@@ -1706,7 +1706,7 @@ let liveRooms = [
 
 // ── REVIEWS data ────────────────────────────────────────────────────
 if(!window._reviews)window._reviews=[];
-function getReviews(){return window._reviews||[];}
+function getReviews(){return (window._reviews||[]).filter(function(r){return r&&r.id;});}
 function saveReview(rv){
   if(!window._reviews)window._reviews=[];
   // upsert: ถ้ามี id เดิมให้แทนที่ ไม่ใช่เพิ่มใหม่
@@ -1722,10 +1722,9 @@ if(!window._reviewsLoaded){
     const saved=localStorage.getItem("laoh_reviews");
     if(saved){
       const parsed=JSON.parse(saved);
-      // deduplicate โดย id
       const seen=new Set();
       window._reviews=parsed.filter(function(r){
-        if(!r.id||seen.has(r.id))return false;
+        if(!r||!r.id||seen.has(r.id))return false;
         seen.add(r.id); return true;
       });
     }
@@ -2147,7 +2146,7 @@ function render(){
       console.error("buildLivePage error:",e);
     }
   }
-  else if(view==="feed"){try{page.appendChild(buildFeedPage());}catch(e){const d=document.createElement("div");d.style.cssText="padding:20px;color:#C0392B;background:#fff;margin:20px;border-radius:12px;font-size:.8rem;";d.textContent="Feed error: "+e.message;page.appendChild(d);}}
+  else if(view==="feed"){try{page.appendChild(buildFeedPage());}catch(e){const d=document.createElement("div");d.style.cssText="padding:20px;color:#C0392B;background:#fff;margin:20px;border-radius:12px;font-size:.8rem;";d.textContent="Feed error: "+e.message;console.error("Feed error:",e);page.appendChild(d);}}
   else if(view==="admin"&&user&&(user.role==="admin"||user.role==="shop"))page.appendChild(buildAdmin());
   else if(view==="profile"&&user)page.appendChild(buildProfile());
   app.appendChild(page);

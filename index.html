@@ -1198,11 +1198,9 @@ function buildFeedPage(){
   const liveShopIds = new Set(feedRooms.map(r=>r.shopId));
   const feedItems = []; // {type:"live"|"review", data:...}
   feedRooms.forEach(r=>feedItems.push({type:"live",data:r}));
-  reviews.forEach(rv=>{
-    // insert after live of same shop if exists, else append
-    if(liveShopIds.has(rv.shopId)){
-      // find last live of same shop and insert after
-      let insertIdx=feedItems.map((x,i)=>x.type==="live"&&x.data.shopId===rv.shopId?i:-1).filter(i=>i>=0).pop();
+  reviews.filter(function(rv){return rv&&rv.id&&!rv.hidden;}).forEach(function(rv){
+    if(rv.shopId&&liveShopIds.has(rv.shopId)){
+      var insertIdx=feedItems.map(function(x,i){return x.type==="live"&&x.data&&x.data.shopId===rv.shopId?i:-1;}).filter(function(i){return i>=0;}).pop();
       if(insertIdx!==undefined) feedItems.splice(insertIdx+1,0,{type:"review",data:rv});
       else feedItems.push({type:"review",data:rv});
     } else {
@@ -1874,6 +1872,9 @@ function buildLivePage(){
           )
         : null;
 
+      // Admin: can manage this room
+      const canManage = isSuperAdmin || (isShop && room.shopId === myShopId);
+
       // ── Product picker (admin/seller only) ──
       const prodPicker = canManage ? (function(){
         const myShopProds = prods.filter(p=>p.shopId===room.shopId);
@@ -1939,9 +1940,6 @@ function buildLivePage(){
       const showAll = window._liveShowAll[room.id] || false;
       const displayProds = showAll ? pinnedProducts : pinnedProducts.slice(0,2);
       const hasMore = pinnedProducts.length > 2;
-
-      // Admin: pin product to top button
-      const canManage = isSuperAdmin || (isShop && room.shopId === myShopId);
 
       const prodSection = pinnedProducts.length > 0
         ? el("div",{className:"live-products-section"},

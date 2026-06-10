@@ -227,6 +227,7 @@ try{
     measurementId:"G-MY1JV7V280"
   });
   db=firebase.firestore();
+  storage=firebase.storage();
 }catch(e){console.warn("Firebase init failed:",e);}
 
 function saveToCloud(col,id,data){
@@ -264,7 +265,6 @@ async function loadFromCloud(){
     if(!ps.empty){
       const fbProds=ps.docs.map(function(d){
         const p=d.data();
-        try{const stored=localStorage.getItem("img_"+p.id);if(stored){const imgs=JSON.parse(stored);p.img=imgs.img||p.img;p.imgs=imgs.imgs||p.imgs;}}catch(e){}
         return p;
       });
       // Merge: keep all local products not in Firebase (new/default ones)
@@ -277,7 +277,6 @@ async function loadFromCloud(){
     if(!os.empty){
       const fbOrders=os.docs.map(function(d){
         const o=d.data();
-        try{const slip=localStorage.getItem("slip_"+o.id);if(slip)o.slip=slip;}catch(e){}
         return o;
       });
       // Merge Firebase orders with local demo orders (keep demo if not in Firebase)
@@ -341,7 +340,7 @@ function saveAll(){
 // ── CONSTANTS ──────────────────────────────────────────────────────
 const P="#1B6B3A",D="#1A2B5F",B="#C8E6D4",C="#F0F7F2";
 const fmt=n=>Number(n).toLocaleString("lo-LA");
-const isUrl=s=>s&&(s.startsWith("http")||s.startsWith("data:"));
+const isUrl=s=>s&&s!=="__local__"&&(s.startsWith("http")||s.startsWith("data:"));
 const getImg=p=>{const im=p.img;return(im&&im!=="__local__")?im:(p.imgs&&p.imgs[0]&&p.imgs[0]!=="__local__"?p.imgs[0]:"🛍");};
 const rdy=p=>p.stock&&Object.values(p.stock).some(v=>v>0);
 const CARRIERS=["ຮຸ່ງອາລຸນ","ອານຸສິດ","ມີໄຊ","ວິໂລດ","ຂ.ສ.ລ."];
@@ -1167,7 +1166,8 @@ function buildSideMenu(){
       ),
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
-        el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ")
+        el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.4.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -1994,6 +1994,8 @@ function saveReview(rv){
   if(idx>=0){window._reviews[idx]=rv;}
   else{window._reviews.unshift(rv);}
   try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e){}
+  // sync to Firestore
+  if(db){try{db.collection("reviews").doc(String(rv.id)).set(rv);}catch(e){}}
 }
 // โหลดจาก localStorage (ครั้งเดียวตอน init เท่านั้น)
 if(!window._reviewsLoaded){
@@ -2009,6 +2011,20 @@ if(!window._reviewsLoaded){
       });
     }
   }catch(e){}
+  // load from Firestore (overrides localStorage if data exists)
+  if(db){
+    db.collection("reviews").orderBy("at","desc").limit(500).get().then(function(snap){
+      if(snap&&!snap.empty){
+        const fbRevs=snap.docs.map(function(d){return d.data();});
+        const seen=new Set();
+        window._reviews=fbRevs.filter(function(r){
+          if(!r||!r.id||seen.has(r.id))return false;
+          seen.add(r.id); return true;
+        });
+        try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e){}
+      }
+    }).catch(function(){});
+  }
 }
 
 // ── AUDIOBOOK / NARRATOR DATA ──────────────────────────────────────
@@ -3987,7 +4003,7 @@ function renderCo(){
           r.onload=function(ev){
             const b64=ev.target.result;
             coSlip=b64; renderCo();
-            uploadSlip(b64, "slip_"+Date.now()).then(function(url){coSlip=url;}).catch(function(){coSlip=b64;});
+            uploadSlip(b64, Date.now()).then(function(url){coSlip=url;renderCo();}).catch(function(){coSlip=b64;});
           };
           r.readAsDataURL(f);
         }
@@ -7240,10 +7256,10 @@ function buildProfile(){
               prevDiv.innerHTML="";
               if(isVid){const v=document.createElement("video");v.src=b64;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.controls=true;prevDiv.appendChild(v);}
               else{prevDiv.appendChild(el("img",{src:b64,style:{width:"100%",borderRadius:"8px",maxHeight:"120px",objectFit:"cover"}}));}
-              // upload ไป Cloudinary
+              // upload ไป Firebase Storage
               if(!isVid){
-                // รูปภาพ → Cloudinary
-                uploadToCloudinary(b64,"laoh/reviews").then(function(url){
+                // รูปภาพ → Firebase Storage
+                uploadImage(b64,"laoh/reviews").then(function(url){
                   rv.mediaUrl=url;
                   toast("ອັບໂຫຼດຮູບສຳເລັດ ✓");
                 }).catch(function(){rv.mediaUrl=b64;});

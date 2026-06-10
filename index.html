@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v144-PRODUCTION — Bug fixes: duplicate printOrder, commission history double-write, coupon discount inconsistency, product name→id matching, stock qty cap, saveAll warning -->
+<!-- LaoH Marketplace v145 — Bug fixes: duplicate printOrder, commission history double-write, coupon discount inconsistency, product name→id matching, stock qty cap, saveAll warning -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3504,10 +3504,13 @@ function showProduct(p){
         ):null
       ):null,
       el("button",{className:"btn btn-p",style:{marginTop:"8px"},onclick:()=>{
-        if(cs.length>0&&!selColor){
-          showOv(el("div",{className:"mod",style:{textAlign:"center",maxWidth:"300px"},onclick:function(e){e.stopPropagation();}},
-            el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"🎨"),
-            el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},_lang==="lo"?"ກະລຸນາເລືອກສີ":"Please Select Color"),
+        // If product has no colors/sizes, skip selection and add directly
+        const noOpts=cs.length===0&&sz.length===0;
+        if(!noOpts){
+          if(cs.length>0&&!selColor){
+            showOv(el("div",{className:"mod",style:{textAlign:"center",maxWidth:"300px"},onclick:function(e){e.stopPropagation();}},
+              el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"🎨"),
+              el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},_lang==="lo"?"ກະລຸນາເລືອກສີ":"Please Select Color"),
             el("div",{style:{fontSize:".82rem",color:"#6B8F75",marginBottom:"16px"}},_lang==="lo"?"ເລືອກສີສິນຄ້າກ່ອນເພີ່ມໃສ່ກະຕ່າ":"Please choose a color before adding to cart"),
             el("button",{className:"btn btn-p",onclick:closeOv},_lang==="lo"?"ຕົກລົງ":"OK")
           ));
@@ -3522,9 +3525,11 @@ function showProduct(p){
           ));
           return;
         }
+        } // end if(!noOpts) validation block
         const k=p.id+"-"+selColor+"-"+selSize;
         const ex=cart.find(i=>i.k===k);
-        const preorder=qN===0;
+        // For no-options products: preorder only if qty explicitly 0 in stock config
+        const preorder=(!noOpts)&&qN===0;
         // Bug fix: cap qty by available stock (skip cap for preorder items)
         if(ex){
           const maxQ=qN>0?qN:999;
@@ -4600,16 +4605,29 @@ function buildAdminTab(){
         el("span",{style:{fontSize:".85rem",fontWeight:"600",color:"#1A2B5F"}},"🔄 ຄືນສິນຄ້າໄດ້ 3 ວັນ")
       ),
       el("label",{className:"lbl"},"🖼 ຮູບພາບ (ເພີ່ມໄດ້ຫຼາຍຮູບ)"),prev,imgBtns,fiGallery,fiCamera,
-      el("button",{className:"btn btn-p",onclick:()=>{
+      el("button",{className:"btn btn-p",onclick:async function(){
         if(!v.name||!v.price){toast("ກະລຸນາໃສ່ຊື່ ແລະ ລາຄາ");return;}
         const cs=v.colors.length?v.colors:[];
         const sz=v.sizes.length?v.sizes:[];
         const cat=v.cats.length?v.cats[0]:(PCATS[0]||"");
-        // อัปเดต PCATS และ CATS ถ้ามีหมวดหมู่ใหม่
         v.cats.forEach(function(c){if(!PCATS.includes(c)){PCATS.push(c);CATS.push(c);}});
         const st={};cs.forEach(c=>sz.forEach(s=>{st[c+"|"+s]=0;}));
         const np={id:Date.now(),name:v.name,cat:cat,price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,refundable:v.refundable||false,desc:v.desc||"",usage:v.usage||"",boxSize:v.boxSize||"",shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
-        prods.unshift(np);saveToCloud("prods",np.id,np);aTab=0;render();toast("ເພີ່ມສິນຄ້າສຳເລັດ ✓");
+        prods.unshift(np);
+        // Wait for Firebase Storage uploads to finish before saving to Firestore
+        // (uploadFile returns a URL; if img is already URL it passes through)
+        if(np.img&&np.img.startsWith("data:")){
+          toast("⬆️ ກຳລັງອັພໂຫຼດຮູບ...");
+          np.img=await uploadImage(np.img,"laoh/products").catch(function(){return np.img;});
+        }
+        if(np.imgs&&np.imgs.length>0){
+          np.imgs=await Promise.all(np.imgs.map(function(u){
+            return u&&u.startsWith("data:")?uploadImage(u,"laoh/products").catch(function(){return u;}):Promise.resolve(u);
+          }));
+          if(!np.img||np.img.startsWith("data:"))np.img=np.imgs[0]||np.img;
+        }
+        saveToCloud("prods",np.id,np);
+        aTab=0;render();toast("ເພີ່ມສິນຄ້າສຳເລັດ ✓");
       }},"➕ ເພີ່ມສິນຄ້າ")
     );
   }
@@ -5814,13 +5832,15 @@ function buildAdminTab(){
               const img2=new Image();
               const url=URL.createObjectURL(f);
               img2.onload=function(){
-                const MAX=400;
+                // QR codes need high resolution to be scannable — no downscaling
+                const MAX=1200;
                 let w=img2.width,h=img2.height;
                 if(w>MAX||h>MAX){const ratio=Math.min(MAX/w,MAX/h);w=Math.round(w*ratio);h=Math.round(h*ratio);}
                 canvas.width=w;canvas.height=h;
                 ctx.drawImage(img2,0,0,w,h);
                 URL.revokeObjectURL(url);
-                const resized=canvas.toDataURL("image/jpeg",0.75);
+                // Use PNG for QR (lossless) to preserve scan accuracy
+                const resized=canvas.toDataURL("image/png");
                 qrImg=resized;
                 db.collection("settings").doc("main").set({qrImg:qrImg}).catch(function(e){return e;});
                 prev.innerHTML="";
@@ -6627,9 +6647,20 @@ function showEditProd(p){
       if((p.imgs||[]).join(",")!==(fm.imgs||[]).join(","))changeLog.push("ຮູບພາບ: ອັບເດດ");
       const updated=Object.assign({},p,fm,{price:Number(fm.price),cost:Number(fm.cost)||0,colors:cs,sizes:sz,stock:newSt,imgs:fm.imgs||[],img:fm.img||p.img,desc:fm.desc||"",usage:fm.usage||"",boxSize:fm.boxSize||"",changeLog:newLog});
       prods=prods.map(function(x){return x.id===p.id?updated:x;});
-      saveToCloud("prods",p.id,updated);
-      closeOv();render();toast(changeLog.length>0?"ບັນທຶກ "+changeLog.length+" ການປ່ຽນແປງ ✓":"ບັນທຶກແລ້ວ ✓");
-      }catch(err){toast("Error: "+err.message);console.error(err);}
+      // Upload any remaining base64 images to Firebase Storage before saving
+      (async function(){
+        if(updated.imgs&&updated.imgs.some(function(u){return u&&u.startsWith("data:");})){
+          toast("⬆️ ກຳລັງອັພໂຫຼດຮູບ...");
+          updated.imgs=await Promise.all(updated.imgs.map(function(u){
+            return u&&u.startsWith("data:")?uploadImage(u,"laoh/products").catch(function(){return u;}):Promise.resolve(u);
+          }));
+          updated.img=updated.imgs[0]||updated.img;
+          prods=prods.map(function(x){return x.id===p.id?updated:x;});
+        }
+        saveToCloud("prods",p.id,updated);
+        closeOv();render();toast(changeLog.length>0?"ບັນທຶກ "+changeLog.length+" ການປ່ຽນແປງ ✓":"ບັນທຶກແລ້ວ ✓");
+      })();
+      }catch(err){toast("Error: "+err.message);}
     }},"💾 บันทึก")
   ));
 }

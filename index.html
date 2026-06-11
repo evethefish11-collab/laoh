@@ -5090,47 +5090,51 @@ function buildAdminTab(){
       };
       mainRow.appendChild(addCI);
       catWrapAdd.appendChild(mainRow);
-      // ── Sub Cat row ──
+      // ── Sub Cat row — always show so user can add subCats even for new mainCats ──
       const subCats=getSubCatsForMain(v.mainCat,myShopAdd);
-      if(subCats.length>0){
-        subCatWrapAdd.style.display="block";
-        subCatWrapAdd.innerHTML="";
-        subCatWrapAdd.appendChild(el("label",{className:"lbl"},"📂 ໝວດໝູ່ຍ່ອຍ (ເລືອກ 1)"));
-        const subRow=el("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px",padding:"6px",background:"#F0FDF4",borderRadius:"10px",border:"1.5px solid #A8D8B0",minHeight:"34px"}});
-        const noneC=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid #C8E6D4",background:!v.subCat?"#1A2B5F":"#fff",color:!v.subCat?"#fff":"#6B8F75",fontSize:".68rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"}},_lang==="lo"?"ທຸກໝວດ":"All");
-        noneC.onclick=function(){v.subCat="";buildSubActiveAdd(subRow,noneC,subCats);};
-        subRow.appendChild(noneC);
-        function buildSubActiveAdd(row,nC,scs){
-          while(row.children.length>1)row.removeChild(row.lastChild);
-          nC.style.background=!v.subCat?"#1A2B5F":"#fff";nC.style.color=!v.subCat?"#fff":"#6B8F75";
-          scs.forEach(function(sc){
-            const active=v.subCat===sc;
-            const chip=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid "+(active?"#1B6B3A":"#C8E6D4"),background:active?"#1B6B3A":"#fff",color:active?"#fff":"#1A2B5F",fontSize:".68rem",fontWeight:active?"700":"500",cursor:"pointer",fontFamily:"inherit"}},sc);
-            chip.onclick=function(){v.subCat=sc;buildSubActiveAdd(row,nC,scs);};
-            row.appendChild(chip);
-          });
-          // Add custom subcat
-          const addSI=document.createElement("input");
-          addSI.className="inp";addSI.placeholder="+ ໝວດຍ່ອຍໃໝ່...";
-          addSI.style.cssText="width:100px;padding:3px 7px;font-size:.65rem;display:inline-block;";
-          addSI.onkeydown=function(e){
-            if(e.key==="Enter"&&this.value.trim()){
-              const val=this.value.trim();
-              const csm=getCatSubMap(myShopAdd);
-              if(!csm[v.mainCat])csm[v.mainCat]=[];
-              if(!csm[v.mainCat].includes(val)){csm[v.mainCat].push(val);if(myShopAdd){if(!myShopAdd.catSubMap)myShopAdd.catSubMap={};if(!myShopAdd.catSubMap[v.mainCat])myShopAdd.catSubMap[v.mainCat]=[];myShopAdd.catSubMap[v.mainCat].push(val);saveToCloud("shops",myShopAdd.id,myShopAdd);}}
-              v.subCat=val;this.value="";buildCatUIAdd();
+      subCatWrapAdd.style.display="block";
+      subCatWrapAdd.innerHTML="";
+      subCatWrapAdd.appendChild(el("label",{className:"lbl"},"📂 ໝວດໝູ່ຍ່ອຍ (ເລືອກ 1 / ພິມ + Enter ເພີ່ມໃໝ່)"));
+      const subRow=el("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px",padding:"6px",background:"#F0FDF4",borderRadius:"10px",border:"1.5px solid #A8D8B0",minHeight:"34px"}});
+      const noneC=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid #C8E6D4",background:!v.subCat?"#1A2B5F":"#fff",color:!v.subCat?"#fff":"#6B8F75",fontSize:".68rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"}},_lang==="lo"?"ບໍ່ກຳນົດ":"None");
+      noneC.onclick=function(){v.subCat="";buildSubActiveAdd(subRow,noneC,subCats);};
+      subRow.appendChild(noneC);
+      function buildSubActiveAdd(row,nC,scs){
+        while(row.children.length>1)row.removeChild(row.lastChild);
+        nC.style.background=!v.subCat?"#1A2B5F":"#fff";nC.style.color=!v.subCat?"#fff":"#6B8F75";
+        scs.forEach(function(sc){
+          const active=v.subCat===sc;
+          const chip=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid "+(active?"#1B6B3A":"#C8E6D4"),background:active?"#1B6B3A":"#fff",color:active?"#fff":"#1A2B5F",fontSize:".68rem",fontWeight:active?"700":"500",cursor:"pointer",fontFamily:"inherit"}},sc);
+          chip.onclick=function(){v.subCat=sc;buildSubActiveAdd(row,nC,scs);};
+          row.appendChild(chip);
+        });
+        // Input to add new subcat — always shown
+        const addSI=document.createElement("input");
+        addSI.className="inp";addSI.placeholder="+ ໝວດຍ່ອຍໃໝ່...";
+        addSI.style.cssText="width:110px;padding:3px 7px;font-size:.65rem;display:inline-block;";
+        addSI.onkeydown=function(e){
+          if(e.key==="Enter"&&this.value.trim()){
+            const val=this.value.trim();
+            // Add to shop's catSubMap and save
+            if(myShopAdd){
+              if(!myShopAdd.catSubMap)myShopAdd.catSubMap={};
+              if(!myShopAdd.catSubMap[v.mainCat])myShopAdd.catSubMap[v.mainCat]=[];
+              if(!myShopAdd.catSubMap[v.mainCat].includes(val)){
+                myShopAdd.catSubMap[v.mainCat].push(val);
+                saveToCloud("shops",myShopAdd.id,myShopAdd);
+              }
+            } else {
+              // No shop yet — add to DEFAULT_CAT_SUB_MAP in memory
+              if(!DEFAULT_CAT_SUB_MAP[v.mainCat])DEFAULT_CAT_SUB_MAP[v.mainCat]=[];
+              if(!DEFAULT_CAT_SUB_MAP[v.mainCat].includes(val))DEFAULT_CAT_SUB_MAP[v.mainCat].push(val);
             }
-          };
-          row.appendChild(addSI);
-        }
-        buildSubActiveAdd(subRow,noneC,subCats);
-        subCatWrapAdd.appendChild(subRow);
-      } else {
-        subCatWrapAdd.style.display="none";
-        subCatWrapAdd.innerHTML="";
-        v.subCat="";
+            v.subCat=val;this.value="";buildCatUIAdd();
+          }
+        };
+        row.appendChild(addSI);
       }
+      buildSubActiveAdd(subRow,noneC,subCats);
+      subCatWrapAdd.appendChild(subRow);
     }
     setTimeout(function(){
       buildChips(colorContainer,window._presetColors,v.colors,makeAddInp(window._presetColors,v.colors,colorContainer,"+ ສີໃໝ່..."));
@@ -7415,44 +7419,49 @@ function showEditProd(p){
       };
       mainRow.appendChild(addI);
       catWrapEdit.appendChild(mainRow);
-      // Sub cat row
+      // Sub cat row — always show so user can add subCats even for new mainCats
       const subCats=getSubCatsForMain(fm.selectedMainCat,myShopEdit);
       subCatWrapEdit.innerHTML="";
-      if(subCats.length>0){
-        subCatWrapEdit.style.display="block";
-        subCatWrapEdit.appendChild(el("label",{className:"lbl"},"📂 ໝວດໝູ່ຍ່ອຍ (ເລືອກ 1)"));
-        const subRow=el("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px",padding:"6px",background:"#F0FDF4",borderRadius:"10px",border:"1.5px solid #A8D8B0",minHeight:"34px"}});
-        const noneC=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid #C8E6D4",background:!fm.selectedSubCat?"#1A2B5F":"#fff",color:!fm.selectedSubCat?"#fff":"#6B8F75",fontSize:".68rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"}},_lang==="lo"?"ທຸກໝວດ":"All");
-        noneC.onclick=function(){fm.selectedSubCat="";rebuildSubEdit(subRow,noneC,subCats);};
-        subRow.appendChild(noneC);
-        function rebuildSubEdit(row,nC,scs){
-          while(row.children.length>1)row.removeChild(row.lastChild);
-          nC.style.background=!fm.selectedSubCat?"#1A2B5F":"#fff";nC.style.color=!fm.selectedSubCat?"#fff":"#6B8F75";
-          scs.forEach(function(sc){
-            const active=fm.selectedSubCat===sc;
-            const chip=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid "+(active?"#1B6B3A":"#C8E6D4"),background:active?"#1B6B3A":"#fff",color:active?"#fff":"#1A2B5F",fontSize:".68rem",fontWeight:active?"700":"500",cursor:"pointer",fontFamily:"inherit"}},sc);
-            chip.onclick=function(){fm.selectedSubCat=sc;rebuildSubEdit(row,nC,scs);};
-            row.appendChild(chip);
-          });
-          // Add custom subcat
-          const addSI=document.createElement("input");
-          addSI.className="inp";addSI.placeholder="+ ໝວດຍ່ອຍໃໝ່...";
-          addSI.style.cssText="width:100px;padding:3px 7px;font-size:.65rem;display:inline-block;";
-          addSI.onkeydown=function(e){
-            if(e.key==="Enter"&&this.value.trim()){
-              const val=this.value.trim();
-              if(myShopEdit){if(!myShopEdit.catSubMap)myShopEdit.catSubMap={};if(!myShopEdit.catSubMap[fm.selectedMainCat])myShopEdit.catSubMap[fm.selectedMainCat]=[];if(!myShopEdit.catSubMap[fm.selectedMainCat].includes(val))myShopEdit.catSubMap[fm.selectedMainCat].push(val);saveToCloud("shops",myShopEdit.id,myShopEdit);}
-              fm.selectedSubCat=val;this.value="";buildEditCatUI();
+      subCatWrapEdit.style.display="block";
+      subCatWrapEdit.appendChild(el("label",{className:"lbl"},"📂 ໝວດໝູ່ຍ່ອຍ (ເລືອກ 1 / ພິມ + Enter ເພີ່ມໃໝ່)"));
+      const subRow=el("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px",padding:"6px",background:"#F0FDF4",borderRadius:"10px",border:"1.5px solid #A8D8B0",minHeight:"34px"}});
+      const noneC=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid #C8E6D4",background:!fm.selectedSubCat?"#1A2B5F":"#fff",color:!fm.selectedSubCat?"#fff":"#6B8F75",fontSize:".68rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"}},_lang==="lo"?"ບໍ່ກຳນົດ":"None");
+      noneC.onclick=function(){fm.selectedSubCat="";rebuildSubEdit(subRow,noneC,subCats);};
+      subRow.appendChild(noneC);
+      function rebuildSubEdit(row,nC,scs){
+        while(row.children.length>1)row.removeChild(row.lastChild);
+        nC.style.background=!fm.selectedSubCat?"#1A2B5F":"#fff";nC.style.color=!fm.selectedSubCat?"#fff":"#6B8F75";
+        scs.forEach(function(sc){
+          const active=fm.selectedSubCat===sc;
+          const chip=el("button",{type:"button",style:{padding:"3px 10px",borderRadius:"16px",border:"1.5px solid "+(active?"#1B6B3A":"#C8E6D4"),background:active?"#1B6B3A":"#fff",color:active?"#fff":"#1A2B5F",fontSize:".68rem",fontWeight:active?"700":"500",cursor:"pointer",fontFamily:"inherit"}},sc);
+          chip.onclick=function(){fm.selectedSubCat=sc;rebuildSubEdit(row,nC,scs);};
+          row.appendChild(chip);
+        });
+        // Input to add new subcat — always shown
+        const addSI=document.createElement("input");
+        addSI.className="inp";addSI.placeholder="+ ໝວດຍ່ອຍໃໝ່...";
+        addSI.style.cssText="width:110px;padding:3px 7px;font-size:.65rem;display:inline-block;";
+        addSI.onkeydown=function(e){
+          if(e.key==="Enter"&&this.value.trim()){
+            const val=this.value.trim();
+            if(myShopEdit){
+              if(!myShopEdit.catSubMap)myShopEdit.catSubMap={};
+              if(!myShopEdit.catSubMap[fm.selectedMainCat])myShopEdit.catSubMap[fm.selectedMainCat]=[];
+              if(!myShopEdit.catSubMap[fm.selectedMainCat].includes(val)){
+                myShopEdit.catSubMap[fm.selectedMainCat].push(val);
+                saveToCloud("shops",myShopEdit.id,myShopEdit);
+              }
+            } else {
+              if(!DEFAULT_CAT_SUB_MAP[fm.selectedMainCat])DEFAULT_CAT_SUB_MAP[fm.selectedMainCat]=[];
+              if(!DEFAULT_CAT_SUB_MAP[fm.selectedMainCat].includes(val))DEFAULT_CAT_SUB_MAP[fm.selectedMainCat].push(val);
             }
-          };
-          row.appendChild(addSI);
-        }
-        rebuildSubEdit(subRow,noneC,subCats);
-        subCatWrapEdit.appendChild(subRow);
-      } else {
-        subCatWrapEdit.style.display="none";
-        fm.selectedSubCat="";
+            fm.selectedSubCat=val;this.value="";buildEditCatUI();
+          }
+        };
+        row.appendChild(addSI);
       }
+      rebuildSubEdit(subRow,noneC,subCats);
+      subCatWrapEdit.appendChild(subRow);
     }
     buildEditCatUI();
   })();

@@ -333,6 +333,8 @@ function deleteFromCloud(col,id){
   try{db.collection(col).doc(String(id)).delete();}catch(e){}
 }
 async function loadFromCloud(){
+  // Reset preset cache so it reloads from localStorage on next render
+  window._presetColors=null; window._presetSizes=null;
   if(!db){render();return;}
   try{
     const [ps,os,prs,us,ss,cps,shs,wds,apps,nars,lvrs]=await Promise.all([
@@ -371,22 +373,11 @@ async function loadFromCloud(){
     if(cps&&!cps.empty)coupons=cps.docs.map(function(d){return JSON.parse(JSON.stringify(d.data()));});
     if(shs&&!shs.empty){
       const fbShops=shs.docs.map(function(d){return JSON.parse(JSON.stringify(d.data()));});
-      // Merge: Firebase data wins over demo defaults
-      // For each shop in memory, if Firebase has it → use Firebase version (preserves active/settings)
-      // If Firebase has extra shops not in demo → add them
-      const fbShopMap={};
-      fbShops.forEach(function(s){fbShopMap[String(s.id)]=s;});
-      shops=shops.map(function(s){
-        return fbShopMap[String(s.id)]
-          ? Object.assign({},s,fbShopMap[String(s.id)]) // Firebase fields override demo defaults
-          : s;
-      });
-      // Add shops that exist in Firebase but not in demo
-      fbShops.forEach(function(fs){
-        if(!shops.find(function(s){return String(s.id)===String(fs.id);})){
-          shops.push(fs);
-        }
-      });
+      // Firebase is the source of truth — replace demo data entirely
+      // Only keep demo shops that are NOT yet in Firebase (new shops not saved yet)
+      const fbShopIds=new Set(fbShops.map(function(s){return String(s.id);}));
+      const localOnlyShops=shops.filter(function(s){return !fbShopIds.has(String(s.id));});
+      shops=fbShops.concat(localOnlyShops);
     }
     if(wds&&!wds.empty)withdrawals=wds.docs.map(function(d){return d.data();});
     // Load shopApplications from Firebase
@@ -5172,114 +5163,252 @@ function buildStaffDashboard(){
   });
   wrap.appendChild(tabBar);
 
-  // ── TAB 0: Orders (same as admin) ──────────────────────────────
+  // ── TAB 0: Orders — identical to Super Admin ──────────────────
   if(sTab===0){
-    // Reuse admin order UI by calling buildAdminTab logic for orders
-    // Show all orders with status update buttons
-    wrap.appendChild(el("div",{style:{padding:"12px 16px 4px",fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},"🚚 ລາຍການຄຳສັ່ງທັງໝົດ"));
+    // Render using same logic as effectiveTab===5 (Super Admin orders)
+    // Staff acts as isSuperAdmin=true for order view
+    const _origIsAdmin = user.role;
+    // Temporarily patch: render full admin order section inline
+    const staffOrderSection = (function(){
+      const isSuperAdmin_s = true; // staff gets full admin view
+      const fO_s = (window._staffOrderFilter2==="ທັງໝົດ"||!window._staffOrderFilter2)
+        ? orders : orders.filter(function(o){return o.status===window._staffOrderFilter2;});
+      const q_s = (window._staffSearch2||"").toLowerCase();
+      const filtered_s = q_s ? fO_s.filter(function(o){
+        return String(o.id).slice(-6).includes(q_s)||
+          (o.name||"").toLowerCase().includes(q_s)||
+          (o.phone||"").replace(/[^0-9]/g,"").includes(q_s.replace(/[^0-9]/g,""));
+      }) : fO_s;
 
-    // Filter bar
-    const filterWrap = el("div",{style:{padding:"0 12px 8px",display:"flex",gap:"6px",overflowX:"auto"}});
-    const statuses = ["ທັງໝົດ","ລໍຢືນຢັນ","ຢືນຢັນແລ້ວ",PACKED_STATUS,LEFT_SHOP_STATUS,HUB_STATUS,DELIVERING_STATUS,COMPLETE_STATUS,"ຍົກເລີກ"];
-    const shortLabels = ["ທັງໝົດ","ລໍ","ຢືນ","📦ແພັກ","🚗ໄປສູນ","🏠ສູນ","🛵ສົ່ງ","✅ສຳເລັດ","❌ຍົກ"];
-    let curFilter = window._staffOrderFilter||"ທັງໝົດ";
-    statuses.forEach(function(st,i){
-      filterWrap.appendChild(el("button",{
-        style:{padding:"5px 10px",borderRadius:"20px",border:"none",fontSize:".65rem",fontWeight:"700",
-          cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",
-          background:curFilter===st?"#1B6B3A":"#E8F5EE",color:curFilter===st?"#fff":"#1B6B3A"},
-        onclick:function(){window._staffOrderFilter=st;render();}
-      },shortLabels[i]||st.slice(0,8)));
-    });
-    wrap.appendChild(filterWrap);
+      const sCnt={};
+      orders.forEach(function(o){sCnt[o.status]=(sCnt[o.status]||0)+1;});
+      const SC={"ລໍຖ້າຊຳລະ":"#f39c12","ລໍຢືນຢັນ":"#e67e22","ຢືນຢັນແລ້ວ":"#7B4FA0","ຮ້ານກຳລັງແພັກສິນຄ້າ":"#FF8C00","ສິນຄ້າອອກຈາກຮ້ານແລ້ວ":"#2980b9","ສິນຄ້າຮອດສູນ LaoH ແລ້ວ":"#0277BD","ກຳລັງຈັດສົ່ງໃຫ້ລູກຄ້າ":"#1565c0","ສິນຄ້າຮອດຂົນສົ່ງປາຍທາງ":"#00838F","ອໍເດີສຳເລັດແລ້ວ":"#1B6B3A","ຍົກເລີກ":"#c00"};
 
-    // Search box
-    const searchWrap = el("div",{style:{padding:"0 12px 8px",display:"flex",gap:"6px"}});
-    const sInp = document.createElement("input");
-    sInp.type="text"; sInp.placeholder="🔍 ຄົ້ນຫາ #ໝາຍເລກ / ຊື່...";
-    sInp.value = window._staffSearch||"";
-    sInp.className="inp";
-    sInp.style.cssText="flex:1;font-size:.8rem;";
-    sInp.oninput=function(){window._staffSearch=this.value;render();};
-    searchWrap.appendChild(sInp);
-    wrap.appendChild(searchWrap);
+      const div = el("div",{style:{padding:"0 0 8px"}});
 
-    // Orders list
-    const q = (window._staffSearch||"").toLowerCase();
-    const filteredOrders = orders.filter(function(o){
-      const matchStatus = curFilter==="ທັງໝົດ"||o.status===curFilter;
-      const matchQ = !q||(String(o.id).slice(-6).includes(q)||
-        (o.buyerName||o.name||"").toLowerCase().includes(q)||
-        (o.buyerPhone||o.phone||"").includes(q));
-      return matchStatus&&matchQ;
-    }).slice().sort(function(a,b){return b.id-a.id;});
+      // Search
+      const srch=document.createElement("input");
+      srch.className="inp";srch.placeholder="🔍 ຄົ້ນຫາ ເລກ Order / ຊື່ / ເບີ...";
+      srch.style.cssText="margin:8px 12px;width:calc(100% - 24px);font-size:.8rem;";
+      srch.value=window._staffSearch2||"";
+      srch.oninput=function(){
+        window._staffSearch2=this.value.trim().toLowerCase();
+        render();
+      };
+      div.appendChild(srch);
 
-    if(filteredOrders.length===0){
-      wrap.appendChild(el("div",{style:{textAlign:"center",padding:"40px 20px",color:"#6B8F75",fontSize:".82rem"}},"ບໍ່ພົບ Order"));
-    } else {
-      filteredOrders.forEach(function(o){
-        const shop=shops.find(function(s){return s.id===o.shopId;})||{};
-        const statusColor=o.status===COMPLETE_STATUS?"#1B6B3A":o.status===HUB_STATUS?"#1B6B3A":
-          o.status===DELIVERING_STATUS?"#1565C0":o.status===LEFT_SHOP_STATUS?"#8e44ad":
-          o.status===PACKED_STATUS?"#e67e22":o.status==="ຍົກເລີກ"?"#c00":"#666";
+      // Status filter pills
+      const stBar=el("div",{style:{display:"flex",gap:"5px",overflowX:"auto",padding:"0 12px 8px",scrollbarWidth:"none"}});
+      const ALL_STS=["ທັງໝົດ","ລໍຢືນຢັນ","ຢືນຢັນແລ້ວ",PACKED_STATUS,LEFT_SHOP_STATUS,HUB_STATUS,DELIVERING_STATUS,COMPLETE_STATUS,"ຍົກເລີກ"];
+      ALL_STS.forEach(function(st){
+        const cur=window._staffOrderFilter2||"ທັງໝົດ";
+        const active=cur===st;
+        stBar.appendChild(el("button",{
+          style:{padding:"5px 11px",borderRadius:"20px",border:"1.5px solid "+(active?"#1A2B5F":"#C8E6D4"),
+            background:active?"#1A2B5F":"#F0F7F2",color:active?"#fff":"#1A2B5F",
+            fontSize:".65rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"},
+          onclick:function(){window._staffOrderFilter2=st;render();}
+        },st+(sCnt[st]?" ("+sCnt[st]+")":"")));
+      });
+      div.appendChild(stBar);
 
-        const card=el("div",{style:{background:"#fff",borderRadius:"12px",margin:"6px 12px",
-          padding:"12px 14px",boxShadow:"0 2px 6px rgba(0,0,0,.07)",
-          border:"1.5px solid #C8E6D4"}});
+      if(filtered_s.length===0){
+        div.appendChild(el("div",{style:{textAlign:"center",padding:"40px 20px",color:"#6B8F75",fontSize:".82rem"}},"ບໍ່ພົບ Order"));
+        return div;
+      }
 
-        // Header row
-        const hdrRow=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}});
-        hdrRow.appendChild(el("div",null,
-          el("div",{style:{fontWeight:"800",fontSize:".8rem",color:"#5D2D7A"}},"#"+String(o.id).slice(-6)),
+      const listWrap = el("div",{style:{padding:"0 10px"}});
+
+      filtered_s.slice().sort(function(a,b){return b.id-a.id;}).forEach(function(o){
+        const shop2=shops.find(function(s){return s.id===o.shopId;})||{};
+        const shopPhone2=(shop2.phone||"").replace(/[^0-9]/g,"");
+        const custPhone2=(o.phone||"").replace(/[^0-9]/g,"");
+        const stColor=SC[o.status]||"#888";
+
+        const card=el("div",{className:"order-row-item",
+          "data-oid":String(o.id).slice(-6),"data-phone":o.phone||"","data-name":(o.name||"").toLowerCase(),
+          style:{background:"#fff",borderRadius:"12px",marginBottom:"10px",
+            padding:"12px 14px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",
+            border:"1.5px solid #E0E0E0",borderLeft:"4px solid "+stColor}});
+
+        // ── Header ──
+        const hdr2=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"}});
+        hdr2.appendChild(el("div",null,
+          el("div",{style:{fontWeight:"900",fontSize:".88rem",color:"#5D2D7A"}},"#"+String(o.id).slice(-6)),
           el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},o.at||"")
         ));
-        hdrRow.appendChild(el("span",{style:{background:statusColor,color:"#fff",borderRadius:"10px",
-          padding:"3px 9px",fontSize:".62rem",fontWeight:"700"}},o.status.slice(0,14)));
-        card.appendChild(hdrRow);
+        hdr2.appendChild(el("span",{style:{background:stColor,color:"#fff",borderRadius:"10px",
+          padding:"3px 9px",fontSize:".62rem",fontWeight:"700",whiteSpace:"nowrap"}},o.status));
+        card.appendChild(hdr2);
 
-        // Customer + shop row
-        card.appendChild(el("div",{style:{fontSize:".75rem",color:"#1A2B5F",marginBottom:"6px"}},
-          el("span",{style:{fontWeight:"700"}},(o.buyerName||o.name||"?")),
-          el("span",{style:{color:"#6B8F75"}}, " · "+(shop.name||"?")),
-          el("br"),
-          el("span",{style:{color:"#1B6B3A"}},(o.buyerPhone||o.phone||""))
+        // ── Customer + shop info ──
+        card.appendChild(el("div",{style:{fontSize:".78rem",color:"#1A2B5F",marginBottom:"8px",background:"#F8F9FF",borderRadius:"8px",padding:"8px 10px"}},
+          el("div",{style:{fontWeight:"700",marginBottom:"2px"}},"👤 "+(o.name||"?")),
+          el("div",{style:{color:"#6B8F75",marginBottom:"2px"}},"📞 "+(o.phone||"")),
+          el("div",{style:{color:"#5D2D7A",fontWeight:"600"}},"🏪 "+(shop2.name||o.shopName||"?"))
         ));
 
-        // Items
-        const items=(o.items||[]).slice(0,2);
-        if(items.length){
-          card.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"8px"}},
-            "📋 "+items.map(function(i){return i.n+(i.q>1?" ×"+i.q:"");}).join(", ")+
-            (o.items.length>2?" +"+(o.items.length-2)+" ອື່ນ":"")
+        // ── Items ──
+        const itemsDiv2=el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"8px 10px",marginBottom:"8px"}});
+        itemsDiv2.appendChild(el("div",{style:{fontSize:".7rem",fontWeight:"700",color:"#1A2B5F",marginBottom:"5px"}},"📋 ລາຍການ:"));
+        (o.items||[]).forEach(function(i){
+          const prod2=prods.find(function(x){return x&&x.name===i.n;});
+          const irow=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"4px"}});
+          if(prod2){
+            const tsrc=(prod2.imgs&&prod2.imgs[0]&&isUrl(prod2.imgs[0]))?prod2.imgs[0]:isUrl(prod2.img)?prod2.img:null;
+            const th=el("div",{style:{width:"28px",height:"28px",borderRadius:"6px",background:"#E8F5EE",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:".85rem",flexShrink:"0",overflow:"hidden"}});
+            if(tsrc)th.appendChild(el("img",{src:tsrc,style:{width:"100%",height:"100%",objectFit:"cover"},loading:"lazy"}));
+            else th.textContent=prod2.img||"🛍";
+            irow.appendChild(th);
+          } else {
+            irow.appendChild(el("div",{style:{width:"28px",height:"28px",borderRadius:"6px",background:"#F0F7F2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".85rem",flexShrink:"0"}},"🛍"));
+          }
+          irow.appendChild(el("div",{style:{flex:"1",fontSize:".75rem",color:"#1A2B5F"}},
+            (i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q,
+            el("span",{style:{color:"#1B6B3A",fontWeight:"600",marginLeft:"6px"}},"₭"+fmt(i.p*i.q))
           ));
-        }
+          itemsDiv2.appendChild(irow);
+        });
+        card.appendChild(itemsDiv2);
 
-        // Status update buttons
-        const STATUS_FLOW = [
-          {from:"ລໍຢືນຢັນ",    to:"ຢືນຢັນແລ້ວ",    label:"✅ ຢືນຢັນ",       color:"#1B6B3A"},
-          {from:"ຢືນຢັນແລ້ວ",  to:PACKED_STATUS,  label:"📦 ໂອນໃຫ້ຮ້ານ",  color:"#e67e22"},
-          {from:LEFT_SHOP_STATUS,to:HUB_STATUS,   label:"✅ ຢືນຢັນຮອດສູນ", color:"#0277BD"},
-          {from:DELIVERING_STATUS,to:COMPLETE_STATUS,label:"✅ ສຳເລັດ",     color:"#1B6B3A"},
-        ];
-        const flow = STATUS_FLOW.find(function(f){return f.from===o.status;});
-        if(flow){
-          card.appendChild(el("button",{
-            style:{width:"100%",background:flow.color,color:"#fff",border:"none",borderRadius:"8px",
-              padding:"8px",fontSize:".78rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
-            onclick:function(){
-              const at=new Date().toLocaleString("lo-LA");
-              const newLog=(o.statusLog||[]).concat([{at:at,from:o.status,to:flow.to,by:user.name,note:"Staff"}]);
-              const idx=orders.findIndex(function(x){return x.id===o.id;});
-              if(idx>=0) orders[idx]=Object.assign({},orders[idx],{status:flow.to,statusLog:newLog});
-              toast("⏳...");
-              saveToCloud("orders",o.id,orders[idx]||o).then(function(){toast("✅ "+flow.to);render();});
+        // ── Total ──
+        card.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontWeight:"800",fontSize:".85rem",color:"#1B6B3A",marginBottom:"10px"}},
+          el("span",null,"💳 ຍອດລວມ"),el("span",null,"₭"+fmt(o.total))
+        ));
+
+        // ── Status selector (full like super admin) ──
+        const selRow=el("div",{style:{marginBottom:"8px"}});
+        selRow.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"4px"}},"🔄 ປ່ຽນສະຖານະ:"));
+        const sel2=el("select",{style:{width:"100%",padding:"7px 10px",borderRadius:"8px",
+          border:"1.5px solid #C8E6D4",background:"#fff",fontSize:".78rem",
+          color:"#1A2B5F",fontWeight:"600",cursor:"pointer",outline:"none",fontFamily:"inherit"},
+          onchange:function(e){
+            const oldSt=o.status;const newSt=e.target.value;
+            const oIdx=orders.findIndex(function(x){return x.id===o.id;});
+            if(oIdx>=0){orders[oIdx]=Object.assign({},orders[oIdx],{status:newSt});}
+            const newLog=(o.statusLog||[]).concat([{at:new Date().toLocaleString("lo-LA"),from:oldSt,to:newSt,by:user.name,note:"Staff"}]);
+            const updates={status:newSt,statusLog:newLog};
+            if(oIdx>=0){orders[oIdx]=Object.assign({},orders[oIdx],updates);o=orders[oIdx];}
+            saveToCloud("orders",o.id,o);
+            toast("✅ ອັບເດດ: "+newSt);render();
+          }
+        },
+          ...STS.map(function(s){const opt=el("option",{value:s},s);if(o.status===s)opt.selected=true;return opt;})
+        );
+        selRow.appendChild(sel2);
+        card.appendChild(selRow);
+
+        // ── Action buttons ──
+        const btnRow2=el("div",{style:{display:"flex",gap:"5px",flexWrap:"wrap"}});
+        const btnStyle={border:"none",borderRadius:"8px",padding:"6px 10px",fontSize:".7rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"};
+
+        // 📋 History
+        btnRow2.appendChild(el("button",{
+          style:Object.assign({},btnStyle,{background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A"}),
+          onclick:function(){
+            const logs=o.statusLog||[];
+            const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+            modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+            modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"📋 ປະຫວັດ #"+String(o.id).slice(-6)));
+            modal.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"10px"}},o.name+" · "+o.phone));
+            if(logs.length===0){
+              modal.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"14px 0"}},"ຍັງບໍ່ມີປະຫວັດ"));
+            } else {
+              logs.slice().reverse().forEach(function(l){
+                const r2=el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"8px 10px",marginBottom:"6px",borderLeft:"3px solid #1B6B3A"}});
+                r2.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"3px"}},l.at+(l.by?" · "+l.by:"")));
+                r2.appendChild(el("div",{style:{fontSize:".78rem",color:"#1A2B5F",fontWeight:"600"}},l.from+" → "+l.to));
+                if(l.note)r2.appendChild(el("div",{style:{fontSize:".68rem",color:"#888"}},l.note));
+                modal.appendChild(r2);
+              });
             }
-          },flow.label));
+            modal.appendChild(el("div",{style:{borderTop:"1px solid #eee",marginTop:"10px",paddingTop:"8px",fontSize:".72rem",color:"#888"}},"ສ້າງ: "+(o.at||"")));
+            showOv(modal);
+          }
+        },"📋 ປະຫວັດ"));
+
+        // 🖨 Print
+        btnRow2.appendChild(el("button",{
+          style:Object.assign({},btnStyle,{background:"none",border:"1.5px solid #1B6B3A",color:"#1B6B3A"}),
+          onclick:function(){printOrder(o);}
+        },"🖨 ພິມ"));
+
+        // 💬 WA ລູກຄ້າ
+        if(custPhone2){
+          btnRow2.appendChild(el("button",{
+            style:Object.assign({},btnStyle,{background:"#25D366",color:"#fff"}),
+            onclick:function(){
+              const msg="ສະບາຍດີ "+o.name+"\n\n"+
+                "Order #"+String(o.id).slice(-6)+"\n"+
+                "ສະຖານະ: "+o.status+"\n\n"+
+                "ຂອບໃຈທີ່ໃຊ້ LaoH ລາວເຮັດ";
+              window.open("https://wa.me/"+custPhone2+"?text="+encodeURIComponent(msg),"_blank");
+            }
+          },"💬 WA ລູກຄ້າ"));
         }
 
-        wrap.appendChild(card);
+        // 📦 WA ລູກຄ້າ Tracking
+        if(custPhone2&&o.trackingNo){
+          btnRow2.appendChild(el("button",{
+            style:Object.assign({},btnStyle,{background:"#1565c0",color:"#fff"}),
+            onclick:function(){
+              const msg="ສະບາຍດີ "+o.name+"\n\n"+
+                "ພັສດຸ #"+String(o.id).slice(-6)+" ໄດ້ຈັດສົ່ງແລ້ວ\n"+
+                "ເລກ Tracking: "+o.trackingNo+"\n"+
+                (o.carrier?"ຂົນສົ່ງ: "+o.carrier+"\n":"")+ 
+                (o.branch?"ສາຂາ: "+o.branch+"\n":"");
+              window.open("https://wa.me/"+custPhone2+"?text="+encodeURIComponent(msg),"_blank");
+            }
+          },"📦 ສົ່ງ Tracking"));
+        }
+
+        // 🏪 WA ຮ້ານ
+        if(shopPhone2){
+          btnRow2.appendChild(el("button",{
+            style:Object.assign({},btnStyle,{background:"#1B6B3A",color:"#fff"}),
+            onclick:function(){
+              const itemList=(o.items||[]).map(function(i){
+                return "• "+i.n+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":"")+
+                  " ×"+i.q+" ₭"+fmt(i.p*i.q);
+              }).join("\n");
+              const msg="🔔 LaoH — Order ໃໝ່\n\n"+
+                "Order #"+String(o.id).slice(-6)+"\n"+
+                "ລູກຄ້າ: "+o.name+"\n"+
+                "ເບີ: "+o.phone+"\n\n"+
+                "ສິນຄ້າ:\n"+itemList+"\n\n"+
+                "ຍອດລວມ: ₭"+fmt(o.total)+"\n"+
+                "ສະຖານະ: "+o.status+"\n\n"+
+                "ກະລຸນາກຽມສິນຄ້າ";
+              window.open("https://wa.me/"+shopPhone2+"?text="+encodeURIComponent(msg),"_blank");
+            }
+          },"🏪 WA ຮ້ານ"));
+        }
+
+        card.appendChild(btnRow2);
+
+        // ── Tracking field ──
+        (function(){
+          const tWrap=el("div",{style:{marginTop:"8px"}});
+          tWrap.appendChild(el("div",{style:{fontSize:".68rem",color:"#27ae60",fontWeight:"700",marginBottom:"3px"}},"📬 ເລກ Tracking"));
+          const ti=document.createElement("input");
+          ti.className="inp";ti.placeholder="ເຊັ່ນ RA123456789TH";
+          ti.value=o.trackingNo||"";ti.style.cssText="margin-bottom:0;font-size:.78rem;border-color:#27ae60";
+          ti.addEventListener("change",function(){
+            o.trackingNo=this.value.trim();
+            saveToCloud("orders",o.id,o);toast("ບັນທຶກ Tracking ✓");
+          });
+          tWrap.appendChild(ti);
+          card.appendChild(tWrap);
+        })();
+
+        listWrap.appendChild(card);
       });
-    }
+
+      div.appendChild(listWrap);
+      return div;
+    })();
+    wrap.appendChild(staffOrderSection);
   }
 
   // ── TAB 1: ຂາເຂົ້າ (Inbound scan) ────────────────────────────
@@ -5748,18 +5877,30 @@ function buildRiderDashboard(){
       shopRow.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"3px"}},"🏪 ຮ້ານ"));
       shopRow.appendChild(el("div",{style:{fontWeight:"700",fontSize:".88rem",color:"#1A2B5F",marginBottom:"4px"}},
         (shop.emoji||"🏪")+" "+shop.name));
+      if(shop.address){
+        shopRow.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"4px"}},
+          "📍 "+shop.address));
+      }
+      const shopBtns = el("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap"}});
       if(shopPhone){
-        const shopBtns = el("div",{style:{display:"flex",gap:"6px"}});
         shopBtns.appendChild(el("a",{href:"tel:"+shopPhone,
-          style:{flex:"1",textAlign:"center",background:"#E8F5EE",color:"#1B6B3A",borderRadius:"8px",
+          style:{flex:"1",minWidth:"60px",textAlign:"center",background:"#E8F5EE",color:"#1B6B3A",borderRadius:"8px",
             padding:"6px 4px",fontSize:".72rem",fontWeight:"700",textDecoration:"none",display:"block"}},
           "📞 ໂທ"));
         shopBtns.appendChild(el("a",{href:"https://wa.me/"+shopPhone.replace(/[^0-9]/g,""),target:"_blank",
-          style:{flex:"1",textAlign:"center",background:"#E8F5EE",color:"#25D366",borderRadius:"8px",
+          style:{flex:"1",minWidth:"60px",textAlign:"center",background:"#E8F5EE",color:"#25D366",borderRadius:"8px",
             padding:"6px 4px",fontSize:".72rem",fontWeight:"700",textDecoration:"none",display:"block"}},
           "💬 WA"));
-        shopRow.appendChild(shopBtns);
       }
+      // Shop map button (if shop has GPS)
+      if(shop.lat&&shop.lng){
+        shopBtns.appendChild(el("a",{
+          href:"https://maps.google.com/?q="+shop.lat+","+shop.lng,target:"_blank",
+          style:{flex:"1",minWidth:"60px",textAlign:"center",background:"#4285F4",color:"#fff",borderRadius:"8px",
+            padding:"6px 4px",fontSize:".72rem",fontWeight:"700",textDecoration:"none",display:"block"}},
+          "🗺 Maps"));
+      }
+      if(shopBtns.children.length>0) shopRow.appendChild(shopBtns);
       body.appendChild(shopRow);
     }
 
@@ -5789,19 +5930,19 @@ function buildRiderDashboard(){
       if(o.deliveryType==="home"&&addr.district){
         const addrBox = el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"8px 10px",marginBottom:"8px",fontSize:".78rem",color:"#1A2B5F"}});
         addrBox.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"2px"}},"📍 ທີ່ຢູ່ຈັດສົ່ງ"));
-        addrBox.appendChild(el("div",null,(addr.house?addr.house+" ":"")+
+        addrBox.appendChild(el("div",{style:{marginBottom:"6px"}},
+          (addr.house?addr.house+" ":"")+
           (addr.village?"ບ."+addr.village+" ":"")+
           (addr.district?"ເມືອງ "+addr.district:"")));
-        body.appendChild(addrBox);
         if(addr.lat&&addr.lng){
-          body.appendChild(el("a",{
-            href:"https://maps.google.com/?q="+addr.lat+","+addr.lng,
-            target:"_blank",
+          addrBox.appendChild(el("a",{
+            href:"https://maps.google.com/?q="+addr.lat+","+addr.lng,target:"_blank",
             style:{display:"block",textAlign:"center",background:"#4285F4",color:"#fff",
-              borderRadius:"8px",padding:"7px",fontSize:".75rem",fontWeight:"700",
-              textDecoration:"none",marginBottom:"8px"}
-          },"🗺 ເປີດ Google Maps"));
+              borderRadius:"8px",padding:"6px",fontSize:".72rem",fontWeight:"700",
+              textDecoration:"none"}
+          },"🗺 Google Maps ລູກຄ້າ"));
         }
+        body.appendChild(addrBox);
       } else if(o.carrier){
         body.appendChild(el("div",{style:{background:"#E3F2FD",borderRadius:"8px",padding:"8px 10px",marginBottom:"8px",fontSize:".78rem",color:"#1A2B5F"}},
           el("div",{style:{fontWeight:"700",marginBottom:"2px"}},"🚚 "+( o.carrier||"ຂົນສົ່ງ")),
@@ -5916,28 +6057,53 @@ function buildRiderDashboard(){
     leftShopOrders.forEach(function(o){wrap.appendChild(makeTaskCard(o,"pickup"));});
   }
 
-  // 3. ຢູ່ສູນ LaoH — ລໍອອກຈັດສົ່ງ
+  // 3. ຢູ່ສູນ LaoH — ແຍກ: ສົ່ງເຖິງບ້ານ vs ຂົນສົ່ງ (group by carrier)
   if(hubOrders.length>0){
-    wrap.appendChild(sectionHdr("🏠 ຢູ່ສູນ — ພ້ອມອອກສົ່ງ",hubOrders.length,"#1565C0"));
-    // Sort by district for optimal route
-    hubOrders.slice().sort(function(a,b){
-      // Sort by distance from hub
+    const hubHome=hubOrders.filter(function(o){return o.deliveryType==="home";}).sort(function(a,b){
       const hub=getHubLocation();
-      const distA=(a.homeAddress&&a.homeAddress.lat)?haversineKm(hub.lat,hub.lng,a.homeAddress.lat,a.homeAddress.lng):999;
-      const distB=(b.homeAddress&&b.homeAddress.lat)?haversineKm(hub.lat,hub.lng,b.homeAddress.lat,b.homeAddress.lng):999;
-      return distA-distB;
-    }).forEach(function(o){wrap.appendChild(makeTaskCard(o,"delivery"));});
+      const dA=(a.homeAddress&&a.homeAddress.lat)?haversineKm(hub.lat,hub.lng,a.homeAddress.lat,a.homeAddress.lng):999;
+      const dB=(b.homeAddress&&b.homeAddress.lat)?haversineKm(hub.lat,hub.lng,b.homeAddress.lat,b.homeAddress.lng):999;
+      return dA-dB;
+    });
+    const hubCarrier=hubOrders.filter(function(o){return o.deliveryType!=="home";});
+
+    if(hubHome.length>0){
+      wrap.appendChild(sectionHdr("🛵 ອອກສົ່ງເຖິງບ້ານ ("+hubHome.length+" ຈຸດ)",hubHome.length,"#1565C0"));
+      hubHome.forEach(function(o){wrap.appendChild(makeTaskCard(o,"delivery"));});
+    }
+    if(hubCarrier.length>0){
+      // Group by carrier company
+      const byCarrier={};
+      hubCarrier.forEach(function(o){const c=o.carrier||"ຂົນສົ່ງ";if(!byCarrier[c])byCarrier[c]=[];byCarrier[c].push(o);});
+      Object.keys(byCarrier).forEach(function(carrierName){
+        const cOrds=byCarrier[carrierName];
+        wrap.appendChild(sectionHdr("🚚 "+carrierName+" ("+cOrds.length+")",cOrds.length,"#7B4FA0"));
+        cOrds.forEach(function(o){wrap.appendChild(makeTaskCard(o,"delivery"));});
+      });
+    }
   }
 
-  // 4. ກຳລັງຈັດສົ່ງ
+  // 4. ກຳລັງຈັດສົ່ງ — ແຍກ: ເຖິງບ້ານ vs ຂົນສົ່ງ
   if(deliveringOrders.length>0){
-    wrap.appendChild(sectionHdr("🛵 ກຳລັງຈັດສົ່ງ",deliveringOrders.length,"#1B6B3A"));
-    deliveringOrders.slice().sort(function(a,b){
+    const delHome=deliveringOrders.filter(function(o){return o.deliveryType==="home";}).sort(function(a,b){
       const hub=getHubLocation();
-      const distA=(a.homeAddress&&a.homeAddress.lat)?haversineKm(hub.lat,hub.lng,a.homeAddress.lat,a.homeAddress.lng):999;
-      const distB=(b.homeAddress&&b.homeAddress.lat)?haversineKm(hub.lat,hub.lng,b.homeAddress.lat,b.homeAddress.lng):999;
-      return distA-distB;
-    }).forEach(function(o){wrap.appendChild(makeTaskCard(o,"delivery"));});
+      const dA=(a.homeAddress&&a.homeAddress.lat)?haversineKm(hub.lat,hub.lng,a.homeAddress.lat,a.homeAddress.lng):999;
+      const dB=(b.homeAddress&&b.homeAddress.lat)?haversineKm(hub.lat,hub.lng,b.homeAddress.lat,b.homeAddress.lng):999;
+      return dA-dB;
+    });
+    const delCarrier=deliveringOrders.filter(function(o){return o.deliveryType!=="home";});
+    if(delHome.length>0){
+      wrap.appendChild(sectionHdr("🛵 ກຳລັງຈັດສົ່ງ — ເຖິງບ້ານ",delHome.length,"#1B6B3A"));
+      delHome.forEach(function(o){wrap.appendChild(makeTaskCard(o,"delivery"));});
+    }
+    if(delCarrier.length>0){
+      const byCarrierD={};
+      delCarrier.forEach(function(o){const c=o.carrier||"ຂົນສົ່ງ";if(!byCarrierD[c])byCarrierD[c]=[];byCarrierD[c].push(o);});
+      Object.keys(byCarrierD).forEach(function(cn){
+        wrap.appendChild(sectionHdr("🚚 ກຳລັງສົ່ງ: "+cn,byCarrierD[cn].length,"#556B2F"));
+        byCarrierD[cn].forEach(function(o){wrap.appendChild(makeTaskCard(o,"delivery"));});
+      });
+    }
   }
 
   return wrap;
@@ -6374,8 +6540,15 @@ function buildAdminTab(){
   if(effectiveTab===1){
     const v={name:"",cat:PCATS[0]||"",price:"",cost:"",colors:[],sizes:[],cats:[],tag:"",subCat:"",img:null};
     // ── Preset options (persistent via window) ──────────────────────
-    if(!window._presetColors)window._presetColors=["ດຳ","ຂາວ","ແດງ","ບົວ","ຟ້າ","ຂຽວ","ເຫຼືອງ","ສົ້ມ","ນ້ຳຕານ","ເທົາ"];
-    if(!window._presetSizes)window._presetSizes=["XS","S","M","L","XL","XXL","ຟຣີໄຊ"];
+    // Load presets from localStorage (persist across renders)
+    if(!window._presetColors){
+      try{const s=localStorage.getItem("laoh_presetColors");window._presetColors=s?JSON.parse(s):["ດຳ","ຂາວ","ແດງ","ບົວ","ຟ້າ","ຂຽວ","ເຫຼືອງ","ສົ້ມ","ນ້ຳຕານ","ເທົາ"];}
+      catch(e){window._presetColors=["ດຳ","ຂາວ","ແດງ","ບົວ","ຟ້າ","ຂຽວ","ເຫຼືອງ","ສົ້ມ","ນ້ຳຕານ","ເທົາ"];}
+    }
+    if(!window._presetSizes){
+      try{const s=localStorage.getItem("laoh_presetSizes");window._presetSizes=s?JSON.parse(s):["XS","S","M","L","XL","XXL","ຟຣີໄຊ"];}
+      catch(e){window._presetSizes=["XS","S","M","L","XL","XXL","ຟຣີໄຊ"];}
+    }
     if(!window._presetCats)window._presetCats=[...PCATS];
 
     // ── Chip builder (no render) ─────────────────────────────────────
@@ -6404,7 +6577,13 @@ function buildAdminTab(){
         if(e.key==="Enter"||e.key===","){
           e.preventDefault();
           const val=inp.value.trim().replace(/,/g,"");
-          if(val&&!presetArr.includes(val)){presetArr.push(val);selectedArr.push(val);buildChips(containerEl,presetArr,selectedArr,makeAddInp(presetArr,selectedArr,containerEl,placeholder));}
+          if(val&&!presetArr.includes(val)){
+            presetArr.push(val);selectedArr.push(val);
+            // Save preset to localStorage
+            if(presetArr===window._presetColors){try{localStorage.setItem("laoh_presetColors",JSON.stringify(presetArr));}catch(e){}}
+            if(presetArr===window._presetSizes){try{localStorage.setItem("laoh_presetSizes",JSON.stringify(presetArr));}catch(e){}}
+            buildChips(containerEl,presetArr,selectedArr,makeAddInp(presetArr,selectedArr,containerEl,placeholder));
+          }
           else if(val&&!selectedArr.includes(val)){selectedArr.push(val);buildChips(containerEl,presetArr,selectedArr,makeAddInp(presetArr,selectedArr,containerEl,placeholder));}
           inp.value="";
         }
@@ -9259,7 +9438,8 @@ function showEditShop(sh){
   const isShopSelf = user && user.role==="shop" && user.shopId===sh.id;
   const isSA = user && user.role==="admin";
   const fm={name:sh.name,emoji:sh.emoji||"",commission:sh.commission||10,logo:sh.logo||null,
-            slogan:sh.slogan||"",about:sh.about||"",banner:sh.banner||"",isLao:sh.isLao||false};
+            slogan:sh.slogan||"",about:sh.about||"",banner:sh.banner||"",isLao:sh.isLao||false,
+            lat:sh.lat?String(sh.lat):"",lng:sh.lng?String(sh.lng):"",address:sh.address||""};
   const mkI=function(ph,k,typ){
     typ=typ||"text";
     const i=document.createElement("input");
@@ -9328,6 +9508,22 @@ function showEditShop(sh){
   modal.appendChild(el("label",{className:"lbl"},"ຊື່ຮ້ານ"));modal.appendChild(mkI("ຊື່ຮ້ານ","name"));
   modal.appendChild(el("label",{className:"lbl"},"Emoji"));modal.appendChild(mkI("🏪","emoji"));
 
+  // ── Shop location (both roles) ──
+  modal.appendChild(el("label",{className:"lbl"},"📍 ທີ່ຕັ້ງຮ້ານ (ສຳລັບໄລເດີ)"));
+  modal.appendChild(el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",marginBottom:"6px"}},
+    mkI("Latitude (17.xxx)","lat","text"),
+    mkI("Longitude (102.xxx)","lng","text")
+  ));
+  modal.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"8px"}},"💡 ເປີດ Google Maps, ກົດຂວາ → 'ທີ່ຢູ່ຂອງຂ້ອຍ' ຫຼື Copy coordinates"));
+  (function(){
+    const addr=document.createElement("input");
+    addr.className="inp";addr.placeholder="ທີ່ຢູ່ຮ້ານ (ຖະໜົນ, ບ້ານ, ເມືອງ...)";
+    addr.value=fm.address||"";
+    addr.oninput=function(){fm.address=this.value;};
+    modal.appendChild(el("label",{className:"lbl"},"ທີ່ຢູ່ຂໍ້ຄວາມ"));
+    modal.appendChild(addr);
+  })();
+
   // ── Admin-only fields ──
   if(isSA){
     modal.appendChild(el("label",{className:"lbl"},"Commission %"));modal.appendChild(mkI("10","commission","number"));
@@ -9357,6 +9553,10 @@ function showEditShop(sh){
     if(fm.banner)sh.banner=fm.banner;
     sh.slogan=fm.slogan||sh.slogan||"";
     sh.about=fm.about||sh.about||"";
+    // Shop location
+    if(fm.lat&&!isNaN(parseFloat(fm.lat)))sh.lat=parseFloat(fm.lat);
+    if(fm.lng&&!isNaN(parseFloat(fm.lng)))sh.lng=parseFloat(fm.lng);
+    sh.address=fm.address||sh.address||"";
     toast("⏳ "+(_lang==="lo"?"ກຳລັງບັນທຶກ...":"Saving..."));
     saveToCloud("shops",sh.id,sh).then(function(){
       // Update session if shop editing their own
@@ -9370,7 +9570,10 @@ function showEditShop(sh){
 }
 
 function showEditProd(p){
-  if(!window._presetColors)window._presetColors=["ດຳ","ຂາວ","ແດງ","ບົວ","ຟ້າ","ຂຽວ","ເຫຼືອງ","ສົ້ມ","ນ້ຳຕານ","ເທົາ"];
+  if(!window._presetColors){
+    try{const s=localStorage.getItem("laoh_presetColors");window._presetColors=s?JSON.parse(s):["ດຳ","ຂາວ","ແດງ","ບົວ","ຟ້າ","ຂຽວ","ເຫຼືອງ","ສົ້ມ","ນ້ຳຕານ","ເທົາ"];}
+    catch(e){window._presetColors=["ດຳ","ຂາວ","ແດງ","ບົວ","ຟ້າ","ຂຽວ","ເຫຼືອງ","ສົ້ມ","ນ້ຳຕານ","ເທົາ"];}
+  }
   if(!window._presetSizes)window._presetSizes=["XS","S","M","L","XL","XXL","ຟຣີໄຊ"];
   if(!window._presetCats)window._presetCats=[...PCATS];
   let fm={...p,
@@ -9499,7 +9702,7 @@ function showEditProd(p){
     });
     const addCI=document.createElement("input");
     addCI.className="inp";addCI.placeholder="+ ເພີ່ມ...";addCI.style.cssText="width:80px;padding:4px 8px;font-size:.7rem;";
-    addCI.onkeydown=function(e){if(e.key==="Enter"&&this.value.trim()){const v=this.value.trim();if(!window._presetColors.includes(v))window._presetColors.push(v);if(!fm.selectedColors.includes(v))fm.selectedColors.push(v);this.value="";refreshColors();}};
+    addCI.onkeydown=function(e){if(e.key==="Enter"&&this.value.trim()){const v=this.value.trim();if(!window._presetColors.includes(v)){window._presetColors.push(v);try{localStorage.setItem("laoh_presetColors",JSON.stringify(window._presetColors));}catch(ex){}}if(!fm.selectedColors.includes(v))fm.selectedColors.push(v);this.value="";refreshColors();}};
     colorWrap.appendChild(addCI);
   }
   refreshColors();
@@ -10581,15 +10784,70 @@ function laohTranslateInit(){
 
 function laohTranslatePick(langCode){
   // Save choice
-  try{ localStorage.setItem('laoh_translate_picked','1'); }catch(e){}
-  // Apply translation
-  if(langCode !== 'lo'){
+  try{ localStorage.setItem('laoh_translate_picked','1'); localStorage.setItem('laoh_translate_lang',langCode); }catch(e){}
+
+  if(langCode === 'lo'){
+    // Restore original — reload without hash
+    laohTranslateClose();
     try{
-      const sel = document.querySelector('.goog-te-combo');
-      if(sel){ sel.value = langCode; sel.dispatchEvent(new Event('change')); }
+      const frame = document.querySelector('.goog-te-banner-frame');
+      if(frame){ frame.contentWindow.document.querySelector('#\:1').click(); }
     }catch(e){}
+    // fallback: reload
+    window.location.reload();
+    return;
   }
+
+  // Method 1: use .goog-te-combo select (standard)
+  function tryCombo(){
+    const sel = document.querySelector('.goog-te-combo');
+    if(sel && sel.options.length > 1){
+      sel.value = langCode;
+      sel.dispatchEvent(new Event('change'));
+      return true;
+    }
+    return false;
+  }
+
+  // Method 2: use cookie approach (Google Translate cookie)
+  function tryCookie(){
+    try{
+      // Set Google Translate cookie directly
+      const domain = location.hostname;
+      document.cookie = 'googtrans=/lo/'+langCode+'; path=/; domain='+domain;
+      document.cookie = 'googtrans=/lo/'+langCode+'; path=/';
+      // Also try subdomain
+      if(domain.split('.').length > 1){
+        document.cookie = 'googtrans=/lo/'+langCode+'; path=/; domain=.'+domain;
+      }
+      location.reload();
+      return true;
+    }catch(e){ return false; }
+  }
+
+  // Method 3: direct URL approach via Google Translate proxy
+  function tryProxy(){
+    const url = encodeURIComponent(location.href.split('#')[0]);
+    window.location.href = 'https://translate.google.com/translate?sl=lo&tl='+langCode+'&u='+url;
+  }
+
   laohTranslateClose();
+
+  // Try methods in order
+  if(tryCombo()) return;
+  // Wait for Google Translate to load then retry
+  let attempts = 0;
+  const interval = setInterval(function(){
+    attempts++;
+    if(tryCombo()){ clearInterval(interval); return; }
+    if(attempts >= 10){
+      clearInterval(interval);
+      // Fallback: cookie method
+      if(!tryCookie()){
+        tryProxy();
+      }
+    }
+  }, 300);
 }
 
 function laohTranslateClose(){

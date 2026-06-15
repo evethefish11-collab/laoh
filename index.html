@@ -199,6 +199,7 @@ input:focus,select:focus,textarea:focus{
   outline:none;
   -webkit-appearance:none;
 }
+.laoh-save-indicator{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:28px;border-radius:20px;font-size:.72rem;font-weight:800;cursor:default;padding:0 8px;font-family:inherit;border:1.5px solid transparent;transition:opacity .4s ease,background .3s;opacity:0;user-select:none;white-space:nowrap;vertical-align:middle;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
 <!-- Firebase SDK (compat mode) -->
@@ -298,18 +299,54 @@ try{
   storage=firebase.storage();
 }catch(e){console.warn("Firebase init failed:",e);}
 
+// ── SAVE INDICATOR ───────────────────────────────────────────
+var _pendingSaves=0;
+function _updateSaveIndicator(){
+  var els=document.querySelectorAll(".laoh-save-indicator");
+  els.forEach(function(el2){
+    if(_pendingSaves>0){
+      el2.textContent="☁️ "+_pendingSaves;
+      el2.style.opacity="1";
+      el2.style.background="#FFF3CD";
+      el2.style.color="#856404";
+      el2.style.border="1.5px solid #FFC107";
+      el2.title="ກຳລັງບັນທຶກ "+_pendingSaves+" ລາຍການ...";
+    } else {
+      el2.textContent="✅";
+      el2.style.background="#E8F5EE";
+      el2.style.color="#1B6B3A";
+      el2.style.border="1.5px solid #4CAF88";
+      el2.title="ທຸກຂໍ້ມູນຖືກບັນທຶກແລ້ວ";
+      setTimeout(function(){
+        el2.style.opacity="0";
+      },1500);
+    }
+  });
+}
+function _incSave(){_pendingSaves++;_updateSaveIndicator();}
+function _decSave(){_pendingSaves=Math.max(0,_pendingSaves-1);_updateSaveIndicator();}
+
 function saveToCloud(col,id,data){
   if(!db)return Promise.resolve();
   try{
     let d=data;
     if(col==="prods"){
-      // Strip base64 images (Cloudinary URLs are kept, only base64 is stripped)
       d=Object.assign({},data);
       if(d.img&&d.img.startsWith("data:"))d.img="__local__";
       if(d.imgs)d.imgs=d.imgs.map(function(im){return im&&im.startsWith("data:")?"__local__":im;});
     }
-    return db.collection(col).doc(String(id)).set(d,{merge:true});
+    _incSave();
+    return db.collection(col).doc(String(id)).set(d,{merge:true})
+      .then(function(r){_decSave();return r;})
+      .catch(function(e){_decSave();return e;});
   }catch(e){return Promise.resolve();}
+}
+function makeSaveIndicator(){
+  var s=document.createElement("span");
+  s.className="laoh-save-indicator";
+  s.textContent="✅";
+  s.style.opacity="0";
+  return s;
 }
 function showResetPwdModal(label, onSave){
   const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxWidth:"320px"}});
@@ -1426,7 +1463,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.8.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.8.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -1442,9 +1479,21 @@ function buildSideMenu(){
         ? el("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
             el("span",{style:{fontSize:"1rem"}},"👤"),
             el("div",{style:{flex:"1",fontSize:".78rem",color:"#1A2B5F",fontWeight:"600"}},user.name),
+            makeSaveIndicator(),
             el("button",{
               style:{background:"none",border:"1px solid #C8E6D4",borderRadius:"8px",padding:"4px 10px",fontSize:".68rem",color:"#6B8F75",cursor:"pointer",fontFamily:"sans-serif"},
-              onclick:function(){user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();closeSideMenu();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
+              onclick:function(){
+  if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+  try{
+    const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");
+    localStorage.setItem(_lck,JSON.stringify(cart));
+  }catch(e){}
+  cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+  window._appliedCoupon=null;window._appliedShipCoupon=null;
+  user=null;view="shop";
+  try{localStorage.removeItem("laoh_session");}catch(e){}
+  laohTranslateResetForNewSession();closeSideMenu();
+  toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
             },_lang==="lo"?"ອອກ":"Logout")
           )
         : el("button",{
@@ -1944,7 +1993,7 @@ function buildFeedPage(){
     // Pinned product
     if(pp){
       const prodRow=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px 10px",background:"#F0F7F2",margin:"6px 10px 10px",borderRadius:"12px",cursor:"pointer"},
-        onclick:function(){showProd(pp.id);}});
+        onclick:function(){const _sp=prods.find(function(x){return String(x.id)===String(pp.id)||x.id===pp.id;});if(_sp)showProduct(_sp);}});
       const pThumb=el("div",{style:{width:"44px",height:"44px",borderRadius:"8px",background:"#C8E6D4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:"0"}});
       const psrc=(pp.imgs&&pp.imgs[0]&&isUrl(pp.imgs[0]))?pp.imgs[0]:isUrl(pp.img)?pp.img:null;
       if(psrc){const pi=document.createElement("img");pi.src=psrc;pi.style.cssText="width:100%;height:100%;object-fit:cover;";pThumb.appendChild(pi);}
@@ -3174,7 +3223,7 @@ function showEditProfile(){
   ));
 }
 // ── RENDER ─────────────────────────────────────────────────────────
-function saveCart(){try{localStorage.setItem("laoh_cart",JSON.stringify(cart));}catch(e){}}
+function saveCart(){try{const _ck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_ck,JSON.stringify(cart));}catch(e){}}
 function render(){
   clearTimeout(window._fbTimer);
   // Don't auto-saveAll on every render - causes issues in preview
@@ -3226,7 +3275,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.8.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.8.1")
   );
 
   // Icon style helper
@@ -4710,7 +4759,18 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
               }
             }
             return;}
-        if(aMode==="login"){const u=users.find(x=>x.username===aF.u&&x.password===aF.p);if(u){user=Object.assign({role:"c"},u);try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}closeOv();render();toast("ยินดีต้อนรับ "+u.name);setTimeout(function(){if(laohTranslateShouldShow())laohTranslateShow();},500);}else{aErr=_lang==="lo"?"ຂໍ້ມູນບໍ່ຖືກຕ້ອງ":"Incorrect credentials";drawAuth();}}
+        if(aMode==="login"){const u=users.find(x=>x.username===aF.u&&x.password===aF.p);if(u){
+  user=Object.assign({role:"c"},u);
+  try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
+  // Load this user's saved cart (uid-based)
+  try{
+    const _lck2="laoh_cart"+(user.id?"_"+user.id:"");
+    const _sc2=localStorage.getItem(_lck2);
+    if(_sc2){const _pc2=JSON.parse(_sc2);if(Array.isArray(_pc2))cart=_pc2.map(function(i){return Object.assign({},i);});}
+    else cart=[];
+  }catch(e){cart=[];}
+  closeOv();render();toast("ยินดีต้อนรับ "+u.name);
+  setTimeout(function(){if(laohTranslateShouldShow())laohTranslateShow();},500);}else{aErr=_lang==="lo"?"ຂໍ້ມູນບໍ່ຖືກຕ້ອງ":"Incorrect credentials";drawAuth();}}
         else{if(!aF.u||!aF.p||!aF.n||!aF.ph||(aF.ph).replace(/[^0-9]/g,"").length<8){aErr="ກະລຸນາໃສ່ຂໍ້ມູນໃຫ້ຄົບ (ເບີ 8 ຕົວ)";drawAuth();return;}if(!aF.consent){
               showOv(el("div",{className:"mod",style:{textAlign:"center",maxWidth:"320px"},onclick:function(e){e.stopPropagation();}},
                 el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"📋"),
@@ -5416,9 +5476,19 @@ function buildStaffDashboard(){
       el("div",{style:{fontSize:".72rem",color:"rgba(255,255,255,.7)",marginTop:"2px"}},
         "📅 "+new Date().toLocaleDateString("lo-LA",{weekday:"short",day:"numeric",month:"short"}))
     ),
-    el("button",{onclick:function(){user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}render();toast("ອອກຈາກລະບົບ ✓");},
-      style:{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.4)",color:"#fff",borderRadius:"20px",padding:"6px 14px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}
-    },"🚪 ອອກ")
+    el("div",{style:{display:"flex",gap:"6px",alignItems:"center"}},
+      makeSaveIndicator(),
+      el("button",{onclick:function(){
+  if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+  try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+  if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ ອອກ?"))return;
+  cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+  user=null;view="shop";
+  try{localStorage.removeItem("laoh_session");}catch(e){}
+  render();toast("ອອກຈາກລະບົບ ✓");},
+        style:{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.4)",color:"#fff",borderRadius:"20px",padding:"6px 14px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}
+      },"🚪 ອອກ")
+    )
   ));
 
   // Staff Tab bar
@@ -5785,7 +5855,10 @@ function buildRiderDashboard(){
       el("div",{style:{fontSize:".72rem",color:"rgba(255,255,255,.7)",marginTop:"2px"}},
         "📅 "+new Date().toLocaleDateString("lo-LA",{weekday:"short",day:"numeric",month:"short"}))
     ),
-    el("button",{onclick:function(){user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບ ✓");render();},
+    el("button",{onclick:function(){try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+          if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ ອອກ?"))return;
+          cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+          user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບ ✓");render();},
       style:{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.4)",color:"#fff",borderRadius:"20px",padding:"6px 14px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}
     },"🚪 ອອກ")
   ));
@@ -6314,14 +6387,27 @@ function buildAdmin(){
           }
         },"🔄"),
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"rgba(220,53,69,.1)",border:"1.5px solid rgba(220,53,69,.5)",color:"#C0392B",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
-          onclick:function(){user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
+          onclick:function(){
+  try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+  if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+  cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+  user=null;view="shop";
+  try{localStorage.removeItem("laoh_session");}catch(e){}
+  laohTranslateResetForNewSession();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
         },(_lang==="lo"?"🚪 ອອກ":"🚪 Logout"))
       ):isNarrator?el("div",{style:{display:"flex",gap:"6px"}},
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"#F5F0FF",border:"1.5px solid #CE93D8",color:"#5D2D7A",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
           onclick:function(){prevView="admin";view="narratorProfile";render();}
         },"🪪 ໂປຣໄຟລ໌"),
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"rgba(220,53,69,.1)",border:"1.5px solid rgba(220,53,69,.5)",color:"#C0392B",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
-          onclick:function(){user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບແລ້ວ ✓");render();}
+          onclick:function(){
+  try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+  if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+  cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+  window._appliedCoupon=null;window._appliedShipCoupon=null;
+  user=null;view="shop";
+  try{localStorage.removeItem("laoh_session");}catch(e){}
+  laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບແລ້ວ ✓");render();}
         },"🚪 ອອກ")
       ):isShop?el("div",{style:{display:"flex",gap:"6px"}},
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"#F0F7F2",border:"1.5px solid #C8E6D4",color:"#1B6B3A",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
@@ -6333,7 +6419,13 @@ function buildAdmin(){
           }
         },(_lang==="lo"?"🪪 ໂປຣໄຟລ໌":"🪪 Profile")),
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"rgba(220,53,69,.1)",border:"1.5px solid rgba(220,53,69,.5)",color:"#C0392B",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
-          onclick:function(){user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
+          onclick:function(){
+  try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+  if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+  cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+  user=null;view="shop";
+  try{localStorage.removeItem("laoh_session");}catch(e){}
+  laohTranslateResetForNewSession();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
         },(_lang==="lo"?"🚪 ອອກ":"🚪 Logout"))
       ):null
     ),
@@ -10093,6 +10185,9 @@ function showNarratorProfileModal(){
       color:"#C0392B",borderRadius:"10px",padding:"9px",fontSize:".78rem",fontWeight:"700",
       cursor:"pointer",fontFamily:"inherit",marginTop:"6px"},
     onclick:function(){
+      try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+      if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+      cart=[];selectedCartKeys=new Set();_checkoutCart=null;
       user=null;view="shop";
       try{localStorage.removeItem("laoh_session");}catch(e){}
       laohTranslateResetForNewSession();
@@ -10814,6 +10909,9 @@ function buildNarratorProfile(){
         color:"#C0392B",borderRadius:"12px",padding:"13px",fontSize:".88rem",fontWeight:"800",
         cursor:"pointer",fontFamily:"inherit"},
       onclick:function(){
+        try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+        if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ ອອກ?"))return;
+        cart=[];selectedCartKeys=new Set();_checkoutCart=null;
         user=null;view="shop";
         try{localStorage.removeItem("laoh_session");}catch(e){}
         laohTranslateResetForNewSession();
@@ -11158,6 +11256,9 @@ function buildProfile(){
       // logout icon มุมบนขวา
       el("div",{style:{position:"absolute",top:"10px",right:"10px",display:"flex",flexDirection:"column",alignItems:"center",gap:"1px",cursor:"pointer"},
         onclick:function(){
+          try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+          if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+          cart=[];selectedCartKeys=new Set();_checkoutCart=null;
           user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
           toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();
         }
@@ -11688,7 +11789,13 @@ try{
 // Always persist session on page load if user exists
 if(user){try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}}
 // Restore cart from localStorage
-try{const _sc=localStorage.getItem("laoh_cart");if(_sc){const _pc=JSON.parse(_sc);if(Array.isArray(_pc))cart=_pc.map(function(i){return Object.assign({},i);});}}catch(e){}
+// Cart restore — load per-user cart after session restore
+try{
+  const _su2=JSON.parse(localStorage.getItem("laoh_session")||"null");
+  const _ck="laoh_cart"+(_su2&&_su2.id?"_"+_su2.id:"");
+  const _sc=localStorage.getItem(_ck);
+  if(_sc){const _pc=JSON.parse(_sc);if(Array.isArray(_pc))cart=_pc.map(function(i){return Object.assign({},i);});}
+}catch(e){}
 // First render with local data (fast)
 render();
 // Then load from Firebase (syncs everyone's data)
@@ -11861,6 +11968,8 @@ loadFromCloud().then(function(){
   const _origRender = window.render;
   window.render = function(){
     _origRender();
+    // Update save indicator after render
+    setTimeout(_updateSaveIndicator, 0);
     if(user && user.role==="admin"){
       startPolling();
     } else {

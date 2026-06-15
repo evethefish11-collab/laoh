@@ -374,7 +374,7 @@ async function loadFromCloud(){
   window._presetColors=null; window._presetSizes=null;
   if(!db){render();return;}
   try{
-    const [ps,os,prs,us,ss,cps,shs,wds,apps,nars,lvrs,stfs,rdrs]=await Promise.all([
+    const [ps,os,prs,us,ss,cps,shs,wds,apps,nars,lvrs,stfs,rdrs,slipSnap]=await Promise.all([
       db.collection("prods").get(),
       db.collection("orders").orderBy("id","desc").get(),
       db.collection("promos").get(),
@@ -387,7 +387,8 @@ async function loadFromCloud(){
       db.collection("narrators").get(),
       db.collection("liveRooms").get(),
       db.collection("staffList").get(),
-      db.collection("riders").get()
+      db.collection("riders").get(),
+      db.collection("slips").get()
     ]);
     if(!ps.empty){
       const fbProds=ps.docs.map(function(d){
@@ -400,6 +401,20 @@ async function loadFromCloud(){
     }
     if(!os.empty){
       orders=os.docs.map(function(d){return JSON.parse(JSON.stringify(d.data()));}).sort(function(a,b){return b.id-a.id;});
+    }
+    // Merge slips into orders (for legacy orders stored in slips collection)
+    if(slipSnap&&!slipSnap.empty){
+      const slipMap={};
+      slipSnap.docs.forEach(function(d){
+        const sd=d.data();
+        if(sd.orderId&&sd.slip) slipMap[String(sd.orderId)]=sd.slip;
+      });
+      orders=orders.map(function(o){
+        if(!o.slip&&slipMap[String(o.id)]){
+          return Object.assign({},o,{slip:slipMap[String(o.id)]});
+        }
+        return o;
+      });
     }
     if(!prs.empty)promos=prs.docs.map(d=>d.data());
     if(!us.empty)users=us.docs.map(d=>d.data());
@@ -1463,7 +1478,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.8.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.8.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3159,7 +3174,31 @@ function showAddrModal(){
         if(!newVill){toast((_lang==="lo"?"ກະລຸນາໃສ່ຊື່ບ້ານ":"Please enter village"));return;}
         addAddress({type:"home",label:lbl,house:newHouse||"",village:newVill,district:newDist,lat:newLat,lng:newLng,homeFee:newFee});
       }
-      toast("ບັນທຶກ ✓"); closeOv(); render();
+      toast("ບັນທຶກ ✓");
+      // If called from checkout, apply address and go back to checkout
+      if(_checkoutCart&&_checkoutCart.length>0){
+        closeOv();
+        // Auto-apply saved address to checkout if home delivery
+        const lastAddr=getSavedAddresses().slice(-1)[0];
+        if(lastAddr){
+          if(lastAddr.type==="home"){
+            coDl.deliveryType="home";
+            coDl.house=lastAddr.house||"";
+            coDl.village=lastAddr.village||"";
+            coDl.district=lastAddr.district||"";
+            coDl.lat=lastAddr.lat||null;
+            coDl.lng=lastAddr.lng||null;
+            coDl.homeFee=lastAddr.homeFee||0;
+          } else {
+            coDl.deliveryType="carrier";
+            coDl.ca=lastAddr.carrier||coDl.ca;
+            coDl.br=lastAddr.branch||"";
+          }
+        }
+        renderCo();
+      } else {
+        closeOv(); render();
+      }
     }
   },(_lang==="lo"?"💾 ບັນທຶກທີ່ຢູ່":"💾 Save Address")));
   showOv(modal,null);
@@ -3275,7 +3314,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.8.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.8.2")
   );
 
   // Icon style helper
@@ -5181,10 +5220,13 @@ function renderCo(){
               at:new Date().toLocaleString("th-TH"),
               groupId:baseOid};
             createdOrders.push(o);
-            const oWithSlip=Object.assign({},o,{slip:coSlip});
+            // Save slip URL both inside order AND in slips collection
+            const oWithSlip=Object.assign({},o,{slip:coSlip||null});
             orders=[oWithSlip].concat(orders);
+            // Save to slips collection (for legacy compatibility)
             if(coSlip&&db){try{db.collection("slips").doc(String(sOid)).set({slip:coSlip,orderId:sOid,at:Date.now(),uid:user&&user.id});}catch(e){}}
-            saveToCloud("orders",sOid,o);
+            // Save order WITH slip field included
+            saveToCloud("orders",sOid,oWithSlip);
             // ── Deduct stock for each item in this order ──────────
             sitems.forEach(function(item){
               const pidx=prods.findIndex(function(x){return x&&x.id===item.id;});
@@ -7941,7 +7983,11 @@ function buildAdminTab(){
                   }
                   const textDiv=el("div",{style:{flex:"1",minWidth:"0"}});
                   textDiv.appendChild(el("div",{style:{fontSize:".75rem",color:isCancelled?"#999":"#1A1020",fontWeight:"500",whiteSpace:"nowrap",overflow:"hidden",textOverflow:isCancelled?"line-through ellipsis":"ellipsis",textDecoration:isCancelled?"line-through":"none"}},(i.preorder?"📦 ":"")+(i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q));
-                  textDiv.appendChild(el("div",{style:{fontSize:".72rem",color:isCancelled?"#bbb":"#1B6B3A",fontWeight:"600",textDecoration:isCancelled?"line-through":"none"}},"₭"+fmt(i.p*i.q)));
+                  // Product ID + price row
+                  const priceRow=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}});
+                  priceRow.appendChild(el("span",{style:{fontSize:".62rem",color:"#aaa",fontFamily:"monospace",letterSpacing:"0.5px"}},i.id?"#"+String(i.id).slice(-6):""));
+                  priceRow.appendChild(el("span",{style:{fontSize:".72rem",color:isCancelled?"#bbb":"#1B6B3A",fontWeight:"600",textDecoration:isCancelled?"line-through":"none"}},"₭"+fmt(i.p*i.q)));
+                  textDiv.appendChild(priceRow);
                   row.appendChild(textDiv);
                   if((isSuperAdmin||isShop)&&o.status!=="ອໍເດີສຳເລັດແລ້ວ"&&o.status!=="ຍົກເລີກ"){
                     const cancelKey=i.n+(i.c||"")+(i.s||"");

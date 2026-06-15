@@ -337,7 +337,7 @@ async function loadFromCloud(){
   window._presetColors=null; window._presetSizes=null;
   if(!db){render();return;}
   try{
-    const [ps,os,prs,us,ss,cps,shs,wds,apps,nars,lvrs]=await Promise.all([
+    const [ps,os,prs,us,ss,cps,shs,wds,apps,nars,lvrs,stfs,rdrs]=await Promise.all([
       db.collection("prods").get(),
       db.collection("orders").orderBy("id","desc").get(),
       db.collection("promos").get(),
@@ -348,7 +348,9 @@ async function loadFromCloud(){
       db.collection("withdrawals").get(),
       db.collection("shopApplications").get(),
       db.collection("narrators").get(),
-      db.collection("liveRooms").get()
+      db.collection("liveRooms").get(),
+      db.collection("staffList").get(),
+      db.collection("riders").get()
     ]);
     if(!ps.empty){
       const fbProds=ps.docs.map(function(d){
@@ -369,6 +371,8 @@ async function loadFromCloud(){
     if(ss.exists&&ss.data().freeShipQty!=null)_freeShipQty=ss.data().freeShipQty;
     if(ss.exists&&ss.data().freeShipMinAmt!=null)_freeShipMinAmt=ss.data().freeShipMinAmt;
     if(ss.exists&&ss.data().reviewCommPct!=null){try{localStorage.setItem("laoh_reviewCommPct",String(ss.data().reviewCommPct));}catch(e){}}
+    if(ss.exists&&ss.data().adminWaNumber){_adminWaNumber=ss.data().adminWaNumber;try{localStorage.setItem("laoh_adminWa",ss.data().adminWaNumber);}catch(e){}}
+    else{try{const _lwa=localStorage.getItem("laoh_adminWa");if(_lwa)_adminWaNumber=_lwa;}catch(e){}}
     if(ss.exists&&ss.data().carriers&&ss.data().carriers.length>0){try{localStorage.setItem("laoh_carriers",JSON.stringify(ss.data().carriers));}catch(e){}}
     if(cps&&!cps.empty)coupons=cps.docs.map(function(d){return JSON.parse(JSON.stringify(d.data()));});
     if(shs&&!shs.empty){
@@ -392,6 +396,14 @@ async function loadFromCloud(){
     // Load liveRooms from Firebase
     if(lvrs&&!lvrs.empty){
       liveRooms=lvrs.docs.map(function(d){return d.data();});
+    }
+    // Load staffList from Firebase
+    if(stfs&&!stfs.empty){
+      staffList=stfs.docs.map(function(d){return d.data();});
+    }
+    // Load riders from Firebase
+    if(rdrs&&!rdrs.empty){
+      riders=rdrs.docs.map(function(d){return d.data();});
     }
     // Load audiobooks from Firebase
     try{
@@ -431,7 +443,7 @@ function saveAll(){
 
 // ── CONSTANTS ──────────────────────────────────────────────────────
 const P="#1B6B3A",D="#1A2B5F",B="#C8E6D4",C="#F0F7F2";
-const fmt=n=>Number(n).toLocaleString("lo-LA");
+const fmt=n=>Number(n||0).toLocaleString("lo-LA");
 const isUrl=s=>s&&s!=="__local__"&&(s.startsWith("http")||s.startsWith("data:"));
 const getImg=p=>{const im=p.img;return(im&&im!=="__local__")?im:(p.imgs&&p.imgs[0]&&p.imgs[0]!=="__local__"?p.imgs[0]:"🛍");};
 const rdy=p=>p.stock&&Object.values(p.stock).some(v=>v>0);
@@ -606,6 +618,7 @@ let orders=[],cart=[],selectedCartKeys=new Set(),_checkoutCart=null,promos=[],co
 let view="shop",fCat=0,fAv="all",fPromo=false,fCo="",fSi="",fSort="new",fOrderSt="",aTab=0,fShop=null,fSearch="",prevView="shop",fShopSubCat="all",fShopSort="new";
 let toastTimer=null;
 let _shippingFee=20000,_freeShipQty=3,_freeShipMinAmt=0;
+let _adminWaNumber="8562059822646"; // Admin WhatsApp — editable in Settings
 // ── VTE districts helpers ──────────────────────────────────────────
 function getVteDistricts(){
   try{const s=localStorage.getItem("laoh_vte_districts");if(s)return JSON.parse(s);}catch(e){}
@@ -1413,7 +1426,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.70")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.72")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -1706,6 +1719,7 @@ function buildFeedPage(){
     const item=document.createElement("div");
     item.className="feed-item";
     item.style.cssText="position:relative;height:100%;background:#0a0a0a;display:flex;flex-direction:column;";
+    item.dataset.rvId=String(rv.id);
 
     // media (image or video)
     const media=document.createElement("div");
@@ -1875,7 +1889,11 @@ function buildFeedPage(){
     svgShare.setAttribute("stroke-linecap","round");svgShare.setAttribute("stroke-linejoin","round");
     svgShare.innerHTML='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>';
     sbEl.appendChild(svgShare);
-    sbEl.onclick=function(){if(navigator.share)navigator.share({title:"LaoH Review",url:location.href});else toast(_lang==="lo"?"ສຳເນົາລິງຂ!":"Copied!");};
+    sbEl.onclick=function(){
+      const rvUrl=location.origin+location.pathname+"?rv="+rv.id;
+      if(navigator.share){navigator.share({title:(rv.userName||"LaoH")+" ຮີວິວ",text:rv.caption||"",url:rvUrl}).catch(function(){});}
+      else{try{navigator.clipboard.writeText(rvUrl);}catch(e){}toast("📋 ຄັດລອກລິ້ງຮີວິວ ✓");}
+    };
     sa.appendChild(sbEl);
     const sl=document.createElement("div"); sl.className="feed-action-label"; sl.textContent="ສົ່ງຕໍ່";
     sa.appendChild(sl); sidebar.appendChild(sa);
@@ -1890,6 +1908,7 @@ function buildFeedPage(){
     const sh=shops.find(function(s){return s.id===post.shopId;})||{};
     const pp=post.pinnedProdId?prods.find(function(p){return p.id===post.pinnedProdId;}):null;
     const card=el("div",{style:{background:"#fff",borderRadius:"16px",marginBottom:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.08)"}});
+    card.dataset.postId=String(post.id);
 
     // Shop header
     const hdr=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px 8px",cursor:"pointer"},
@@ -1943,7 +1962,7 @@ function buildFeedPage(){
           const ex=cart.find(function(x){return x.k===k;});
           if(ex){const ei=cart.findIndex(function(x){return x.k===k;});if(ei>=0)cart[ei]=Object.assign({},cart[ei],{q:(cart[ei].q||1)+1});}
           else cart.push(Object.assign({},pp,{k:k,co:co,si:sz,q:1,preorder:false,dispPrice:pp.price,orderSource:"shoppost",shopPostId:post.id,shopPostCaption:post.caption||""}));
-          toast("🛒 ເພີ່ມ "+pp.name+" ແລ້ວ ✓");render();
+          saveCart();toast("🛒 ເພີ່ມ "+pp.name+" ແລ້ວ ✓");render();
         }
       },"🛒 ຊື້"));
       card.appendChild(prodRow);
@@ -1965,6 +1984,15 @@ function buildFeedPage(){
         likeCnt.textContent=(liked?"❤️ ":"🤍 ")+(post.likes||0);}catch(e){}
       }
     },likeCnt));
+    // Share button for shop post
+    actRow.appendChild(el("button",{
+      style:{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",padding:"4px 0",fontFamily:"inherit",marginLeft:"auto"},
+      onclick:function(){
+        const postUrl=location.origin+location.pathname+"?post="+post.id;
+        if(navigator.share){navigator.share({title:(sh.name||"LaoH")+" Post",text:post.caption||"",url:postUrl}).catch(function(){});}
+        else{try{navigator.clipboard.writeText(postUrl);}catch(e){}toast("📋 ຄັດລອກລິ້ງໂພສ ✓");}
+      }
+    },el("span",{style:{fontSize:".78rem",color:"#6B8F75"}},"📤 ສົ່ງຕໍ່")));
     card.appendChild(actRow);
     scroll.appendChild(card);
   }
@@ -2029,7 +2057,7 @@ function buildFeedPage(){
           onclick:function(e){e.stopPropagation();
             const co=(pinnedProd.colors||[])[0]||"";const si=(pinnedProd.sizes||[])[0]||"";
             const k=pinnedProd.id+"-"+co+"-"+si;const ex=cart.find(function(x){return x.k===k;});
-            if(ex){const ei=cart.findIndex(function(x){return x.k===k;});if(ei>=0)cart[ei]=Object.assign({},cart[ei],{q:(cart[ei].q||1)+1});}else cart.push({...pinnedProd,k,co,si,q:1,preorder:false,dispPrice:pinnedProd.price,reviewRef:ab.id,orderSource:"audiobook",audiobookId:ab.id,audiobookTitle:ab.title||""});
+            if(ex){const ei=cart.findIndex(function(x){return x.k===k;});if(ei>=0)cart[ei]=Object.assign({},cart[ei],{q:(cart[ei].q||1)+1});}else{cart.push({...pinnedProd,k,co,si,q:1,preorder:false,dispPrice:pinnedProd.price,reviewRef:ab.id,orderSource:"audiobook",audiobookId:ab.id,audiobookTitle:ab.title||""});saveCart();}
             // Track buy for commission
             ab.buys=(ab.buys||0)+1;
             const narInfo2=narrators.find(function(n){return n.id===ab.narratorId;})||{commRate:5};
@@ -2183,6 +2211,27 @@ function buildFeedPage(){
         ),
         el("div",{className:"feed-action-label"},_lang==="lo"?"ຄອມເມັນ":"Comment")
       ),
+      // Share action
+      el("div",{className:"feed-action"},
+        (function(){
+          const shareBtn=document.createElement("button");
+          shareBtn.className="feed-action-btn";
+          const svgS=document.createElementNS("http://www.w3.org/2000/svg","svg");
+          svgS.setAttribute("viewBox","0 0 24 24");svgS.setAttribute("width","22");svgS.setAttribute("height","22");
+          svgS.setAttribute("fill","none");svgS.setAttribute("stroke","#fff");svgS.setAttribute("stroke-width","2.2");
+          svgS.setAttribute("stroke-linecap","round");svgS.setAttribute("stroke-linejoin","round");
+          svgS.innerHTML='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>';
+          shareBtn.appendChild(svgS);
+          shareBtn.onclick=function(e){
+            e.stopPropagation();
+            const liveUrl=location.origin+location.pathname+"?live="+room.id;
+            if(navigator.share){navigator.share({title:(sh.name||"LaoH")+" Live",text:room.title||"",url:liveUrl}).catch(function(){});}
+            else{try{navigator.clipboard.writeText(liveUrl);}catch(err){}toast("📋 ຄັດລອກລິ້ງ Live ✓");}
+          };
+          return shareBtn;
+        })(),
+        el("div",{className:"feed-action-label"},_lang==="lo"?"ສົ່ງຕໍ່":"Share")
+      ),
 
     );
 
@@ -2248,7 +2297,7 @@ function buildFeedPage(){
                 const k=p.id+"-"+co+"-"+si;
                 const ex=cart.find(x=>x.k===k);
                 if(ex){const ei=cart.findIndex(x=>x.k===k);if(ei>=0)cart[ei]=Object.assign({},cart[ei],{q:(cart[ei].q||1)+1});}
-                else cart.push({...p,k,co,si,q:1,preorder:false,dispPrice:price,reviewRef:window._lastReviewRef||null,orderSource:window._lastReviewRef?"review":"live",reviewId:window._lastReviewRef||null});
+                else{cart.push({...p,k,co,si,q:1,preorder:false,dispPrice:price,reviewRef:window._lastReviewRef||null,orderSource:window._lastReviewRef?"review":"live",reviewId:window._lastReviewRef||null});saveCart();}
                 window._lastReviewRef=null; // clear หลัง attach ไปที่ cart item
                 toast((_lang==="lo"?"✅ ເພີ່ມໃສ່ກະຕ່າ!":"✅ Added to cart!"));
                 render();
@@ -2756,7 +2805,7 @@ function buildLivePage(){
                         const k=p.id+"-"+co+"-"+si;
                         const ex=cart.find(x=>x.k===k);
                         if(ex){const ei=cart.findIndex(x=>x.k===k);if(ei>=0)cart[ei]=Object.assign({},cart[ei],{q:(cart[ei].q||1)+1});}
-                        else cart.push({...p,k,co,si,q:1,preorder:false,dispPrice:price,reviewRef:window._lastReviewRef||null,orderSource:window._lastReviewRef?"review":"live",reviewId:window._lastReviewRef||null});
+                        else{cart.push({...p,k,co,si,q:1,preorder:false,dispPrice:price,reviewRef:window._lastReviewRef||null,orderSource:window._lastReviewRef?"review":"live",reviewId:window._lastReviewRef||null});saveCart();}
                         window._lastReviewRef=null;
                         toast(_lang==="lo"?"✅ ເພີ່ມໃສ່ກະຕ່າແລ້ວ!":"✅ Added to cart!");
                         render();
@@ -3177,7 +3226,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.70")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.72")
   );
 
   // Icon style helper
@@ -3385,31 +3434,11 @@ function buildShopProfile(shopId){
       style:{position:"absolute",top:"12px",left:"12px",background:"rgba(255,255,255,0.25)",border:"none",borderRadius:"50%",width:"34px",height:"34px",color:"#fff",fontSize:"1.1rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
       onclick:()=>{const pv=prevView||"shop";prevView="shop";view=pv;render();}
     },"←"),
-    // share + LaoH certified top-right
-    el("div",{style:{position:"absolute",top:"10px",right:"12px",display:"flex",gap:"6px",alignItems:"center"}},
-      // Share button
-      el("button",{
-        style:{background:"rgba(255,255,255,0.92)",border:"none",borderRadius:"20px",padding:"4px 10px",
-          display:"flex",alignItems:"center",gap:"4px",cursor:"pointer",
-          boxShadow:"0 1px 4px rgba(0,0,0,.2)",fontSize:".7rem",fontWeight:"700",color:"#1A2B5F"},
-        onclick:function(e){
-          e.stopPropagation();
-          const shareUrl=location.origin+location.pathname+"?shop="+sh.id;
-          if(navigator.share){
-            navigator.share({title:sh.name,text:(sh.slogan||sh.name),url:shareUrl})
-              .catch(function(){});
-          } else {
-            try{navigator.clipboard.writeText(shareUrl);}catch(err){}
-            toast("📋 ຄັດລອກລິ້ງຮ້ານແລ້ວ ✓");
-          }
-        }
-      },"🔗 "+(_lang==="lo"?"ແຊ່ ":"Share")),
-      // LaoH Certified badge
-      sh.isLao?el("div",{style:{background:"rgba(255,255,255,.92)",borderRadius:"20px",padding:"3px 8px",display:"flex",alignItems:"center",gap:"4px",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}},
-        el("span",{style:{fontSize:".85rem"}},"🇱🇦"),
-        el("span",{style:{fontSize:".65rem",fontWeight:"800",color:"#C62828"}},"LaoH Certified")
-      ):null
-    )
+    // LaoH Certified badge top-right only
+    sh.isLao?el("div",{style:{position:"absolute",top:"10px",right:"12px",background:"rgba(255,255,255,.92)",borderRadius:"20px",padding:"3px 8px",display:"flex",alignItems:"center",gap:"4px",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}},
+      el("span",{style:{fontSize:".85rem"}},"🇱🇦"),
+      el("span",{style:{fontSize:".65rem",fontWeight:"800",color:"#C62828"}},"LaoH Certified")
+    ):null
   );
 
   const avatarRow = el("div",{style:{display:"flex",alignItems:"flex-end",padding:"0 16px",marginTop:"-36px",gap:"12px",position:"relative",zIndex:"2"}},
@@ -3562,12 +3591,35 @@ function buildShopProfile(shopId){
     : el("div",{className:"grid",style:{padding:"0 14px 20px"}},filteredProds.map(p=>buildCard(p,PM)));
 
   // followBtn overlay
-  if(followBtn){
+  if(followBtn||true){
     avatarRow.style.position="relative";
-    followBtn.style.position="absolute";
-    followBtn.style.top="8px";
-    followBtn.style.right="16px";
-    avatarRow.appendChild(followBtn);
+    // Share button (icon style like feed buttons)
+    const shareIconBtn=el("button",{
+      style:{position:"absolute",top:"8px",right:followBtn?"76px":"16px",
+        width:"38px",height:"38px",borderRadius:"50%",border:"1.5px solid #C8E6D4",
+        background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",
+        justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,.1)",padding:"0"},
+      title:_lang==="lo"?"ແຊ່ຮ້ານ":"Share Shop",
+      onclick:function(e){
+        e.stopPropagation();
+        const shareUrl=location.origin+location.pathname+"?shop="+sh.id;
+        if(navigator.share){
+          navigator.share({title:sh.name,text:(sh.slogan||sh.name),url:shareUrl}).catch(function(){});
+        } else {
+          try{navigator.clipboard.writeText(shareUrl);}catch(err){}
+          toast("📋 ຄັດລອກລິ້ງຮ້ານແລ້ວ ✓");
+        }
+      }
+    });
+    // Upload/share SVG icon (same style as feed icons)
+    shareIconBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B6B3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+    avatarRow.appendChild(shareIconBtn);
+    if(followBtn){
+      followBtn.style.position="absolute";
+      followBtn.style.top="8px";
+      followBtn.style.right="16px";
+      avatarRow.appendChild(followBtn);
+    }
   }
 
   const parts=[banner,avatarRow,info,stats];
@@ -4022,7 +4074,7 @@ function buildShopFooter(){
           el("span",{style:{fontSize:".8rem",color:"rgba(255,255,255,.8)"}},s)))
       ),
       
-      el("a",{href:"https://wa.me/8562059822646",target:"_blank",style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:"11px",borderRadius:"10px",background:"#25D366",color:"#fff",textDecoration:"none",fontWeight:"700",fontSize:".85rem",fontFamily:"sans-serif"}},t("contact"))
+      el("a",{href:"https://wa.me/"+_adminWaNumber,target:"_blank",style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:"11px",borderRadius:"10px",background:"#25D366",color:"#fff",textDecoration:"none",fontWeight:"700",fontSize:".85rem",fontFamily:"sans-serif"}},t("contact"))
     ),
     el("div",{style:{background:"#1A2B5F",color:"rgba(255,255,255,.4)",padding:"20px 14px 14px"}},
       el("div",{style:{fontSize:"1.05rem",color:"#4CAF88",marginBottom:"6px",fontWeight:"900",fontFamily:"'Playfair Display',Georgia,serif"}},"🌺 LaoH ລາວເຮັດ"),
@@ -4094,7 +4146,7 @@ function buildMemberBanner(){
   }).sort(function(a,b){return b.score-a.score;});
 
   const topRec=scored.slice(0,6).map(function(x){return x.p;});
-  const topSale=prods.filter(function(p){return p.tag==="sale";}).slice(0,6);
+
 
   // สร้าง horizontal scroll card row
   function miniCard(p){
@@ -4126,15 +4178,10 @@ function buildMemberBanner(){
     wrap.appendChild(recRow);
   }
 
-  // ส่วนขายดี
-  if(topSale.length>0){
-    wrap.appendChild(el("div",{style:{fontWeight:"800",fontSize:".82rem",color:"#C0392B",margin:"10px 0 7px"}},
-      (_lang==="lo"?"🔥 ສິນຄ້າຂາຍດີ":"🔥 Best Sellers")));
-    const saleRow=el("div",{style:{display:"flex",gap:"8px",overflowX:"auto",paddingBottom:"4px",scrollbarWidth:"none"}});
-    topSale.forEach(function(p){saleRow.appendChild(miniCard(p));});
-    wrap.appendChild(saleRow);
-  }
+  // Best Sellers section removed — show only ແນະນຳ
 
+  // Only return if there are products to show
+  if(topRec.length===0) return null;
   return wrap;
 }
 
@@ -4323,7 +4370,7 @@ function showProduct(p){
           if(ex.q<maxQ){if(eidx>=0)cart[eidx]=Object.assign({},cart[eidx],{q:(cart[eidx].q||1)+1});ex=cart[eidx]||ex;}
           else{toast(_lang==="lo"?"ສິນຄ້າໃນ Stock ມີພຽງ "+maxQ+" ຊິ້ນ":"Stock limit: "+maxQ+" pcs");return;}
         }else{
-          cart.push({...p,k,co:selColor,si:selSize,q:1,preorder,dispPrice:promo?promo.price:p.price,reviewRef:window._lastReviewRef||null,orderSource:window._lastReviewRef?"review":"product",reviewId:window._lastReviewRef||null});
+          cart.push({...p,k,co:selColor,si:selSize,q:1,preorder,dispPrice:promo?promo.price:p.price,reviewRef:window._lastReviewRef||null,orderSource:window._lastReviewRef?"review":"product",reviewId:window._lastReviewRef||null});saveCart();
         }
         window._lastReviewRef=null; // clear หลัง attach
           // track cart add
@@ -4665,7 +4712,7 @@ function renderCo(){
   });
   const totalQty=coCart.reduce(function(s,i){return s+i.q;},0);
   // ถ้าเลือกส่งถึงบ้าน ใช้ homeFee แทน
-  const fee=coDl.deliveryType==="home"?coDl.homeFee:(bigBoxFee>0?bigBoxFee:(totalQty<_freeShipQty?_shippingFee:0));
+  const fee=coDl.deliveryType==="home"?(Number(coDl.homeFee)||0):(bigBoxFee>0?bigBoxFee:(totalQty<_freeShipQty?(_shippingFee||0):0));
   const feeLabel=_lang==="lo"?(coDl.deliveryType==="home"?"🛵 ສົ່ງເຖິງບ້ານ":(bigBoxId?"📦 ຄ່າສົ່ງ (ກ່ອງ "+bigBoxId+")":"📦 ຄ່າສົ່ງ")):(coDl.deliveryType==="home"?"🛵 Home Delivery":(bigBoxId?"📦 Shipping (Box "+bigBoxId+")":"📦 Shipping"));
   const gt=cT+fee;
   let mod;
@@ -5088,7 +5135,7 @@ _checkoutCart=null; selectedCartKeys.clear(); coStep=4; closeOv();
           successMod.appendChild(ordersBox);
           const waBtnS=el("button",{type:"button",style:{width:"100%",padding:"11px",borderRadius:"11px",background:"#25D366",color:"#fff",fontWeight:"700",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",border:"none",marginBottom:"8px"}},
             "💬 ແຈ້ງ Admin ທາງ WhatsApp");
-          waBtnS.onclick=function(){window.open("https://wa.me/8562055228845?text="+encodeURIComponent(waMsg),"_blank");};
+          waBtnS.onclick=function(){window.open("https://wa.me/"+_adminWaNumber+"?text="+encodeURIComponent(waMsg),"_blank");};
           successMod.appendChild(waBtnS);
           successMod.appendChild(el("button",{type:"button",className:"btn btn-p",onclick:()=>{closeOv();render();}},"ປິດ"));
           showOv(successMod,null);
@@ -5105,7 +5152,32 @@ _checkoutCart=null; selectedCartKeys.clear(); coStep=4; closeOv();
       )
     );
   } else {
-    mod=el("div",{className:"mod",onclick:e=>e.stopPropagation(),style:{textAlign:"center",padding:"20px 16px"}},el("div",{style:{fontSize:"2.8rem",marginBottom:"8px"}},"🎉"),el("p",{style:{fontSize:"1.1rem",fontWeight:"700",color:"#1A2B5F",marginBottom:"8px"}},_lang==="lo"?"ຂໍຂອບໃຈ! ✓":"Thank you! ✓"),el("p",{style:{fontSize:".82rem",color:"#2E5A3A",marginBottom:"14px"}},_lang==="lo"?"ຕິດຕາມ 📦":"Track order at 📦 icon"),el("button",{className:"btn btn-p",onclick:()=>{closeOv();render();}},_lang==="lo"?"ປິດ":"Close"));
+    // Thank you modal — show order IDs + WA link
+    const _thankOrderIds=createdOrders&&createdOrders.length>0
+      ?createdOrders.map(function(o){return "#"+String(o.id).slice(-6);}).join(", ")
+      :"";
+    // Get admin WA from settings or fallback to known admin number
+    const _thankWaNumRaw=(typeof _adminWaNumber!=="undefined"&&_adminWaNumber)?_adminWaNumber:"8562059822646";
+    const _thankWaNum=(function(){const n=_thankWaNumRaw.replace(/[^0-9]/g,"");return n.startsWith("856")?n:"856"+n.replace(/^0/,"");})();
+    const _thankWaMsg=encodeURIComponent((_lang==="lo"?"ສະບາຍດີ ຂ້ອຍສັ່ງ Order ":"Hello, I just placed Order ")+_thankOrderIds+(_lang==="lo"?" ຕ້ອງການສອບຖາມ":"​ and would like to follow up"));
+    const _thankWaLink="https://wa.me/"+_thankWaNum+"?text="+_thankWaMsg;
+    const _thankMod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{textAlign:"center",padding:"24px 18px"}});
+    _thankMod.appendChild(el("div",{style:{fontSize:"2.8rem",marginBottom:"8px"}},"🎉"));
+    _thankMod.appendChild(el("p",{style:{fontSize:"1.15rem",fontWeight:"800",color:"#1A2B5F",marginBottom:"6px"}},_lang==="lo"?"ຂໍຂອບໃຈ! ✓":"Thank you! ✓"));
+    if(_thankOrderIds){
+      _thankMod.appendChild(el("div",{style:{background:"#E8F5EE",borderRadius:"10px",padding:"8px 14px",marginBottom:"10px"}},
+        el("div",{style:{fontSize:".7rem",color:"#6B8F75",marginBottom:"2px"}},_lang==="lo"?"ເລກ Order ຂອງທ່ານ":"Your Order ID"),
+        el("div",{style:{fontSize:"1rem",fontWeight:"800",color:"#1B6B3A",letterSpacing:"1px"}},_thankOrderIds)
+      ));
+    }
+    _thankMod.appendChild(el("p",{style:{fontSize:".82rem",color:"#2E5A3A",marginBottom:"14px"}},_lang==="lo"?"ຕິດຕາມ 📦 icon ຫຼື ກົດປຸ່ມລຸ່ມ":"Track at 📦 icon or tap below"));
+    if(_thankWaNum&&_thankWaNum.length>3){
+      _thankMod.appendChild(el("a",{href:_thankWaLink,target:"_blank",style:{display:"block",width:"100%",background:"#25D366",color:"#fff",borderRadius:"10px",padding:"11px",fontWeight:"700",fontSize:".88rem",textDecoration:"none",marginBottom:"10px",fontFamily:"inherit"}},
+        "💬 "+(_lang==="lo"?"ແຈ້ງ Admin ທາງ WhatsApp":"Message Admin on WhatsApp")
+      ));
+    }
+    _thankMod.appendChild(el("button",{className:"btn",style:{width:"100%",background:"#F0F7F2",color:"#1A2B5F",border:"1.5px solid #C8E6D4"},onclick:function(){closeOv();render();}},_lang==="lo"?"ປິດ":"Close"));
+    mod=_thankMod;
   }
   showOv(mod,null);
 }
@@ -7162,7 +7234,7 @@ function buildAdminTab(){
               const wdBtn=el("button",{style:{width:"100%",marginTop:"5px",padding:"7px",borderRadius:"8px",background:"#25D366",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".72rem",fontWeight:"700"},
                 onclick:function(){
                   const msg="ຂໍຖອນຄ່າຄອມຮີວິວ\n\nຊື່: "+(u.name||"-")+"\nເບີ: "+(u.phone||"-")+"\nຄ່າຄອມທັງໝົດ: ₭"+fmt(totalComm)+"\nຈຳນວນຮີວິວ: "+uRvsAll.length+(_lang==="lo"?" ຮີວິວ":" reviews");
-                  window.open("https://wa.me/8562059822646?text="+encodeURIComponent(msg),"_blank");
+                  window.open("https://wa.me/"+_adminWaNumber+"?text="+encodeURIComponent(msg),"_blank");
                 }
               },"💸 ຖອນ Commission ₭"+fmt(totalComm)+" → WhatsApp");
               cardEl.appendChild(wdBtn);
@@ -7649,7 +7721,7 @@ function buildAdminTab(){
               isShop?el("button",{style:{background:"#FF9800",color:"#fff",border:"none",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
                 const shopName=(user&&user.shopName)||"ຮ້ານ";
                 const msg="ແຈ້ງ Admin LaoH\n\nOrder #"+String(o.id).slice(-6)+" ຈາກ "+shopName+"\nສະຖານະ: "+o.status+"\nລູກຄ້າ: "+o.name+" "+o.phone+"\n\nກະລຸນາກວດສອບ";
-                window.open("https://wa.me/8562059822646?text="+encodeURIComponent(msg),"_blank");
+                window.open("https://wa.me/"+_adminWaNumber+"?text="+encodeURIComponent(msg),"_blank");
               }},"📢 ແຈ້ງ Admin"):null,
               (isSuperAdmin&&o.phone)?el("button",{style:{background:"#25D366",color:"#fff",border:"none",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:()=>{const msg="ແຈ້ງສະຖານະ Order\n\nOrder #"+String(o.id).slice(-6)+" ຂອງ "+o.name+" ສະຖານະ: "+o.status+"\n\nຂອບໃຈທີ່ໃຊ້ LaoH ລາວເຮັດ ຕິດຕໍ່ຫາພວກເຮົາໄດ້ຖ້າມີຄຳຖາມ";window.open("https://wa.me/"+o.phone.replace(/[^0-9+]/g,"")+"?text="+encodeURIComponent(msg),"_blank");}},"ສົ່ງອັບເດດສະຖານະ WhatsApp"):null,
               (isSuperAdmin&&o.phone)?el("button",{style:{background:"#1565c0",color:"#fff",border:"none",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
@@ -8084,6 +8156,25 @@ function buildAdminTab(){
       toast("ບັນທຶກຄ່າຈັດສົ່ງ ✓");
     }},"💾 ບັນທຶກຄ່າຈັດສົ່ງ");
 
+    // ── Admin WhatsApp Number ─────────────────────────────────────
+    const waInp=document.createElement("input");
+    waInp.className="inp"; waInp.type="tel";
+    waInp.value=_adminWaNumber;
+    waInp.placeholder="8562059XXXXXXX";
+    waInp.style.marginBottom="6px";
+    const saveWaBtn=el("button",{className:"btn btn-p",style:{marginBottom:"16px",background:"#25D366"},
+      onclick:function(){
+        const raw=waInp.value.replace(/[^0-9]/g,"");
+        if(raw.length<10){toast("ໃສ່ເບີໃຫ້ຄົບ (ຕ້ອງມີລະຫັດປະເທດ 856)");return;}
+        _adminWaNumber=raw;
+        try{localStorage.setItem("laoh_adminWa",raw);}catch(e){}
+        if(db){
+          try{db.collection("settings").doc("main").set({adminWaNumber:raw},{merge:true});}catch(e){}
+        }
+        toast("💬 ບັນທຶກເບີ WhatsApp Admin ✓");
+      }
+    },"💾 ບັນທຶກເບີ WhatsApp");
+
     const shipPreview=el("div",{style:{background:"#E8F5EE",borderRadius:"10px",padding:"10px 12px",marginBottom:"16px",fontSize:".78rem",color:"#1B6B3A",fontWeight:"600"}},
       "📦 ສ່ວນລຸດ: ສັ່ງ "+_freeShipQty+" ຊີ້ນຂຶ້ນໄປ ສົ່ງຟຣີ | ຕ່ຳກວ່ານັ້ນ ₭"+fmt(_shippingFee)+
       (_freeShipMinAmt>0?" | ຍອດຂັ້ນຕ່ຳ ₭"+fmt(_freeShipMinAmt):"")
@@ -8100,6 +8191,16 @@ function buildAdminTab(){
         el("label",{className:"lbl"},"ຍອດຂັ້ນຕ່ຳ (₭) ຖ້ຳຕ້ອງຊຳລະຄ່າສົ່ງ (0 = ບໍ່ກຳນົດ)"),
         minAmtInp,
         saveShipBtn,
+        el("div",{style:{borderTop:"1px solid #E8F5EE",paddingTop:"14px",marginBottom:"10px"}}),
+        el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💬 WhatsApp Admin"),
+        el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"6px"}},"ເບີນີ້ຈະໃຊ້ກັບທຸກປຸ່ມ WA ໃນລະບົບ (ລູກຄ້າຕິດຕໍ່, ຂໍຖອນເງິນ, ຮ້ານຕິດຕໍ່...)"),
+        el("div",{style:{display:"flex",gap:"8px",alignItems:"center",marginBottom:"4px"}},
+          el("span",{style:{fontSize:"1.1rem"}},"📱"),
+          el("span",{style:{fontSize:".75rem",color:"#25D366",fontWeight:"700"}},"+"+_adminWaNumber)
+        ),
+        waInp,
+        el("div",{style:{fontSize:".65rem",color:"#999",marginBottom:"8px"}},"ຕົວຢ່າງ: 8562059822646 (ໃສ່ລະຫັດປະເທດ 856 ກ່ອນ ບໍ່ຕ້ອງມີ +)"),
+        saveWaBtn,
 
         // ── Hub Location (จุดศูนย์กลางคำนวณระยะ) ──────────────
         el("div",{style:{borderTop:"1px solid #E8F5EE",paddingTop:"14px",marginTop:"4px"}}),
@@ -9061,7 +9162,7 @@ function buildAdminTab(){
           cursor:"pointer",fontSize:".72rem",fontWeight:"700",fontFamily:"inherit"},
         onclick:function(){
           const ri=riders.findIndex(function(x){return x.id===r.id;});
-          if(ri>=0) riders[ri]=Object.assign({},riders[ri],{active:!r.active});
+          if(ri>=0){riders[ri]=Object.assign({},riders[ri],{active:!r.active});saveToCloud("riders",riders[ri].id,riders[ri]);}
           toast((r.active?"ປິດ":"ເປີດ")+" ໄລເດີ ✓"); render();
         }
       },r.active?"ປິດ":"ເປີດ"));
@@ -9071,7 +9172,7 @@ function buildAdminTab(){
           color:"#7B4FA0",background:"#fff",cursor:"pointer",fontSize:".72rem",fontWeight:"700",fontFamily:"inherit"},
         onclick:function(){showResetPwdModal("🔑 Reset: "+r.name,function(newPwd){
           const ri=riders.findIndex(function(x){return x.id===r.id;});
-          if(ri>=0) riders[ri]=Object.assign({},riders[ri],{password:newPwd});
+          if(ri>=0){riders[ri]=Object.assign({},riders[ri],{password:newPwd});saveToCloud("riders",riders[ri].id,riders[ri]);}
           toast("ປ່ຽນລະຫັດ "+r.name+" ✓");
         });}
       },"🔑 PW"));
@@ -9165,6 +9266,7 @@ function buildAdminTab(){
             if(riders.find(function(r){return r.username===f.username;})){toast("Username ນີ້ມີຢູ່ແລ້ວ");return;}
             const nr={id:"r"+Date.now(),username:f.username,password:f.password,name:f.name,phone:f.phone||"",active:true};
             riders.push(nr);
+            saveToCloud("riders",nr.id,nr);
             toast("✅ ເພີ່ມໄລເດີ "+nr.name+" ສຳເລັດ");
             render();
           }
@@ -9251,7 +9353,7 @@ function buildAdminTab(){
         style:{flex:"1",padding:"7px 4px",borderRadius:"8px",border:"1.5px solid "+(s.active?"#c00":"#1B6B3A"),color:s.active?"#c00":"#1B6B3A",background:"#fff",cursor:"pointer",fontSize:".72rem",fontWeight:"700",fontFamily:"inherit"},
         onclick:function(){
           const si=staffList.findIndex(function(x){return x.id===s.id;});
-          if(si>=0) staffList[si]=Object.assign({},staffList[si],{active:!s.active});
+          if(si>=0){staffList[si]=Object.assign({},staffList[si],{active:!s.active});saveToCloud("staffList",staffList[si].id,staffList[si]);}
           toast((s.active?"ປິດ":"ເປີດ")+" Staff ✓");render();
         }
       },s.active?"ປິດ":"ເປີດ"));
@@ -9259,7 +9361,7 @@ function buildAdminTab(){
         style:{flex:"1",padding:"7px 4px",borderRadius:"8px",border:"1.5px solid #7B4FA0",color:"#7B4FA0",background:"#fff",cursor:"pointer",fontSize:".72rem",fontWeight:"700",fontFamily:"inherit"},
         onclick:function(){showResetPwdModal("🔑 Reset: "+s.name,function(newPwd){
           const si=staffList.findIndex(function(x){return x.id===s.id;});
-          if(si>=0) staffList[si]=Object.assign({},staffList[si],{password:newPwd});
+          if(si>=0){staffList[si]=Object.assign({},staffList[si],{password:newPwd});saveToCloud("staffList",staffList[si].id,staffList[si]);}
           toast("ປ່ຽນລະຫັດ "+s.name+" ✓");
         });}
       },"🔑 PW"));
@@ -9331,7 +9433,9 @@ function buildAdminTab(){
           onclick:function(){
             if(!f.name||!f.username||!f.password){toast("ໃສ່ຂໍ້ມູນໃຫ້ຄົບ");return;}
             if(staffList.find(function(s){return s.username===f.username;})){toast("Username ນີ້ມີຢູ່ແລ້ວ");return;}
-            staffList.push({id:"s"+Date.now(),username:f.username,password:f.password,name:f.name,phone:f.phone||"",active:true});
+            const newStaff={id:"s"+Date.now(),username:f.username,password:f.password,name:f.name,phone:f.phone||"",active:true};
+            staffList.push(newStaff);
+            saveToCloud("staffList",newStaff.id,newStaff);
             toast("✅ ເພີ່ມ Staff "+f.name+" ສຳເລັດ");render();
           }
         },"✅ ບັນທຶກ"));
@@ -9404,7 +9508,7 @@ function buildAdminTab(){
           cursor:"pointer",fontSize:".72rem",fontWeight:"700",fontFamily:"inherit"},
         onclick:function(){
           const ni=narrators.findIndex(function(x){return x.id===n.id;});
-          if(ni>=0) narrators[ni]=Object.assign({},narrators[ni],{active:!n.active});
+          if(ni>=0){narrators[ni]=Object.assign({},narrators[ni],{active:!n.active});saveToCloud("narrators",narrators[ni].id,narrators[ni]);}
           toast((n.active?"ປິດ":"ເປີດ")+" Narrator ✓"); render();
         }
       },n.active?"ປິດ":"ເປີດ"));
@@ -9419,7 +9523,7 @@ function buildAdminTab(){
             const r=parseFloat(newRate);
             if(!isNaN(r)&&r>=0&&r<=50){
               const ni=narrators.findIndex(function(x){return x.id===n.id;});
-              if(ni>=0) narrators[ni]=Object.assign({},narrators[ni],{commRate:r});
+              if(ni>=0){narrators[ni]=Object.assign({},narrators[ni],{commRate:r});saveToCloud("narrators",narrators[ni].id,narrators[ni]);}
               toast("ຄ່າຄອມ "+n.name+" = "+r+"% ✓"); render();
             } else { toast("ໃສ່ຕົວເລກ 0-50"); }
           }
@@ -9431,7 +9535,7 @@ function buildAdminTab(){
           color:"#7B4FA0",background:"#fff",cursor:"pointer",fontSize:".72rem",fontWeight:"700",fontFamily:"inherit"},
         onclick:function(){showResetPwdModal("🔑 Reset: "+n.name,function(newPwd){
           const ni=narrators.findIndex(function(x){return x.id===n.id;});
-          if(ni>=0) narrators[ni]=Object.assign({},narrators[ni],{password:newPwd});
+          if(ni>=0){narrators[ni]=Object.assign({},narrators[ni],{password:newPwd});saveToCloud("narrators",narrators[ni].id,narrators[ni]);}
           toast("ປ່ຽນລະຫັດ "+n.name+" ✓");
         });}
       },"🔑 PW"));
@@ -9464,8 +9568,10 @@ function buildAdminTab(){
             if(!f.name||!f.username||!f.password){toast("ໃສ່ຂໍ້ມູນໃຫ້ຄົບ");return;}
             if(narrators.find(function(n){return n.username===f.username;})){toast("Username ນີ້ມີຢູ່ແລ້ວ");return;}
             const r=parseFloat(f.commRate)||5;
-            narrators.push({id:"n"+Date.now(),username:f.username,password:f.password,
-              name:f.name,phone:f.phone||"",bio:f.bio||"",avatar:"🎙️",active:true,commRate:r});
+            const newNarrator={id:"n"+Date.now(),username:f.username,password:f.password,
+              name:f.name,phone:f.phone||"",bio:f.bio||"",avatar:"🎙️",active:true,commRate:r};
+            narrators.push(newNarrator);
+            saveToCloud("narrators",newNarrator.id,newNarrator);
             toast("✅ ເພີ່ມ Narrator "+f.name+" ສຳເລັດ");render();
           }
         },"✅ ບັນທຶກ"));
@@ -10712,7 +10818,7 @@ function buildProfile(){
       icon:"❓",
       label:_lang==="lo"?"ຊ່ວຍເຫຼືອ":"Help & Support",
       value:"",
-      action:()=>window.open("https://wa.me/8562059822646","_blank")
+      action:()=>window.open("https://wa.me/"+_adminWaNumber,"_blank")
     },
     // Super Admin only: Save All to Firebase
     ...(user&&user.role==="admin" ? [{
@@ -10976,7 +11082,7 @@ function buildProfile(){
           onclick:function(){
             if(totalReviewComm===0){toast("ຍັງບໍ່ມີຄ່າຄອມ");return;}
             const msg="ຂໍຖອນຄ່າຄອມຮີວິວ\n\nຊື່: "+(user.name||user.username)+"\nເບີ: "+(user.phone||"")+"\nຄ່າຄອມ: ₭"+fmt(totalReviewComm)+"\nຈຳນວນຮີວິວ: "+myReviews.length+(_lang==="lo"?" ຮີວິວ":" reviews");
-            window.open("https://wa.me/8562059822646?text="+encodeURIComponent(msg),"_blank");
+            window.open("https://wa.me/"+_adminWaNumber+"?text="+encodeURIComponent(msg),"_blank");
           }
         },totalReviewComm>0?"💬 ແຈ້ງ Admin ຖອນ ₭"+fmt(totalReviewComm):"ຍັງບໍ່ມີຄ່າຄອມ");
         commBar.appendChild(wdBtn);
@@ -11329,9 +11435,43 @@ loadFromCloud().then(function(){
   const sharedShopId=urlParams.get("shop");
   if(sharedShopId){
     const ss2=shops.find(function(s){return String(s.id)===String(sharedShopId);});
-    if(ss2&&ss2.active){
+    if(ss2){
       fShop=ss2.id;view="shopProfile";render();
+    } else {
+      toast("🔍 ກຳລັງຄົ້ນຫາຮ້ານ...");
     }
+  }
+  // Handle ?rv=reviewId from review share link
+  const sharedRvId=urlParams.get("rv");
+  if(sharedRvId){
+    view="feed";render();
+    setTimeout(function(){
+      // Scroll feed to the review card with matching id
+      const feedItems2=document.querySelectorAll(".feed-item");
+      let found=false;
+      feedItems2.forEach(function(el2){if(el2.dataset.rvId===String(sharedRvId)){el2.scrollIntoView({behavior:"smooth"});found=true;}});
+      if(!found) toast("📹 "+(_lang==="lo"?"ເປີດຮີວິວໃນ Feed":"Review opened in Feed"));
+    },600);
+    window._highlightRvId=String(sharedRvId);
+  }
+  // Handle ?post=postId from shop post share link
+  const sharedPostId=urlParams.get("post");
+  if(sharedPostId){
+    view="feed";render();
+    setTimeout(function(){
+      const feedItems3=document.querySelectorAll(".feed-item");
+      feedItems3.forEach(function(el3){if(el3.dataset.postId===String(sharedPostId))el3.scrollIntoView({behavior:"smooth"});});
+    },600);
+  }
+  // Handle ?live=liveId from live share link
+  const sharedLiveId=urlParams.get("live");
+  if(sharedLiveId){
+    view="feed";render();
+    setTimeout(function(){
+      const feedItems4=document.querySelectorAll(".feed-item");
+      feedItems4.forEach(function(el4){if(el4.dataset.liveId===String(sharedLiveId))el4.scrollIntoView({behavior:"smooth"});});
+      toast("🔴 "+(_lang==="lo"?"ເປີດ Live ໃນ Feed":"Live opened in Feed"));
+    },600);
   }
 });
 

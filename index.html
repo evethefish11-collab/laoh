@@ -1497,7 +1497,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.0.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.0.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3338,7 +3338,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.0.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.0.5")
   );
 
   // Icon style helper
@@ -3607,7 +3607,6 @@ function buildShopProfile(shopId){
     }
     const vGrid=el("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"4px",padding:"8px"}});
     allShopVideos.forEach(function(v){
-      const prodForVid=v.prodId?prods.find(function(p){return p.id===v.prodId;}):(v.pinnedProdId?prods.find(function(p){return p.id===v.pinnedProdId;}):null);
       const cell=el("div",{style:{position:"relative",width:"100%",paddingBottom:"100%",borderRadius:"8px",overflow:"hidden",background:"#000",cursor:"pointer"}});
       const vidThumb=document.createElement("video");
       vidThumb.src=v.mediaUrl;vidThumb.muted=true;vidThumb.playsInline=true;vidThumb.preload="metadata";
@@ -3620,17 +3619,59 @@ function buildShopProfile(shopId){
       cell.appendChild(el("div",{style:{position:"absolute",top:"4px",right:"4px",fontSize:"1rem"}},"▶️"));
       if(v.userName){cell.appendChild(el("div",{style:{position:"absolute",bottom:"3px",left:"4px",right:"4px",fontSize:".6rem",color:"#fff",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,.8)"}},v.userName));}
       cell.onclick=function(){
-        const vm=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{background:"#000",padding:"0",borderRadius:"0",maxWidth:"100vw",width:"100vw",height:"100vh",display:"flex",flexDirection:"column"}});
-        vm.appendChild(el("button",{className:"mcl",onclick:closeOv,style:{color:"#fff",background:"rgba(255,255,255,.15)"}},"✕"));
-        const mediaArea=el("div",{style:{flex:"1",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}});
-        const v2=document.createElement("video");v2.src=v.mediaUrl;v2.controls=true;v2.autoplay=true;v2.setAttribute("playsinline","");v2.setAttribute("webkit-playsinline","");v2.style.cssText="max-width:100%;max-height:100%;";
-        mediaArea.appendChild(v2);
-        vm.appendChild(mediaArea);
-        const vmInfo=el("div",{style:{padding:"12px 14px",background:"#111",color:"#fff"}});
-        vmInfo.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"4px"}},prodForVid?prodForVid.name:(v.userName||sh.name||"")));
-        vmInfo.appendChild(el("div",{style:{fontSize:".78rem",color:"rgba(255,255,255,.7)"}},v.caption||""));
-        vm.appendChild(vmInfo);
+        // ── ເປີດ viewer ແບບເລື່ອນເບິ່ງວິດີໂອອື່ນຂອງຮ້ານນີ້ໄດ້ (ບໍ່ປ່ຽນ view, ຍັງຄ້າງຢູ່ໜ້າໂປຣໄຟລ໌ຮ້ານ) ──
+        const vm=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{background:"#000",padding:"0",borderRadius:"0",maxWidth:"100vw",width:"100vw",height:"100vh",display:"flex",flexDirection:"column",position:"relative"}});
+        vm.setAttribute("data-noswipe","1"); // ປິດ swipe-down-to-close ຂອງລະບົບເດີມ ເພາະຈະໃຊ້ scroll ພາຍໃນແທນ
+        vm.appendChild(el("button",{className:"mcl",onclick:closeOv,style:{color:"#fff",background:"rgba(255,255,255,.15)",position:"absolute",top:"12px",right:"12px",zIndex:"20"}},"✕"));
+        const scrollWrap=el("div",{className:"feed-scroll",style:{flex:"1"}});
+        allShopVideos.forEach(function(vItem){
+          const itemProd=vItem.prodId?prods.find(function(p){return p.id===vItem.prodId;}):(vItem.pinnedProdId?prods.find(function(p){return p.id===vItem.pinnedProdId;}):null);
+          const itemEl=el("div",{className:"feed-item",style:{background:"#0a0a0a",display:"flex",flexDirection:"column"}});
+          const mediaArea=el("div",{style:{flex:"1",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}});
+          const v2=document.createElement("video");v2.src=vItem.mediaUrl;v2.controls=true;v2.playsInline=true;v2.setAttribute("playsinline","");v2.setAttribute("webkit-playsinline","");v2.style.cssText="max-width:100%;max-height:100%;";
+          mediaArea.appendChild(v2);
+          itemEl.appendChild(mediaArea);
+          const vmInfo=el("div",{style:{padding:"12px 14px",background:"#111",color:"#fff"}});
+          vmInfo.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"4px"}},itemProd?itemProd.name:(vItem.userName||sh.name||"")));
+          if(vItem.caption)vmInfo.appendChild(el("div",{style:{fontSize:".78rem",color:"rgba(255,255,255,.7)",marginBottom:itemProd?"8px":"0"}},vItem.caption));
+          // ── ປ້ายสินค้าปักไว้ กดแล้วเปิดหน้าเลือกสินค้า (ไม่ auto-add ลงตะกร้า) ──
+          if(itemProd){
+            const pill=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",background:"#1B6B3A",borderRadius:"12px",padding:"7px 12px",cursor:"pointer"},
+              onclick:function(e){e.stopPropagation();showProduct(itemProd);}
+            });
+            const pImg=(itemProd.imgs&&itemProd.imgs[0]&&isUrl(itemProd.imgs[0]))?itemProd.imgs[0]:(isUrl(itemProd.img)?itemProd.img:null);
+            if(pImg){const pi2=document.createElement("img");pi2.src=pImg;pi2.style.cssText="width:28px;height:28px;border-radius:8px;object-fit:cover;flex-shrink:0;";pill.appendChild(pi2);}
+            const ptInfo=el("div",{style:{flex:"1",minWidth:"0"}},
+              el("div",{style:{fontSize:".78rem",color:"#fff",fontWeight:"700",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},itemProd.name),
+              el("div",{style:{fontSize:".72rem",color:"#C8F5D0",fontWeight:"600"}},"₭"+fmt(itemProd.price))
+            );
+            pill.appendChild(ptInfo);
+            pill.appendChild(el("div",{style:{width:"30px",height:"30px",background:"rgba(255,255,255,.2)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".9rem",flexShrink:"0"}},"🛒"));
+            vmInfo.appendChild(pill);
+          }
+          itemEl.appendChild(vmInfo);
+          scrollWrap.appendChild(itemEl);
+        });
+        vm.appendChild(scrollWrap);
         showOv(vm,null);
+        // ── Scroll ໄປທີ່ວິດີໂອທີ່ກົດເຂົ້າມາ ແລະໃຫ້ມັນເລີ່ມຫຼີ້ນ (videos ອື່ນຄ້າງ paused ຈົນກວ່າຈະ scroll ໄປເຫັນ) ──
+        setTimeout(function(){
+          const idx=allShopVideos.indexOf(v);
+          const items=scrollWrap.querySelectorAll(".feed-item");
+          if(items[idx]){items[idx].scrollIntoView({behavior:"auto"});const vEl=items[idx].querySelector("video");if(vEl)vEl.play().catch(function(){});}
+          // ── ໃຫ້ມີແຕ່ວິດີໂອທີ່ເຫັນຢູ່ໃນຈໍຫຼີ້ນ, ວິດີໂອອື່ນ pause ອັດຕະໂນມັດ ──
+          try{
+            const obs=new IntersectionObserver(function(entries){
+              entries.forEach(function(entry){
+                const vEl2=entry.target.querySelector("video");
+                if(!vEl2)return;
+                if(entry.isIntersecting)vEl2.play().catch(function(){});
+                else vEl2.pause();
+              });
+            },{root:scrollWrap,threshold:0.6});
+            items.forEach(function(it){obs.observe(it);});
+          }catch(e){}
+        },50);
       };
       vGrid.appendChild(cell);
     });

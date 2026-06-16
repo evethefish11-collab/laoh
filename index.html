@@ -217,7 +217,7 @@ input:focus,select:focus,textarea:focus{
 function googleTranslateElementInit() {
   new google.translate.TranslateElement({
     pageLanguage: 'lo',
-    includedLanguages: 'en,th,zh-CN,zh-TW,ja,ko,fr,de,vi,my',
+    includedLanguages: 'en,th,zh-CN,zh-TW,ja,ko,fr,de,vi',
     layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
     autoDisplay: false
   }, 'google_translate_element');
@@ -271,6 +271,55 @@ body { top: 0 !important; }
 </head>
 <body>
 <div id="google_translate_element"></div>
+
+<!-- A2HS Popup: Add to Home Screen Guide -->
+<div id="laoh-a2hs-popup" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:22px 20px 32px;width:100%;max-width:480px;box-shadow:0 -4px 30px rgba(0,0,0,.2);position:relative;">
+    <button onclick="document.getElementById('laoh-a2hs-popup').style.display='none';try{localStorage.setItem('laoh_a2hs_dismissed','1');}catch(e){};" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;line-height:1;">✕</button>
+    <div style="font-weight:800;font-size:1rem;color:#1A2B5F;margin-bottom:4px;text-align:center;">📲 ປັກ LaoH ໄວ້ໜ້າຈໍ</div>
+    <div style="font-size:.75rem;color:#6B8F75;text-align:center;margin-bottom:16px;">ເພື່ອເຂົ້າໃຊ້ງ່າຍ ເໝືອນ App ຈິງ</div>
+
+    <!-- iOS Safari steps -->
+    <div id="laoh-a2hs-ios" style="display:none;">
+      <div style="font-size:.72rem;color:#1A2B5F;font-weight:700;margin-bottom:10px;">🍎 iPhone / iPad (Safari)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#F0F7F2;border-radius:10px;padding:9px 11px;">
+          <span style="font-size:1.2rem;flex-shrink:0;">1️⃣</span>
+          <div><b style="font-size:.75rem;color:#1A2B5F;">ເປີດໃນ Safari ກ່ອນ</b><br><span style="font-size:.68rem;color:#6B8F75;">ຖ້າເປີດໃນ Facebook/LINE ໃຫ້ກົດ ··· ແລ້ວເລືອກ <b>"Open in Safari"</b></span></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#F0F7F2;border-radius:10px;padding:9px 11px;">
+          <span style="font-size:1.2rem;flex-shrink:0;">2️⃣</span>
+          <div><b style="font-size:.75rem;color:#1A2B5F;">ກົດປຸ່ມ Share</b> <span style="font-size:.9rem;">⎋</span><br><span style="font-size:.68rem;color:#6B8F75;">ຢູ່ດ້ານລຸ່ມ (iPhone) ຫຼື ດ້ານເທິງ (iPad) ຂອງ Safari</span></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#F0F7F2;border-radius:10px;padding:9px 11px;">
+          <span style="font-size:1.2rem;flex-shrink:0;">3️⃣</span>
+          <div><b style="font-size:.75rem;color:#1A2B5F;">ເລືອກ "Add to Home Screen"</b><br><span style="font-size:.68rem;color:#6B8F75;">ເລື່ອນລົງໃນລາຍການ → ກົດ <b>"Add to Home Screen"</b> → <b>Add</b></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Android Chrome steps -->
+    <div id="laoh-a2hs-android" style="display:none;">
+      <div style="font-size:.72rem;color:#1A2B5F;font-weight:700;margin-bottom:10px;">🤖 Android (Chrome)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#F0F7F2;border-radius:10px;padding:9px 11px;">
+          <span style="font-size:1.2rem;flex-shrink:0;">1️⃣</span>
+          <div><b style="font-size:.75rem;color:#1A2B5F;">ເປີດໃນ Chrome ກ່ອນ</b><br><span style="font-size:.68rem;color:#6B8F75;">ຖ້າເປີດໃນ Facebook ໃຫ້ກົດ ··· → <b>"Open in Chrome"</b></span></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#F0F7F2;border-radius:10px;padding:9px 11px;">
+          <span style="font-size:1.2rem;flex-shrink:0;">2️⃣</span>
+          <div><b style="font-size:.75rem;color:#1A2B5F;">ກົດ ⋮ (ເມນູ 3 ຈຸດ)</b><br><span style="font-size:.68rem;color:#6B8F75;">ຢູ່ມຸມຂວາດ້ານເທິງຂອງ Chrome</span></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#F0F7F2;border-radius:10px;padding:9px 11px;">
+          <span style="font-size:1.2rem;flex-shrink:0;">3️⃣</span>
+          <div><b style="font-size:.75rem;color:#1A2B5F;">ເລືອກ "Add to Home screen"</b><br><span style="font-size:.68rem;color:#6B8F75;">ກົດ <b>Add</b> ເພື່ອຢືນຢັນ</span></div>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="document.getElementById('laoh-a2hs-popup').style.display='none';try{localStorage.setItem('laoh_a2hs_dismissed','1');}catch(e){};" style="margin-top:16px;width:100%;padding:11px;border:none;border-radius:12px;background:#1B6B3A;color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;">✅ ເຂົ້າໃຈແລ້ວ</button>
+  </div>
+</div>
 <div id="laoh-translate-popup" class="hidden">
   <div class="tp-box">
     <button class="tp-close" onclick="laohTranslateClose()" title="Close">✕</button>
@@ -604,20 +653,64 @@ function getShopApplications(){
 function saveShopApplications(arr){try{localStorage.setItem("laoh_shop_applications",JSON.stringify(arr));}catch(e){}}
 // ── SAVED ADDRESSES (per user) ──────────────────────────────────────
 function getAddrKey(){return "laoh_addrs_"+(user&&user.id||"guest");}
+// ── window._addrCache / window._addrCacheUid: in-memory cache of the CURRENT user's addresses, loaded from Firestore at login/session-restore ──
+// Tagged with the uid it belongs to, so if `user` changes (logout/switch account) without an explicit cache-clear,
+// the cache is automatically treated as stale instead of leaking another customer's addresses.
+// getSavedAddresses()/addAddress()/deleteAddress() keep their EXACT original signatures so all existing call sites work unchanged.
 function getSavedAddresses(){
+  const curUid=user&&user.id||null;
+  if(Array.isArray(window._addrCache)&&window._addrCacheUid===curUid)return window._addrCache;
+  // Fallback: cache not loaded yet, or belongs to a different/previous user — use localStorage so UI never breaks
   try{const s=localStorage.getItem(getAddrKey());if(s)return JSON.parse(s);}catch(e){}
   return [];
 }
 function saveAddresses(arr){try{localStorage.setItem(getAddrKey(),JSON.stringify(arr));}catch(e){}}
 function addAddress(addr){
-  const arr=getSavedAddresses();
-  addr.id=Date.now();
+  const arr=getSavedAddresses().slice();
+  if(!addr.id)addr.id=Date.now();
   arr.push(addr);
-  saveAddresses(arr);
+  window._addrCache=arr;window._addrCacheUid=user&&user.id||null; // ── update cache immediately so UI reflects it right away ──
+  saveAddresses(arr); // ── keep localStorage as backup too (never removed) ──
+  if(db&&user&&user.id){try{saveToCloud("addresses",addr.id,Object.assign({},addr,{uid:user.id}));}catch(e){}}
   return addr;
 }
 function deleteAddress(id){
-  saveAddresses(getSavedAddresses().filter(function(a){return a.id!==id;}));
+  const arr=getSavedAddresses().filter(function(a){return a.id!==id;});
+  window._addrCache=arr;window._addrCacheUid=user&&user.id||null;
+  saveAddresses(arr);
+  if(db&&user&&user.id){try{deleteFromCloud("addresses",id);}catch(e){}}
+}
+// ── ໂຫຼດທີ່ຢູ່ຂອງຜູ້ໃຊ້ນີ້ຈາກ Firestore ໃສ່ cache, ແລະ migrate ທີ່ຢູ່ເກົ່າຈາກ localStorage ຂຶ້ນ Firestore ຄັ້ງດຽວ (ບໍ່ລຶບ localStorage ເດີມ) ──
+async function loadAddressesForCurrentUser(){
+  if(!user||!user.id||user.role!=="c"){window._addrCache=null;window._addrCacheUid=null;return;}
+  let cloudAddrs=[];
+  if(db){
+    try{
+      const snap=await db.collection("addresses").where("uid","==",user.id).get();
+      if(snap&&!snap.empty)cloudAddrs=snap.docs.map(function(d){return JSON.parse(JSON.stringify(d.data()));});
+    }catch(e){console.warn("loadAddressesForCurrentUser failed:",e);}
+  }
+  // ── Migration: ນຳເອົາທີ່ຢູ່ເກົ່າທີ່ມີຢູ່ໃນ localStorage (ແຕ່ບໍ່ມີໃນ Firestore) ຂຶ້ນໄປ Firestore ອັດຕະໂນມັດ ──
+  try{
+    const localRaw=localStorage.getItem(getAddrKey());
+    if(localRaw){
+      const localAddrs=JSON.parse(localRaw)||[];
+      const cloudIds=new Set(cloudAddrs.map(function(a){return a.id;}));
+      const missing=localAddrs.filter(function(a){return a&&a.id&&!cloudIds.has(a.id);});
+      if(missing.length>0&&db){
+        for(const a of missing){
+          try{await saveToCloud("addresses",a.id,Object.assign({},a,{uid:user.id}));}catch(e){}
+        }
+        cloudAddrs=cloudAddrs.concat(missing);
+      } else if(missing.length>0&&!db){
+        // db not ready yet — still show local ones in cache for now, will migrate next time db is available
+        cloudAddrs=cloudAddrs.concat(missing);
+      }
+    }
+  }catch(e){console.warn("Address migration failed:",e);}
+  window._addrCache=cloudAddrs;window._addrCacheUid=user.id;
+  // Keep localStorage in sync too (backup, never relied upon as primary once cache is set)
+  saveAddresses(cloudAddrs);
 }
 function getShipFeeByBoxSize(boxId){
   const bs=getBoxSizes();
@@ -752,7 +845,7 @@ function downloadOrderPDF(o){
     const sh=prod&&prod.shopId?shops.find(function(s){return s.id===prod.shopId;}):null;
     rows+="<tr style='background:"+(i%2===0?"#fff":"#f9f6ff")+"'>";
     rows+="<td style='padding:8px 10px'>"+(i+1)+"</td>";
-    rows+="<td style='padding:8px 10px'>"+(it.preorder?"[Pre] ":"")+it.n+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":" ")+"x"+it.q+"</td>";
+    rows+="<td style='padding:8px 10px'>"+(it.preorder?"[Pre] ":"")+(prod&&prod.id?"#"+prod.id+" ":"")+it.n+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":" ")+"x"+it.q+"</td>";
     rows+="<td style='padding:8px 10px'>"+(sh?sh.name:(_lang==="lo"?"🌺 LaoH ລາວເຮັດ":"🌺 LaoH"))+"</td>";
     rows+="<td style='padding:8px 10px;text-align:right'>"+fmt2(it.p)+"</td>";
     rows+="<td style='padding:8px 10px;text-align:right;font-weight:700'>"+fmt2(it.p*it.q)+"</td>";
@@ -761,20 +854,20 @@ function downloadOrderPDF(o){
   const css="body{font-family:sans-serif;padding:28px;max-width:680px;margin:0 auto;color:#1a1020}h1{color:#5D2D7A;font-size:1.3rem;letter-spacing:2px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.box{background:#f5f0ff;border-radius:8px;padding:10px 12px}.box b{display:block;font-size:.65rem;color:#888;margin-bottom:3px;text-transform:uppercase}table{width:100%;border-collapse:collapse;margin:14px 0}th{background:#5D2D7A;color:#fff;padding:8px 10px;text-align:left;font-size:.78rem}td{font-size:.8rem;border-bottom:1px solid #eee}.total-box{background:#5D2D7A;color:#fff;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:4px}.footer{margin-top:20px;font-size:.7rem;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}";
   const html="<html><head><meta charset='UTF-8'><style>"+css+"</style></head><body>"+
     "<div style='display:flex;justify-content:space-between;margin-bottom:16px'>"+
-    "<div><h1>LaoH ລາວເຮັດ</h1><div style='font-size:.75rem;color:#888'>Order Receipt</div></div>"+
+    "<div><h1>LaoH ລາວເຮັດ</h1><div style='font-size:.75rem;color:#888'>ໃບບິນ Order</div></div>"+
     "<div style='text-align:right'><div style='font-size:1.1rem;font-weight:900'>#"+String(o.id).slice(-6)+"</div>"+
     "<div style='font-size:.72rem;color:#888'>"+o.at+"</div>"+
     "<div style='margin-top:4px;background:#5D2D7A;color:#fff;display:inline-block;padding:3px 10px;border-radius:12px;font-size:.72rem'>"+o.status+"</div></div></div>"+
     "<div class='grid'>"+
-    "<div class='box'><b>ชื่อผู้รับ</b>"+(o.name||"")+"</div>"+
-    "<div class='box'><b>เบอร์โทร</b>"+(o.phone||"")+"</div>"+
-    "<div class='box'><b>บริษัทจัดส่ง</b>"+(o.carrier||"")+"</div>"+
-    "<div class='box'><b>สาขา</b>"+(o.branch||"")+"</div>"+
+    "<div class='box'><b>ຊື່ຜູ້ຮັບ</b>"+(o.name||"")+"</div>"+
+    "<div class='box'><b>ເບີໂທ</b>"+(o.phone||"")+"</div>"+
+    "<div class='box'><b>ບໍລິສັດຂົນສົ່ງ</b>"+(o.carrier||"")+"</div>"+
+    "<div class='box'><b>ສາຂາ</b>"+(o.branch||"")+"</div>"+
     "</div>"+
-    "<table><thead><tr><th>#</th><th>สินค้า</th><th>ร้านค้า</th><th style='text-align:right'>ราคา/ชิ้น</th><th style='text-align:right'>รวม</th></tr></thead>"+
+    "<table><thead><tr><th>#</th><th>ສິນຄ້າ</th><th>ຮ້ານຄ້າ</th><th style='text-align:right'>ລາຄາ/ຊິ້ນ</th><th style='text-align:right'>ລວມ</th></tr></thead>"+
     "<tbody>"+rows+"</tbody></table>"+
-    (o.discount>0?"<div style='text-align:right;font-size:.82rem;color:#c00;margin-bottom:4px'>ส่วนลด"+(o.coupon?" ("+o.coupon+")":"")+"  -"+fmt2(o.discount)+"</div>":"")+
-    "<div class='total-box'><span>ยอดที่ชำระ</span><span style='font-size:1.1rem;font-weight:900'>"+fmt2(o.total)+" kip</span></div>"+
+    (o.discount>0?"<div style='text-align:right;font-size:.82rem;color:#c00;margin-bottom:4px'>ສ່ວນຫຼຸດ"+(o.coupon?" ("+o.coupon+")":"")+"  -"+fmt2(o.discount)+"</div>":"")+
+    "<div class='total-box'><span>ຍອດທີ່ຊຳລະ</span><span style='font-size:1.1rem;font-weight:900'>"+fmt2(o.total)+" kip</span></div>"+
     "<div class='footer'>LaoH &bull; "+new Date().toLocaleDateString("th-TH")+"</div>"+
     "</body></html>";
   // Download as HTML file (opens in browser as PDF-ready page)
@@ -825,7 +918,7 @@ function printOrder(o){
     const bg=i%2===0?"#fff":"#f9f6ff";
     rows+="<tr style='background:"+bg+"'>";
     rows+="<td style='padding:8px 10px'>"+(i+1)+"</td>";
-    rows+="<td style='padding:8px 10px'>"+(it.preorder?"[Pre] ":"")+it.n+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":" ")+"x"+it.q+"</td>";
+    rows+="<td style='padding:8px 10px'>"+(it.preorder?"[Pre] ":"")+(prod&&prod.id?"#"+prod.id+" ":"")+it.n+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":" ")+"x"+it.q+"</td>";
     rows+="<td style='padding:8px 10px'>"+(sh?sh.name:(_lang==="lo"?"🌺 LaoH ລາວເຮັດ":"🌺 LaoH"))+"</td>";
     rows+="<td style='padding:8px 10px;text-align:right'>"+fmt2(it.p)+"</td>";
     rows+="<td style='padding:8px 10px;text-align:right;font-weight:700'>"+fmt2(it.p*it.q)+"</td>";
@@ -848,7 +941,7 @@ function printOrder(o){
   const barcodeUrl="https://barcodeapi.org/api/128/"+orderId;
   const html="<html><head><meta charset='UTF-8'><style>"+css+"</style></head><body>"+
     "<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px'>"+
-    "<div><h1>LaoH ລາວເຮັດ</h1><div style='font-size:.75rem;color:#888'>Order Receipt</div></div>"+
+    "<div><h1>LaoH ລາວເຮັດ</h1><div style='font-size:.75rem;color:#888'>ໃບບິນ Order</div></div>"+
     "<div style='display:flex;gap:12px;align-items:flex-start'>"+
     "<div style='text-align:right'><div style='font-size:1.1rem;font-weight:900'>#"+orderId+"</div>"+
     "<div style='font-size:.72rem;color:#888'>"+o.at+"</div>"+
@@ -861,10 +954,10 @@ function printOrder(o){
     "<div class='box'><b>ຂົນສົ່ງ</b>"+o.carrier+"</div>"+
     "<div class='box'><b>ສາຂາ / ທີ່ຢູ່</b>"+o.branch+"</div>"+
     "</div>"+
-    "<table><thead><tr><th>#</th><th>สินค้า</th><th>ร้านค้า</th><th style='text-align:right'>ราคา/ชิ้น</th><th style='text-align:right'>รวม</th></tr></thead>"+
+    "<table><thead><tr><th>#</th><th>ສິນຄ້າ</th><th>ຮ້ານຄ້າ</th><th style='text-align:right'>ລາຄາ/ຊິ້ນ</th><th style='text-align:right'>ລວມ</th></tr></thead>"+
     "<tbody>"+rows+"</tbody></table>"+
-    (o.discount>0?"<div style='text-align:right;font-size:.82rem;color:#c00;margin-bottom:4px'>ส่วนลด"+(o.coupon?" ("+o.coupon+")":"")+"  -"+fmt2(o.discount)+" kip</div>":"")+
-    "<div class='total-box'><span>ยอดที่ชำระ</span><span style='font-size:1.1rem;font-weight:900'>"+fmt2(o.total)+" kip</span></div>"+
+    (o.discount>0?"<div style='text-align:right;font-size:.82rem;color:#c00;margin-bottom:4px'>ສ່ວນຫຼຸດ"+(o.coupon?" ("+o.coupon+")":"")+"  -"+fmt2(o.discount)+" kip</div>":"")+
+    "<div class='total-box'><span>ຍອດທີ່ຊຳລະ</span><span style='font-size:1.1rem;font-weight:900'>"+fmt2(o.total)+" kip</span></div>"+
     "<div class='footer'>LaoH &bull; "+new Date().toLocaleDateString("th-TH")+"</div>"+
     "<br><button class='no-print' onclick='window.print()' style='background:#5D2D7A;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem'>Print / Save PDF</button>"+
     "</body></html>";
@@ -1256,78 +1349,7 @@ function exportMonthlyExcel(){
   toast("ດາວໂຫຼດ "+fileName+" ✓");
 }
 
-// ── PWA INSTALL BANNER ────────────────────────────────────────────
-function showInstallBanner(){
-  // Don't show if already installed or dismissed
-  if(localStorage.getItem("pwa_dismissed"))return;
-  if(window.matchMedia("(display-mode: standalone)").matches)return;
-
-  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isAndroid=/android/i.test(navigator.userAgent);
-  if(!isIOS&&!isAndroid)return;
-
-  const banner=document.createElement("div");
-  banner.id="install-banner";
-  banner.style.cssText="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1A0A00;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(45,17,85,.5);animation:slideUp .3s ease";
-
-  const icon=document.createElement("img");
-  icon.style.cssText="width:44px;height:44px;border-radius:10px;flex-shrink:0";
-  // Use logo from nav
-  const navLogo=document.querySelector(".logo img");
-  if(navLogo)icon.src=navLogo.src;
-
-  const txt=document.createElement("div");
-  txt.style.cssText="flex:1";
-  txt.innerHTML=isIOS?
-    "<div style='font-weight:700;font-size:.88rem'>ຕິດຕັ້ງ LaoH ເທິງໜ້າຈໍໂທລະສັບ</div>"+
-    "<div style='font-size:.72rem;opacity:.8;margin-top:2px'>ກົດ <b>Share</b> ແລ້ວເລືອກ <b>ເພີ່ມໃສ່ໜ້າຈໍຫຼັກ</b> 📲</div>":
-    "<div style='font-weight:700;font-size:.88rem'>ຕິດຕັ້ງ LaoH ເທິງໜ້າຈໍໂທລະສັບ</div>"+
-    "<div style='font-size:.72rem;opacity:.8;margin-top:2px'>ເພື່ອເປີດໄດ້ໄວຂຶ້ນ ໂດຍບໍ່ຕ້ອງພິມ URL 📲</div>";
-
-  // Install button (Android only - iOS uses Share)
-  if(isAndroid&&window._pwaPrompt){
-    const btn=document.createElement("button");
-    btn.textContent="ติดตั้ง";
-    btn.style.cssText="background:#fff;color:#391B41;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:.82rem;cursor:pointer;flex-shrink:0;font-family:sans-serif";
-    btn.onclick=function(){
-      window._pwaPrompt.prompt();
-      banner.remove();
-    };
-    banner.appendChild(icon);
-    banner.appendChild(txt);
-    banner.appendChild(btn);
-  } else {
-    banner.appendChild(icon);
-    banner.appendChild(txt);
-  }
-
-  // Close button
-  const close=document.createElement("button");
-  close.textContent="✕";
-  close.style.cssText="background:none;border:none;color:rgba(255,255,255,.7);font-size:1rem;cursor:pointer;padding:4px;flex-shrink:0";
-  close.onclick=function(){
-    banner.remove();
-    localStorage.setItem("pwa_dismissed","1");
-  };
-  banner.appendChild(close);
-
-  // Add slide-up animation
-  if(!document.getElementById("pwa-style")){
-    const s=document.createElement("style");
-    s.id="pwa-style";
-    s.textContent="@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}";
-    document.head.appendChild(s);
-  }
-
-  document.body.appendChild(banner);
-}
-
-// Show banner after 3 seconds on first visit
-setTimeout(function(){
-  if(!window.matchMedia("(display-mode: standalone)").matches){
-    showInstallBanner();
-  }
-}, 3000);
+// (Old PWA install banner removed — replaced by laoh-a2hs-popup, see window load event below)
 
 
 // ── LANGUAGE TOGGLE ────────────────────────────────────────────────
@@ -1463,7 +1485,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.8.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v1.9.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -1769,6 +1791,19 @@ function buildFeedPage(){
     item.className="feed-item";
     item.style.cssText="position:relative;height:100%;background:#0a0a0a;display:flex;flex-direction:column;";
     item.dataset.rvId=String(rv.id);
+
+    // ── Back to Home button (top-left, same as Live page) ──────────
+    const rvNavBack=el("div",{className:"feed-nav"},
+      el("button",{
+        className:"feed-nav-btn",
+        style:{display:"flex",alignItems:"center",gap:"5px",padding:"6px 12px"},
+        onclick:function(){view="shop";render();}
+      },
+        el("span",null,"←"),
+        el("span",null,"LaoH")
+      )
+    );
+    item.appendChild(rvNavBack);
 
     // media (image or video)
     const media=document.createElement("div");
@@ -3159,7 +3194,10 @@ function showAddrModal(){
         if(!newVill){toast((_lang==="lo"?"ກະລຸນາໃສ່ຊື່ບ້ານ":"Please enter village"));return;}
         addAddress({type:"home",label:lbl,house:newHouse||"",village:newVill,district:newDist,lat:newLat,lng:newLng,homeFee:newFee});
       }
-      toast("ບັນທຶກ ✓"); closeOv(); render();
+      toast("ບັນທຶກ ✓");
+      // ຖ້າມາຈາກ Checkout ໃຫ້ກັບຄືນ Checkout, ບໍ່ render ທັງໜ້າ
+      if(view==="shop"&&_checkoutCart&&_checkoutCart.length>0){closeOv();renderCo();}
+      else{closeOv();render();}
     }
   },(_lang==="lo"?"💾 ບັນທຶກທີ່ຢູ່":"💾 Save Address")));
   showOv(modal,null);
@@ -3275,7 +3313,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.8.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v1.9.3")
   );
 
   // Icon style helper
@@ -3327,6 +3365,11 @@ function buildNav(){
     return el("button",{className:"ibt",onclick:goProfile},el("img",{src:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTQiIGZpbGw9IndoaXRlIi8+CiAgPHBhdGggZD0iTTE4IDg4IEMxOCA2NSAyOCA1OCA1MCA1OCBDNzIgNTggODIgNjUgODIgODggWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",style:{width:"30px",height:"30px",objectFit:"contain",verticalAlign:"middle"}}));
   })() : null;
 
+  // Translate icon — shown next to profile avatar for shop/admin/staff/rider/narrator roles
+  const translateIconBtn = (user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"))
+    ? el("button",{className:"ibt",style:{fontSize:"1rem"},onclick:()=>{laohTranslateShow();},title:_lang==="lo"?"ແປພາສາ":"Translate"},"🗣️")
+    : null;
+
   // Login button — shown when NOT logged in
   const loginBtn = !user
     ? el("button",{
@@ -3336,7 +3379,7 @@ function buildNav(){
     : null;
 
   const rightDiv = el("div",{style:{display:"flex",gap:"5px",alignItems:"center"}},
-    user ? null : langBtn, loginBtn, profileBtn, cartBtn
+    user ? null : langBtn, loginBtn, translateIconBtn, profileBtn, cartBtn
   );
 
   return el("nav",{className:"nav"},leftBtn,center,rightDiv);
@@ -4769,6 +4812,8 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
     if(_sc2){const _pc2=JSON.parse(_sc2);if(Array.isArray(_pc2))cart=_pc2.map(function(i){return Object.assign({},i);});}
     else cart=[];
   }catch(e){cart=[];}
+  // Load this user's saved delivery addresses from Firestore (with auto-migration from localStorage)
+  loadAddressesForCurrentUser().then(function(){render();}).catch(function(){});
   closeOv();render();toast("ยินดีต้อนรับ "+u.name);
   setTimeout(function(){if(laohTranslateShouldShow())laohTranslateShow();},500);}else{aErr=_lang==="lo"?"ຂໍ້ມູນບໍ່ຖືກຕ້ອງ":"Incorrect credentials";drawAuth();}}
         else{if(!aF.u||!aF.p||!aF.n||!aF.ph||(aF.ph).replace(/[^0-9]/g,"").length<8){aErr="ກະລຸນາໃສ່ຂໍ້ມູນໃຫ້ຄົບ (ເບີ 8 ຕົວ)";drawAuth();return;}if(!aF.consent){
@@ -4779,7 +4824,7 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
                 el("button",{className:"btn btn-p",style:{width:"100%"},onclick:function(){drawAuth();}},_lang==="lo"?"ກັບໄປຍອມຮັບ":"Go Back & Accept")
               ));
               return;
-            }if(aF.p!==aF.c2){aErr="รหัสผ่านไม่ตรงกัน";drawAuth();return;}if(users.find(x=>x.username===aF.u)){aErr="ชื่อผู้ใช้นี้มีอยู่แล้ว";drawAuth();return;}const nu={id:Date.now(),username:aF.u,password:aF.p,name:aF.n,phone:aF.ph,facebook:aF.fb};users.push(nu);saveToCloud("users",nu.id,nu);user={role:"c",...nu};closeOv();render();toast(_lang==="lo"?"ສະໝັກສຳເລັດ 🎉 ໃຊ້ LAOH15 ຫຼຸດ 15% ສຳລັບຄຳສັ່ງທຳອິດ!":"Registered! Use LAOH15 for 15% off your first order!");}
+            }if(aF.p!==aF.c2){aErr="รหัสผ่านไม่ตรงกัน";drawAuth();return;}if(users.find(x=>x.username===aF.u)){aErr="ชื่อผู้ใช้นี้มีอยู่แล้ว";drawAuth();return;}const nu={id:Date.now(),username:aF.u,password:aF.p,name:aF.n,phone:aF.ph,facebook:aF.fb};users.push(nu);saveToCloud("users",nu.id,nu);user={role:"c",...nu};window._addrCache=[];window._addrCacheUid=nu.id;closeOv();render();toast(_lang==="lo"?"ສະໝັກສຳເລັດ 🎉 ໃຊ້ LAOH15 ຫຼຸດ 15% ສຳລັບຄຳສັ່ງທຳອິດ!":"Registered! Use LAOH15 for 15% off your first order!");}
       }},aType==="a"?_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login":aMode==="login"?_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login":_lang==="lo"?"ສະໝັກສະມາຊິກ":"Register"),
       // Remember me checkbox (login only)
       aMode==="login"||aType==="a"?el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginTop:"8px"}},
@@ -5159,6 +5204,7 @@ function renderCo(){
           });
           const shopKeys=Object.keys(shopGroups);
           const createdOrders=[];
+          const _orderSaveCalls=[]; // ── ໃຊ້ກວດສອບວ່າ Firestore ບັນທຶກສຳເລັດແທ້ ກ່ອນສະແດງວ່າ "ສຳເລັດ" ──
           shopKeys.forEach(function(sid,idx){
             const sitems=shopGroups[sid];
             const sTotal=sitems.reduce(function(s,i){return s+(i.dispPrice||i.price)*i.q;},0);
@@ -5184,7 +5230,7 @@ function renderCo(){
             const oWithSlip=Object.assign({},o,{slip:coSlip});
             orders=[oWithSlip].concat(orders);
             if(coSlip&&db){try{db.collection("slips").doc(String(sOid)).set({slip:coSlip,orderId:sOid,at:Date.now(),uid:user&&user.id});}catch(e){}}
-            saveToCloud("orders",sOid,o);
+            _orderSaveCalls.push(saveToCloud("orders",sOid,o));
             // ── Deduct stock for each item in this order ──────────
             sitems.forEach(function(item){
               const pidx=prods.findIndex(function(x){return x&&x.id===item.id;});
@@ -5239,8 +5285,8 @@ function renderCo(){
           const iList=createdOrders.map(function(o){return (o.items||[]).map(function(i){return (i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q;}).join(", ");}).join(", ");
           const delivInfo=coDl.deliveryType==="home"?"🛵 ສົ່ງເຖິງບ້ານ\nທີ່ຢູ່: "+coDl.house+(_lang==="lo"?" ບ້ານ":" Village")+coDl.village+(_lang==="lo"?" ເມືອງ":" District")+coDl.district:"🚚 "+coDl.ca+" ສາຂາ "+coDl.br;
           const waMsg="Order "+createdOrders.map(function(o){return "#"+String(o.id).slice(-6)+(o.shopName?" ("+o.shopName+")":"");}).join(", ")+"\nຊື່: "+coDl.n+"\nເບີ: "+coDl.ph+"\nສິນຄ້າ: "+iList+"\nຍອດ: ₭"+fmt(gt-discount)+"\n"+delivInfo;
-          // remove only the checked-out items from cart
-          // cart is now global (coCart is the local read-only view)
+          // ── ສະແດງຜົນ "ສຳເລັດ" ແທ້ໆ ລ້າງ Cart ແລະສະແດງ popup ສຳເລັດ (ເອີ້ນຫຼັງກວດສອບແລ້ວເທົ່ານັ້ນ) ──
+          function _finishCheckoutSuccess(){
 if(_checkoutCart){
   const ckKeys=new Set(_checkoutCart.map(function(i){return i.k;}));
   cart=cart.filter(function(i){return !ckKeys.has(i.k);});
@@ -5266,6 +5312,37 @@ _checkoutCart=null; selectedCartKeys.clear(); coStep=4; closeOv();
           successMod.appendChild(el("button",{type:"button",className:"btn btn-p",onclick:()=>{closeOv();render();}},"ປິດ"));
           showOv(successMod,null);
           try{render();}catch(re){console.warn("render after checkout:",re.message);}
+          }
+          // ── ກວດສອບວ່າ Firestore ບັນທຶກອໍເດີສຳເລັດແທ້ ກ່ອນສະແດງ popup ສຳເລັດ (ສະເພາະຈຸດນີ້ເທົ່ານັ້ນ) ──
+          function _attemptOrderUploadCheckout(){
+            if(!db){_showOrderUploadRetry();return;}
+            const verifyCalls=createdOrders.map(function(co){
+              return db.collection("orders").doc(String(co.id)).get()
+                .then(function(doc){return doc.exists===true;})
+                .catch(function(){return false;});
+            });
+            const timeoutP=new Promise(function(resolve){setTimeout(function(){resolve("timeout");},8000);});
+            Promise.race([Promise.all(verifyCalls),timeoutP]).then(function(result){
+              const allOk=Array.isArray(result)&&result.length>0&&result.every(function(ok){return ok===true;});
+              if(allOk){_finishCheckoutSuccess();}else{_showOrderUploadRetry();}
+            });
+          }
+          function _showOrderUploadRetry(){
+            const retryMod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{textAlign:"center"}});
+            retryMod.appendChild(el("div",{style:{fontSize:"2.2rem",marginBottom:"6px"}},"📶"));
+            retryMod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#c0392b",marginBottom:"8px"}},_lang==="lo"?"ອິນເຕີເນັດອ່ອນ":"Weak Internet"));
+            retryMod.appendChild(el("div",{style:{fontSize:".85rem",color:"#5D2D7A",marginBottom:"16px",lineHeight:"1.6"}},_lang==="lo"?"ການອັບໂລດອໍເດີຍັງບໍ່ສຳເລັດ. ກະລຸນາລອງໃໝ່ໂດຍບໍ່ຕ້ອງປິດໜ້ານີ້.":"Order upload did not complete. Please retry without closing this page."));
+            const retryBtn=el("button",{type:"button",className:"btn btn-p",style:{marginBottom:"8px"}},_lang==="lo"?"🔄 ລອງສົ່ງອໍເດີອີກຄັ້ງ":"🔄 Retry Sending Order");
+            retryBtn.onclick=function(){
+              closeOv();
+              toast(_lang==="lo"?"⏳ ກຳລັງລອງໃໝ່...":"⏳ Retrying...");
+              const resendCalls=createdOrders.map(function(co){return saveToCloud("orders",co.id,co);});
+              Promise.all(resendCalls).then(function(){_attemptOrderUploadCheckout();});
+            };
+            retryMod.appendChild(retryBtn);
+            showOv(retryMod,null);
+          }
+          _attemptOrderUploadCheckout();
           }catch(err){
             toast("Error: "+err.message);
             console.error("CHECKOUT ERROR:", err.message, err.stack);
@@ -5575,8 +5652,19 @@ function buildStaffDashboard(){
           const hdrL=document.createElement("div");
           hdrL.innerHTML="<b style='font-size:.82rem;color:#5D2D7A'>#"+String(o.id).slice(-6)+"</b>"+(o.shopName?"<span style='font-size:.65rem;color:#5D2D7A;font-weight:600;margin-left:5px'>["+o.shopName+"]</span>":"")+"<br><span style='font-size:.65rem;color:#6B8F75'>"+(o.at||"")+"</span>";
           const hdrR=document.createElement("div");hdrR.style.cssText="display:flex;gap:4px;align-items:center;";
-          const slipSrc2=o.slip||(function(){try{return localStorage.getItem("slip_"+o.id);}catch(e){return null;}}());
-          if(slipSrc2){const sb=document.createElement("button");sb.style.cssText="background:none;border:1.5px solid #1565c0;color:#1565c0;padding:2px 7px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;font-family:inherit;";sb.textContent="💳 ສລິບ";sb.onclick=function(){const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));m.appendChild(el("img",{src:slipSrc2,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));showOv(m);};hdrR.appendChild(sb);}
+          const sb=document.createElement("button");sb.style.cssText="background:none;border:1.5px solid #1565c0;color:#1565c0;padding:2px 7px;border-radius:20px;font-size:.62rem;font-weight:600;cursor:pointer;font-family:inherit;";sb.textContent="💳 ສລິບ";
+          sb.onclick=function(){
+            function showSlipImg2(src){const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));m.appendChild(el("img",{src:src,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));showOv(m);}
+            const cachedSlip2=o.slip||(function(){try{return localStorage.getItem("slip_"+o.id);}catch(e){return null;}}());
+            if(cachedSlip2){showSlipImg2(cachedSlip2);return;}
+            if(!db){toast("⚠️ "+(_lang==="lo"?"ບໍ່ສາມາດເຊື່ອມຕໍ່ຖານຂໍ້ມູນ":"Cannot connect to database"));return;}
+            toast("⏳ "+(_lang==="lo"?"ກຳລັງໂຫຼດສລິບ...":"Loading slip..."));
+            db.collection("slips").doc(String(o.id)).get().then(function(doc){
+              if(doc.exists&&doc.data().slip){try{o.slip=doc.data().slip;}catch(e){}showSlipImg2(doc.data().slip);}
+              else{toast("📭 "+(_lang==="lo"?"ບໍ່ພົບສລິບສຳລັບອໍເດີນີ້":"No slip found for this order"));}
+            }).catch(function(){toast("⚠️ "+(_lang==="lo"?"ໂຫຼດສລິບບໍ່ສຳເລັດ":"Failed to load slip"));});
+          };
+          hdrR.appendChild(sb);
           const selSt=document.createElement("select");selSt.style.cssText="padding:4px 6px;border-radius:7px;border:1.5px solid #C8E6D4;background:#fff;font-size:.71rem;color:#1A2B5F;font-weight:600;cursor:pointer;outline:none;font-family:inherit;";
           STS.forEach(function(s){const opt=document.createElement("option");opt.value=s;opt.textContent=s;if(o.status===s)opt.selected=true;selSt.appendChild(opt);});
           selSt.onchange=function(){const oldSt=o.status;const newSt=this.value;const oIdx=orders.findIndex(function(x){return x.id===o.id;});const newLog=(o.statusLog||[]).concat([{at:new Date().toLocaleString("lo-LA"),from:oldSt,to:newSt,by:user.name,note:"Staff"}]);if(oIdx>=0){orders[oIdx]=Object.assign({},orders[oIdx],{status:newSt,statusLog:newLog});o=orders[oIdx];}saveToCloud("orders",o.id,o);toast("✅ "+newSt);render();};
@@ -5601,7 +5689,7 @@ function buildStaffDashboard(){
             irow.appendChild(th);
             const txtDiv=document.createElement("div");txtDiv.style.cssText="flex:1;min-width:0;";
             const nameL=document.createElement("div");nameL.style.cssText="font-size:.75rem;color:"+(isCancelled?"#999":"#1A1020")+";font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:"+(isCancelled?"line-through":"none")+";";
-            nameL.textContent=(prod2&&prod2.id?"📦 ":"")+(i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q;
+            nameL.textContent=(prod2&&prod2.id?"📦 #"+prod2.id+" ":"")+(i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q;
             const priceL=document.createElement("div");priceL.style.cssText="font-size:.72rem;color:"+(isCancelled?"#bbb":"#1B6B3A")+";font-weight:600;text-decoration:"+(isCancelled?"line-through":"none")+";";priceL.textContent="₭"+fmt(i.p*i.q);
             txtDiv.appendChild(nameL);txtDiv.appendChild(priceL);
             if(prod2&&prod2.id){const bcL=document.createElement("div");bcL.style.cssText="font-size:.6rem;color:#888;";bcL.textContent="ID: "+String(prod2.id).slice(-6);txtDiv.appendChild(bcL);}
@@ -6461,9 +6549,9 @@ function buildAdminTab(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw","📸 ໂພສ"]:
-    isSuperAdmin?[_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ"]:
+    isSuperAdmin?[_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"]:
     [_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings"];
-  const superAdminTabMap={0:5,1:7,2:8,3:9,4:4,5:10,6:11,7:12,8:13,9:14};
+  const superAdminTabMap={0:5,1:7,2:8,3:9,4:4,5:10,6:11,7:12,8:13,9:30};
   const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:20};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
@@ -7276,9 +7364,27 @@ function buildAdminTab(){
   }
   if(effectiveTab===3){
     const stockProds=isShop?prods.filter(function(p){return p.shopId===(user&&user.shopId);}):prods;
+    // ── ຄຳນວນຍອດ "ຂາຍແລ້ວ" ຕໍ່ສິນຄ້າ+ສີ+ຂະໜາດ (ນັບ 1 ຄັ້ງຕໍ່ອໍເດີ, ນັບແຕ່ສະຖານະ "ຢືນຢັນແລ້ວ" ເປັນຕົ້ນໄປ, ບໍ່ນັບອໍເດີ/ລາຍການທີ່ຍົກເລີກ) ──
+    const CONFIRMED_IDX=STS.indexOf("ຢືນຢັນແລ້ວ");
+    function buildSoldMap(){
+      const map={}; // key: prodName|color|size -> qty
+      orders.forEach(function(o){
+        if(o.status==="ຍົກເລີກ")return; // ຍົກເລີກທັງໃບ — ບໍ່ນັບ
+        const stIdx=STS.indexOf(o.status);
+        if(stIdx<CONFIRMED_IDX)return; // ຍັງບໍ່ທັນ "ຢືນຢັນແລ້ວ" — ບໍ່ນັບ
+        (o.items||[]).forEach(function(it){
+          const cancelKey=it.n+(it.c||"")+(it.s||"");
+          if((o.cancelledItems||[]).includes(cancelKey))return; // ລາຍການນີ້ຖືກຍົກເລີກ — ບໍ່ນັບ
+          const key=it.n+"|"+(it.c||"")+"|"+(it.s||"");
+          map[key]=(map[key]||0)+(it.q||0);
+        });
+      });
+      return map;
+    }
+    const soldMap=buildSoldMap();
     return el("div",null,...stockProds.map(p=>{
       const cs=p.colors||[],sz=p.sizes||[];
-      const combos=cs.flatMap(c=>sz.map(s=>({k:c+"|"+s,c,s,q:(p.stock?p.stock[c+"|"+s]||0:0)||0})));
+      const combos=cs.flatMap(c=>sz.map(s=>({k:c+"|"+s,c,s,q:(p.stock?p.stock[c+"|"+s]||0:0)||0,sold:soldMap[p.name+"|"+c+"|"+s]||0})));
       if(!combos.length)return null;
       return el("div",{className:"acard",style:{marginBottom:"10px"}},
         el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}},
@@ -7291,7 +7397,7 @@ function buildAdminTab(){
           })(),
           el("b",{style:{fontSize:".84rem"}},p.name)
         ),
-        ...combos.map(({k,c,s,q})=>{
+        ...combos.map(({k,c,s,q,sold})=>{
           const qEl=el("span",{style:{width:"28px",textAlign:"center",fontSize:".82rem",fontWeight:"700"}},String(q));
           const upd=(d)=>{
             const pidx=prods.findIndex(function(x){return x&&x.id===p.id;});
@@ -7305,7 +7411,7 @@ function buildAdminTab(){
             }
           };
           return el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 9px",background:C,borderRadius:"8px",marginBottom:"4px"}},
-            el("div",{style:{flex:"1"}},el("span",{style:{fontSize:".78rem",fontWeight:"600",color:"#1A2B5F"}},c+" / "+s),el("span",{style:{fontSize:".68rem",color:q>0?"#1a7a3a":"#8A7A9E",marginLeft:"6px"}},q>0?q+" ຊີ້ນ":"ພຣີໂອເດີ")),
+            el("div",{style:{flex:"1"}},el("span",{style:{fontSize:".78rem",fontWeight:"600",color:"#1A2B5F"}},c+" / "+s),el("span",{style:{fontSize:".68rem",color:q>0?"#1a7a3a":"#8A7A9E",marginLeft:"6px"}},q>0?q+" ຊີ້ນ":"ພຣີໂອເດີ"),el("span",{style:{fontSize:".68rem",color:"#5D2D7A",marginLeft:"6px",fontWeight:"600"}},"· ຂາຍແລ້ວ "+sold+" ຊີ້ນ")),
             el("div",{className:"qctrl"},el("button",{onclick:()=>upd(-1)},"-"),qEl,el("button",{onclick:()=>upd(1)},"+"))
           );
         })
@@ -7830,30 +7936,32 @@ function buildAdminTab(){
               ...availSTS.map(function(s){const opt=el("option",{value:s},s);if(o.status===s)opt.selected=true;return opt;})
             );
             const wdBadge=o.withdrawn?el("span",{style:{background:"#1B6B3A",color:"#fff",fontSize:".6rem",fontWeight:"700",padding:"2px 7px",borderRadius:"20px",letterSpacing:"0.5px"}},"✅ ຖອນແລ້ວ"):null;
-            // slip button
-            const slipSrc=o.slip||(function(){
-          // โหลดจาก Firestore ถ้า db พร้อม
-          if(db&&!o._slipLoaded){
-            try{o._slipLoaded=true;}catch(e){}
-            db.collection("slips").doc(String(o.id)).get().then(function(doc){
-              if(doc.exists&&doc.data().slip){
-                try{o.slip=doc.data().slip;}catch(e){}
-                // update button icon
-                const slipBtn=document.querySelector('[data-slip-oid="'+o.id+'"]');
-                if(slipBtn){slipBtn.style.display="inline-flex";}
+            // slip button — ສະແດງປຸ່ມໄວ້ກ່ອນ ແລ້ວໂຫຼດສລິບແທ້ໆຕອນກົດ (ບໍ່ອີງກັບ timing ການໂຫຼດ Firestore)
+            const slipBtn=el("button",{style:{background:"none",border:"1.5px solid #1565c0",color:"#1565c0",padding:"2px 8px",borderRadius:"20px",fontSize:".62rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+              function showSlipImg(src){
+                const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+                m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+                m.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💳 ສລິບ #"+String(o.id).slice(-6)));
+                m.appendChild(el("img",{src:src,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));
+                showOv(m,null);
               }
-            }).catch(function(){});
-          }
-          // fallback localStorage
-          try{return localStorage.getItem("slip_"+o.id);}catch(e){return null;}
-        })();
-            const slipBtn=slipSrc?el("button",{style:{background:"none",border:"1.5px solid #1565c0",color:"#1565c0",padding:"2px 8px",borderRadius:"20px",fontSize:".62rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
-              const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
-              m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-              m.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💳 ສລິບ #"+String(o.id).slice(-6)));
-              m.appendChild(el("img",{src:slipSrc,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));
-              showOv(m,null);
-            }},"💳 ສລິບ"):null;
+              // 1) ມີຢູ່ໃນ order object ແລ້ວ (in-memory ຫຼື localStorage)
+              const cachedSlip=o.slip||(function(){try{return localStorage.getItem("slip_"+o.id);}catch(e){return null;}}());
+              if(cachedSlip){showSlipImg(cachedSlip);return;}
+              // 2) ບໍ່ມີ — ໄປດຶງຈາກ Firestore "slips" collection
+              if(!db){toast("⚠️ "+(_lang==="lo"?"ບໍ່ສາມາດເຊື່ອມຕໍ່ຖານຂໍ້ມູນ":"Cannot connect to database"));return;}
+              toast("⏳ "+(_lang==="lo"?"ກຳລັງໂຫຼດສລິບ...":"Loading slip..."));
+              db.collection("slips").doc(String(o.id)).get().then(function(doc){
+                if(doc.exists&&doc.data().slip){
+                  try{o.slip=doc.data().slip;}catch(e){}
+                  showSlipImg(doc.data().slip);
+                } else {
+                  toast("📭 "+(_lang==="lo"?"ບໍ່ພົບສລິບສຳລັບອໍເດີນີ້":"No slip found for this order"));
+                }
+              }).catch(function(){
+                toast("⚠️ "+(_lang==="lo"?"ໂຫຼດສລິບບໍ່ສຳເລັດ":"Failed to load slip"));
+              });
+            }},"💳 ສລິບ");
             return el("div",{className:"order-row-item","data-oid":String(o.id).slice(-6),"data-phone":(o.phone||""),"data-name":(o.name||"").toLowerCase(),style:{background:C,borderRadius:"10px",padding:"9px 11px",marginBottom:"7px"}},
               el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px",flexWrap:"wrap",gap:"4px"}},
                 el("div",null,
@@ -7940,7 +8048,7 @@ function buildAdminTab(){
                     row.appendChild(el("div",{style:{width:"34px",height:"34px",borderRadius:"7px",background:"#F0F7F2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1rem",flexShrink:"0"}},"🛍"));
                   }
                   const textDiv=el("div",{style:{flex:"1",minWidth:"0"}});
-                  textDiv.appendChild(el("div",{style:{fontSize:".75rem",color:isCancelled?"#999":"#1A1020",fontWeight:"500",whiteSpace:"nowrap",overflow:"hidden",textOverflow:isCancelled?"line-through ellipsis":"ellipsis",textDecoration:isCancelled?"line-through":"none"}},(i.preorder?"📦 ":"")+(i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q));
+                  textDiv.appendChild(el("div",{style:{fontSize:".75rem",color:isCancelled?"#999":"#1A1020",fontWeight:"500",whiteSpace:"nowrap",overflow:"hidden",textOverflow:isCancelled?"line-through ellipsis":"ellipsis",textDecoration:isCancelled?"line-through":"none"}},(i.preorder?"📦 ":"")+(prod&&prod.id?"#"+prod.id+" ":"")+(i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q));
                   textDiv.appendChild(el("div",{style:{fontSize:".72rem",color:isCancelled?"#bbb":"#1B6B3A",fontWeight:"600",textDecoration:isCancelled?"line-through":"none"}},"₭"+fmt(i.p*i.q)));
                   row.appendChild(textDiv);
                   if((isSuperAdmin||isShop)&&o.status!=="ອໍເດີສຳເລັດແລ້ວ"&&o.status!=="ຍົກເລີກ"){
@@ -8053,7 +8161,8 @@ function buildAdminTab(){
                 if(!sh){sh=shops.find(function(s){return s.phone;});}
                 if(!sh||!sh.phone)return null;
                 const itemList=(o.items||[]).map(function(i){
-                  var line="• "+i.n;
+                  const ip=prods.find(function(x){return x&&x.name===i.n;});
+                  var line="• "+(ip&&ip.id?"#"+ip.id+" ":"")+i.n;
                   if(i.c)line+=" ("+i.c+(i.s?"/"+i.s:"")+")";
                   line+=" ×"+i.q+" ₭"+fmt(i.p*i.q);
                   return line;
@@ -10086,6 +10195,288 @@ function buildAdminTab(){
     return section;
   }
 
+  // ── SUPER ADMIN: CREATE ORDER FOR CUSTOMER (effectiveTab 30) ───────────
+  if(effectiveTab===30){
+    if(!window._adminOrderDraft){
+      window._adminOrderDraft={
+        customer:null,customerName:"",customerPhone:"",
+        items:[], // {pid,name,c,s,q,p,cost,preorder,shopId,shopName}
+        deliveryType:"carrier",carrier:CARRIERS[0],branch:"",
+        house:"",village:"",district:"",
+        couponCode:"",
+        showAdminOrders:false
+      };
+    }
+    const ad=window._adminOrderDraft;
+    const section=el("div",null);
+    section.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",marginBottom:"6px"}},_lang==="lo"?"➕ ສ້າງອໍເດີໃຫ້ລູກຄ້າ":"➕ Create Order for Customer"));
+    section.appendChild(el("div",{style:{fontSize:".74rem",color:"#6B8F75",marginBottom:"16px"}},_lang==="lo"?"ໃຊ້ສຳລັບກໍລະນີອໍເດີລູກຄ້າຫາຍ ຫຼື ສັ່ງແທນລູກຄ້າທາງໂທລະສັບ/Facebook":"For lost orders or phone/Facebook orders on behalf of customer"));
+
+    // ── toggle: view admin-created orders list ──
+    const toggleBtn=el("button",{type:"button",style:{background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",borderRadius:"20px",padding:"6px 14px",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",marginBottom:"16px"},
+      onclick:function(){ad.showAdminOrders=!ad.showAdminOrders;render();}
+    },ad.showAdminOrders?(_lang==="lo"?"← ກັບໄປສ້າງອໍເດີ":"← Back to Create"):(_lang==="lo"?"📋 ເບິ່ງອໍເດີທີ່ແອັດມິນສ້າງ":"📋 View Admin-Created Orders"));
+    section.appendChild(toggleBtn);
+
+    if(ad.showAdminOrders){
+      const adminOrders=orders.filter(function(o){return o.createdByAdmin===true;});
+      if(adminOrders.length===0){
+        section.appendChild(el("div",{style:{textAlign:"center",padding:"30px",color:"#8A7A9E"}},"📭 "+(_lang==="lo"?"ຍັງບໍ່ມີອໍເດີທີ່ແອັດມິນສ້າງ":"No admin-created orders yet")));
+      } else {
+        adminOrders.forEach(function(o){
+          const card=el("div",{style:{background:"#fff",borderRadius:"12px",padding:"12px 14px",marginBottom:"10px",border:"1.5px solid #E0D4F0",boxShadow:"0 2px 6px rgba(0,0,0,.05)"}});
+          card.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"6px"}},
+            el("span",{style:{fontWeight:"800",color:"#5D2D7A",fontSize:".85rem"}},"#"+String(o.id).slice(-6)),
+            el("span",{style:{fontSize:".7rem",background:"#F0E6FF",color:"#5D2D7A",padding:"2px 9px",borderRadius:"10px",fontWeight:"700"}},o.status)
+          ));
+          card.appendChild(el("div",{style:{fontSize:".8rem",color:"#1A2B5F",marginBottom:"4px"}},"👤 "+o.name+" · "+o.phone));
+          (o.items||[]).forEach(function(it){
+            card.appendChild(el("div",{style:{fontSize:".74rem",color:"#65607a",paddingLeft:"8px"}},"• "+it.n+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":" ")+"×"+it.q));
+          });
+          card.appendChild(el("div",{style:{fontWeight:"800",color:"#1B6B3A",fontSize:".88rem",marginTop:"6px",textAlign:"right"}},"₭"+fmt(o.total)));
+          section.appendChild(card);
+        });
+      }
+      return section;
+    }
+
+    // ── STEP 1: Select Customer ──────────────────────────────────────
+    const custCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+    custCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",marginBottom:"10px"}},"① "+(_lang==="lo"?"ເລືອກລູກຄ້າ":"Select Customer")));
+    if(ad.customer){
+      custCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#F0F7F2",borderRadius:"10px",padding:"10px 12px"}},
+        el("div",null,el("div",{style:{fontWeight:"700",fontSize:".84rem",color:"#1A2B5F"}},ad.customer.name||ad.customer.username),el("div",{style:{fontSize:".72rem",color:"#6B8F75"}},ad.customer.phone||"")),
+        el("button",{type:"button",style:{background:"none",border:"none",color:"#c0392b",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){ad.customer=null;render();}},"✕ "+(_lang==="lo"?"ປ່ຽນ":"Change"))
+      ));
+    } else {
+      const custSearch=el("input",{type:"text",placeholder:_lang==="lo"?"🔍 ຄົ້ນຫາຊື່ ຫຼື ເບີໂທລູກຄ້າ...":"🔍 Search customer name or phone...",style:{width:"100%",padding:"10px 12px",borderRadius:"10px",border:"1.5px solid #ddd",fontSize:".82rem",fontFamily:"inherit",marginBottom:"8px"}});
+      const custList=el("div",{style:{maxHeight:"220px",overflowY:"auto"}});
+      function refreshCustList(q){
+        custList.innerHTML="";
+        const customers=users.filter(function(u){return u.role==="c";});
+        const filtered=q?customers.filter(function(u){return (u.name||"").toLowerCase().includes(q.toLowerCase())||(u.username||"").toLowerCase().includes(q.toLowerCase())||(u.phone||"").includes(q);}):customers.slice(0,30);
+        if(filtered.length===0){custList.appendChild(el("div",{style:{fontSize:".76rem",color:"#999",padding:"8px"}},_lang==="lo"?"ບໍ່ພົບລູກຄ້າ":"No customer found"));return;}
+        filtered.forEach(function(u){
+          custList.appendChild(el("div",{style:{padding:"9px 10px",borderRadius:"8px",cursor:"pointer",fontSize:".8rem",borderBottom:"1px solid #f0f0f0"},
+            onclick:function(){ad.customer=u;ad.customerName=u.name||u.username;ad.customerPhone=u.phone||"";render();}
+          },el("span",{style:{fontWeight:"600",color:"#1A2B5F"}},u.name||u.username),el("span",{style:{color:"#8A7A9E",marginLeft:"8px"}},u.phone||"")));
+        });
+      }
+      refreshCustList("");
+      custSearch.oninput=function(){refreshCustList(this.value.trim());};
+      custCard.appendChild(custSearch);custCard.appendChild(custList);
+      custCard.appendChild(el("div",{style:{fontSize:".7rem",color:"#999",margin:"10px 0 6px"}},_lang==="lo"?"— ຫຼື ກໍລະນີລູກຄ້າໃໝ່ທີ່ບໍ່ມີໃນລະບົບ —":"— Or for a new customer not in the system —"));
+      const newNameInp=el("input",{type:"text",placeholder:_lang==="lo"?"ຊື່ລູກຄ້າ":"Customer name",value:ad.customerName,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",marginBottom:"6px"}});
+      const newPhoneInp=el("input",{type:"text",placeholder:_lang==="lo"?"ເບີໂທ":"Phone",value:ad.customerPhone,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",marginBottom:"8px"}});
+      newNameInp.oninput=function(){ad.customerName=this.value;};
+      newPhoneInp.oninput=function(){ad.customerPhone=this.value;};
+      custCard.appendChild(newNameInp);custCard.appendChild(newPhoneInp);
+      custCard.appendChild(el("button",{type:"button",className:"btn btn-g",style:{fontSize:".78rem"},onclick:function(){
+        if(!newNameInp.value.trim()||!newPhoneInp.value.trim()){toast(_lang==="lo"?"ກະລຸນາໃສ່ຊື່ ແລະ ເບີໂທ":"Please enter name and phone");return;}
+        ad.customer={id:null,name:newNameInp.value.trim(),phone:newPhoneInp.value.trim(),username:newNameInp.value.trim()};
+        ad.customerName=newNameInp.value.trim();ad.customerPhone=newPhoneInp.value.trim();
+        render();
+      }},_lang==="lo"?"✓ ໃຊ້ຂໍ້ມູນນີ້":"✓ Use This Info"));
+    }
+    section.appendChild(custCard);
+
+    // ── STEP 2: Select Products ──────────────────────────────────────
+    const prodCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+    prodCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",marginBottom:"10px"}},"② "+(_lang==="lo"?"ເລືອກສິນຄ້າ":"Select Products")));
+    if(ad.items.length>0){
+      const itemsList=el("div",{style:{marginBottom:"10px"}});
+      ad.items.forEach(function(it,idx){
+        itemsList.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#F0F7F2",borderRadius:"9px",padding:"8px 10px",marginBottom:"6px"}},
+          el("div",{style:{fontSize:".78rem",color:"#1A2B5F"}},it.name+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":" ")+" ×"+it.q+" — ₭"+fmt(it.p*it.q)),
+          el("button",{type:"button",style:{background:"none",border:"none",color:"#c0392b",fontSize:"1rem",cursor:"pointer"},onclick:function(){ad.items.splice(idx,1);render();}},"✕")
+        ));
+      });
+      prodCard.appendChild(itemsList);
+    }
+    const prodSearch=el("input",{type:"text",placeholder:_lang==="lo"?"🔍 ຄົ້ນຫາສິນຄ້າ...":"🔍 Search product...",style:{width:"100%",padding:"10px 12px",borderRadius:"10px",border:"1.5px solid #ddd",fontSize:".82rem",fontFamily:"inherit",marginBottom:"8px"}});
+    const prodResults=el("div",{style:{maxHeight:"260px",overflowY:"auto"}});
+    function refreshProdResults(q){
+      prodResults.innerHTML="";
+      if(!q){return;}
+      const filtered=prods.filter(function(p){return p&&p.name&&p.name.toLowerCase().includes(q.toLowerCase());}).slice(0,15);
+      if(filtered.length===0){prodResults.appendChild(el("div",{style:{fontSize:".76rem",color:"#999",padding:"8px"}},_lang==="lo"?"ບໍ່ພົບສິນຄ້າ":"No product found"));return;}
+      filtered.forEach(function(p){
+        const pCard=el("div",{style:{border:"1.5px solid #eee",borderRadius:"10px",padding:"10px",marginBottom:"8px"}});
+        pCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",color:"#1A2B5F",marginBottom:"6px"}},p.name+" — ₭"+fmt(p.price)));
+        const cs=p.colors||[""],sz=p.sizes||[""];
+        const colorSel=el("select",{style:{padding:"6px 8px",borderRadius:"7px",border:"1px solid #ddd",fontSize:".76rem",marginRight:"6px",fontFamily:"inherit"}});
+        cs.forEach(function(c){colorSel.appendChild(el("option",{value:c},c||"-"));});
+        const sizeSel=el("select",{style:{padding:"6px 8px",borderRadius:"7px",border:"1px solid #ddd",fontSize:".76rem",marginRight:"6px",fontFamily:"inherit"}});
+        sz.forEach(function(s){sizeSel.appendChild(el("option",{value:s},s||"-"));});
+        const qtyInp=el("input",{type:"number",min:"1",value:"1",style:{width:"54px",padding:"6px 8px",borderRadius:"7px",border:"1px solid #ddd",fontSize:".76rem",marginRight:"6px",fontFamily:"inherit"}});
+        const addBtn=el("button",{type:"button",className:"btn btn-p",style:{padding:"7px 14px",fontSize:".76rem",width:"auto"}},_lang==="lo"?"➕ ເພີ່ມ":"➕ Add");
+        addBtn.onclick=function(){
+          const qVal=Math.max(1,parseInt(qtyInp.value)||1);
+          const sh=shops.find(function(s){return s.id===p.shopId;});
+          ad.items.push({pid:p.id,name:p.name,c:colorSel.value||"",s:sizeSel.value||"",q:qVal,p:p.price,cost:p.cost||0,preorder:false,shopId:p.shopId||null,shopName:sh?sh.name:"LaoH"});
+          render();
+        };
+        const row=el("div",{style:{display:"flex",alignItems:"center",flexWrap:"wrap",gap:"4px"}});
+        if(p.colors&&p.colors.length>0)row.appendChild(colorSel);
+        if(p.sizes&&p.sizes.length>0)row.appendChild(sizeSel);
+        row.appendChild(qtyInp);row.appendChild(addBtn);
+        pCard.appendChild(row);
+        prodResults.appendChild(pCard);
+      });
+    }
+    prodSearch.oninput=function(){refreshProdResults(this.value.trim());};
+    prodCard.appendChild(prodSearch);prodCard.appendChild(prodResults);
+    section.appendChild(prodCard);
+
+    // ── STEP 3: Delivery ──────────────────────────────────────
+    const delCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+    delCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",marginBottom:"10px"}},"③ "+(_lang==="lo"?"ການຈັດສົ່ງ":"Delivery")));
+    const delTabs=el("div",{className:"tabs",style:{marginBottom:"10px"}});
+    [["carrier",_lang==="lo"?"🚚 ຂົນສົ່ງ":"🚚 Carrier"],["home",_lang==="lo"?"🛵 ສົ່ງເຖິງບ້ານ":"🛵 Home Delivery"]].forEach(function(t){
+      delTabs.appendChild(el("button",{type:"button",style:{flex:"1",padding:"8px",border:"none",background:ad.deliveryType===t[0]?"#1A2B5F":"#fff",color:ad.deliveryType===t[0]?"#fff":"#1A2B5F",fontSize:".78rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){ad.deliveryType=t[0];render();}},t[1]));
+    });
+    delCard.appendChild(delTabs);
+    if(ad.deliveryType==="carrier"){
+      const carrierSel=el("select",{style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",marginBottom:"8px"}});
+      CARRIERS.forEach(function(c){carrierSel.appendChild(el("option",{value:c,selected:ad.carrier===c},c));});
+      carrierSel.onchange=function(){ad.carrier=this.value;};
+      const branchInp=el("input",{type:"text",placeholder:_lang==="lo"?"ສາຂາ":"Branch",value:ad.branch,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit"}});
+      branchInp.oninput=function(){ad.branch=this.value;};
+      delCard.appendChild(carrierSel);delCard.appendChild(branchInp);
+    } else {
+      const houseInp=el("input",{type:"text",placeholder:_lang==="lo"?"ບ້ານເລກທີ":"House No.",value:ad.house,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",marginBottom:"6px"}});
+      const villInp=el("input",{type:"text",placeholder:_lang==="lo"?"ບ້ານ":"Village",value:ad.village,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",marginBottom:"6px"}});
+      const distInp=el("input",{type:"text",placeholder:_lang==="lo"?"ເມືອງ":"District",value:ad.district,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit"}});
+      houseInp.oninput=function(){ad.house=this.value;};
+      villInp.oninput=function(){ad.village=this.value;};
+      distInp.oninput=function(){ad.district=this.value;};
+      delCard.appendChild(houseInp);delCard.appendChild(villInp);delCard.appendChild(distInp);
+    }
+    section.appendChild(delCard);
+
+    // ── STEP 4: Coupon ──────────────────────────────────────
+    const cpCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+    cpCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",marginBottom:"10px"}},"④ "+(_lang==="lo"?"ໂຄ້ດສ່ວນຫຼຸດ (ບໍ່ບັງຄັບ)":"Coupon (optional)")));
+    const cpInp=el("input",{type:"text",placeholder:_lang==="lo"?"ໃສ່ໂຄ້ດ...":"Enter code...",value:ad.couponCode,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",textTransform:"uppercase"}});
+    cpInp.oninput=function(){ad.couponCode=this.value.toUpperCase();};
+    cpCard.appendChild(cpInp);
+    section.appendChild(cpCard);
+
+    // ── STEP 5: Summary & Submit ──────────────────────────────────────
+    const subtotal=ad.items.reduce(function(s,it){return s+it.p*it.q;},0);
+    let discount=0,matchedCp=null;
+    if(ad.couponCode){
+      matchedCp=coupons.find(function(c){return c.code===ad.couponCode&&(!c.expiry||new Date(c.expiry)>=new Date());});
+      if(matchedCp&&matchedCp.type!=="shipping")discount=Math.round(subtotal*matchedCp.pct/100);
+    }
+    const sumCard=el("div",{className:"acard",style:{marginBottom:"14px",background:"#F3F0F7"}});
+    sumCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".82rem",marginBottom:"4px"}},el("span",null,_lang==="lo"?"ລວມສິນຄ້າ":"Subtotal"),el("span",null,"₭"+fmt(subtotal))));
+    if(discount>0)sumCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".82rem",marginBottom:"4px",color:"#c0392b"}},el("span",null,_lang==="lo"?"ສ່ວນຫຼຸດ":"Discount"),el("span",null,"-₭"+fmt(discount))));
+    sumCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".95rem",fontWeight:"800",color:"#1B6B3A",marginTop:"6px"}},el("span",null,_lang==="lo"?"ລວມທັງໝົດ":"Total"),el("span",null,"₭"+fmt(subtotal-discount))));
+    section.appendChild(sumCard);
+
+    const submitBtn=el("button",{type:"button",className:"btn btn-p",style:{fontSize:".9rem",fontWeight:"800",padding:"13px"}},_lang==="lo"?"✅ ສ້າງອໍເດີ":"✅ Create Order");
+    submitBtn.onclick=function(){
+      if(!ad.customer){toast(_lang==="lo"?"ກະລຸນາເລືອກລູກຄ້າກ່ອນ":"Please select a customer first");return;}
+      if(ad.items.length===0){toast(_lang==="lo"?"ກະລຸນາເລືອກສິນຄ້າກ່ອນ":"Please select at least one product");return;}
+      if(ad.deliveryType==="carrier"&&!ad.branch.trim()){toast(_lang==="lo"?"ກະລຸນາໃສ່ສາຂາ":"Please enter branch");return;}
+      if(ad.deliveryType==="home"&&(!ad.house.trim()||!ad.village.trim()||!ad.district.trim())){toast(_lang==="lo"?"ກະລຸນາໃສ່ທີ່ຢູ່ໃຫ້ຄົບ":"Please complete the address");return;}
+      const shopGroupsA={};
+      ad.items.forEach(function(it){
+        const sid=it.shopId?String(it.shopId):"__laoh__";
+        if(!shopGroupsA[sid])shopGroupsA[sid]=[];
+        shopGroupsA[sid].push(it);
+      });
+      const shopKeysA=Object.keys(shopGroupsA);
+      const baseOidA=Date.now();
+      const createdOrdersA=[];
+      shopKeysA.forEach(function(sid,idx){
+        const sitems=shopGroupsA[sid];
+        const sTotal=sitems.reduce(function(s,i){return s+i.p*i.q;},0);
+        const sDisc=idx===0?discount:0;
+        const sOid=baseOidA+(idx*10000);
+        const o={id:sOid,uid:ad.customer.id||null,name:ad.customer.name,phone:ad.customer.phone,
+          deliveryType:ad.deliveryType,
+          carrier:ad.deliveryType==="carrier"?ad.carrier:"🛵 ສົ່ງເຖິງບ້ານ",
+          branch:ad.deliveryType==="carrier"?ad.branch:(ad.house+(_lang==="lo"?" ບ້ານ":" Village")+ad.village+(_lang==="lo"?" ເມືອງ":" District")+ad.district),
+          homeAddress:ad.deliveryType==="home"?{house:ad.house,village:ad.village,district:ad.district,lat:null,lng:null}:null,
+          shopId:sid==="__laoh__"?null:Number(sid),
+          shopName:sitems[0].shopName||"LaoH",
+          items:sitems.map(function(i){return {n:i.name,c:i.c||"",s:i.s||"",q:i.q,p:i.p,cost:i.cost||0,preorder:i.preorder||false};}),
+          subtotal:sTotal,shipping:0,discount:sDisc,
+          coupon:idx===0&&matchedCp?matchedCp.code:"",
+          total:sTotal-sDisc,
+          status:"ລໍຢືນຢັນ",
+          at:new Date().toLocaleString("th-TH"),
+          groupId:baseOidA,
+          createdByAdmin:true};
+        createdOrdersA.push(o);
+        orders=[o].concat(orders);
+        saveToCloud("orders",sOid,o);
+        // ── Deduct stock ──
+        sitems.forEach(function(item){
+          const pidx=prods.findIndex(function(x){return x&&x.id===item.pid;});
+          if(pidx>=0){
+            const k=(item.c||"")+"|"+(item.s||"");
+            const newStock=Object.assign({},prods[pidx].stock||{});
+            const curQ=newStock[k]||0;
+            if(curQ>0){
+              newStock[k]=Math.max(0,curQ-(item.q||1));
+              prods[pidx]=Object.assign({},prods[pidx],{stock:newStock});
+              saveToCloud("prods",prods[pidx].id,prods[pidx]);
+            }
+          }
+        });
+      });
+      if(matchedCp){
+        const cpU=Object.assign({},matchedCp,{used:(matchedCp.used||0)+1});
+        const cpIdx=coupons.findIndex(function(x){return x.id===matchedCp.id;});
+        if(cpIdx>=0)coupons[cpIdx]=cpU;
+        saveToCloud("coupons",cpU.id,cpU);
+      }
+      // ── ກວດສອບວ່າ Firestore ບັນທຶກອໍເດີສຳເລັດແທ້ ກ່ອນແຈ້ງວ່າສຳເລັດ (ຄືແບບເຊັກເອົາທ໌ລູກຄ້າ v1.9.1) ──
+      submitBtn.disabled=true;submitBtn.textContent=_lang==="lo"?"⏳ ກຳລັງສ້າງ...":"⏳ Creating...";
+      function _attemptAdminOrderUpload(){
+        if(!db){_showAdminOrderRetry();return;}
+        const verifyCallsA=createdOrdersA.map(function(co){
+          return db.collection("orders").doc(String(co.id)).get()
+            .then(function(doc){return doc.exists===true;})
+            .catch(function(){return false;});
+        });
+        const timeoutPA=new Promise(function(resolve){setTimeout(function(){resolve("timeout");},8000);});
+        Promise.race([Promise.all(verifyCallsA),timeoutPA]).then(function(result){
+          const allOkA=Array.isArray(result)&&result.length>0&&result.every(function(ok){return ok===true;});
+          if(allOkA){
+            toast("✅ "+(_lang==="lo"?"ສ້າງອໍເດີສຳເລັດ":"Order created successfully"));
+            window._adminOrderDraft=null;
+            render();
+          } else {
+            _showAdminOrderRetry();
+          }
+        });
+      }
+      function _showAdminOrderRetry(){
+        const retryModA=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{textAlign:"center"}});
+        retryModA.appendChild(el("div",{style:{fontSize:"2.2rem",marginBottom:"6px"}},"📶"));
+        retryModA.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#c0392b",marginBottom:"8px"}},_lang==="lo"?"ອິນເຕີເນັດອ່ອນ":"Weak Internet"));
+        retryModA.appendChild(el("div",{style:{fontSize:".85rem",color:"#5D2D7A",marginBottom:"16px",lineHeight:"1.6"}},_lang==="lo"?"ການອັບໂລດອໍເດີຍັງບໍ່ສຳເລັດ. ກະລຸນາລອງໃໝ່ໂດຍບໍ່ຕ້ອງປິດໜ້ານີ້.":"Order upload did not complete. Please retry without closing this page."));
+        const retryBtnA=el("button",{type:"button",className:"btn btn-p",style:{marginBottom:"8px"}},_lang==="lo"?"🔄 ລອງສົ່ງອໍເດີອີກຄັ້ງ":"🔄 Retry Sending Order");
+        retryBtnA.onclick=function(){
+          closeOv();
+          toast(_lang==="lo"?"⏳ ກຳລັງລອງໃໝ່...":"⏳ Retrying...");
+          const resendCallsA=createdOrdersA.map(function(co){return saveToCloud("orders",co.id,co);});
+          Promise.all(resendCallsA).then(function(){_attemptAdminOrderUpload();});
+        };
+        retryModA.appendChild(retryBtnA);
+        showOv(retryModA,null);
+      }
+      _attemptAdminOrderUpload();
+    };
+    section.appendChild(submitBtn);
+
+    return section;
+  }
+
 }
 
 function showNarratorProfileModal(){
@@ -10504,6 +10895,13 @@ function showEditProd(p){
   }
   if(!window._presetSizes)window._presetSizes=["XS","S","M","L","XL","XXL","ຟຣີໄຊ"];
   if(!window._presetCats)window._presetCats=[...PCATS];
+  // ── ກູ້ຄືນສີ / ຂະໜາດ ທີ່ສິນຄ້ານີ້ມີຢູ່ແລ້ວ ແຕ່ອາດຫາຍຈາກ preset list (ເຊັ່ນ localStorage ຖືກລ້າງ) ──
+  (function(){
+    var changed=false;
+    (p.colors||[]).forEach(function(c){if(c&&!window._presetColors.includes(c)){window._presetColors.push(c);changed=true;}});
+    (p.sizes||[]).forEach(function(s){if(s&&!window._presetSizes.includes(s)){window._presetSizes.push(s);changed=true;}});
+    if(changed){try{localStorage.setItem("laoh_presetColors",JSON.stringify(window._presetColors));localStorage.setItem("laoh_presetSizes",JSON.stringify(window._presetSizes));}catch(e){}}
+  })();
   let fm={...p,
     selectedColors:[...(p.colors||[])],
     selectedSizes:[...(p.sizes||[])],
@@ -10567,6 +10965,8 @@ function showEditProd(p){
       catWrapEdit.appendChild(mainRow);
       // Sub cat row — always show so user can add subCats even for new mainCats
       const subCats=getSubCatsForMain(fm.selectedMainCat,myShopEdit);
+      // ── ກູ້ຄືນ subCat ເກົ່າຂອງສິນຄ້ານີ້ ຖ້າມັນຫາຍຈາກລາຍການ (ເຊັ່ນ catSubMap ຖືກແກ້) ──
+      if(fm.selectedSubCat&&!subCats.includes(fm.selectedSubCat))subCats.push(fm.selectedSubCat);
       subCatWrapEdit.innerHTML="";
       subCatWrapEdit.style.display="block";
       subCatWrapEdit.appendChild(el("label",{className:"lbl"},"📂 ໝວດໝູ່ຍ່ອຍ (ເລືອກ 1 / ພິມ + Enter ເພີ່ມໃໝ່)"));
@@ -10946,6 +11346,12 @@ function buildProfile(){
       action:()=>{_lang=_lang==="lo"?"en":"lo";try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();}
     },
     {
+      icon:"🗣️",
+      label:_lang==="lo"?"ແປພາສາ (Google Translate)":"Translate (Google Translate)",
+      value:"",
+      action:()=>{laohTranslateShow();}
+    },
+    {
       icon:"📦",
       label:_lang==="lo"?(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders"):"My Orders",
       value:myO.length>0?String(myO.length):"",
@@ -10973,7 +11379,7 @@ function buildProfile(){
                   "🏪 "+(o.shopName||"")+" · ₭"+fmt(o.total||0)
                 ),
                 (o.items||[]).map(i=>el("div",{style:{fontSize:".72rem",color:"#1A2B5F",paddingLeft:"8px"}},
-                  "• "+i.n+" ×"+i.q+" ₭"+fmt(i.p)
+                  "• "+i.n+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q+" ₭"+fmt(i.p)
                 ))
               ))
             );
@@ -11800,6 +12206,8 @@ try{
 render();
 // Then load from Firebase (syncs everyone's data)
 loadFromCloud().then(function(){
+  // Load this restored session's delivery addresses from Firestore (with auto-migration from localStorage)
+  if(user&&user.role==="c"){loadAddressesForCurrentUser().then(function(){render();}).catch(function(){});}
   // ✅ Rebuild _presetCats from all real product cats after load
   // so custom categories added in older versions are preserved
   const allCatSet=new Set([...PCATS]);
@@ -11987,7 +12395,7 @@ loadFromCloud().then(function(){
 
 // ── GOOGLE TRANSLATE POPUP ─────────────────────────────────────────
 const _TRANSLATE_LANGS = [
-  {code:'lo', label:'ລາວ', flag:'🇱🇦'},
+  {code:'lo', label:'ຍົກເລີກ / Cancel', flag:'↩️'},
   {code:'en', label:'English', flag:'🇬🇧'},
   {code:'th', label:'ภาษาไทย', flag:'🇹🇭'},
   {code:'zh-CN', label:'中文', flag:'🇨🇳'},
@@ -11996,7 +12404,6 @@ const _TRANSLATE_LANGS = [
   {code:'ko', label:'한국어', flag:'🇰🇷'},
   {code:'fr', label:'Français', flag:'🇫🇷'},
   {code:'de', label:'Deutsch', flag:'🇩🇪'},
-  {code:'my', label:'မြန်မာ', flag:'🇲🇲'},
 ];
 
 function laohTranslateInit(){
@@ -12108,6 +12515,26 @@ window.addEventListener('load', function(){
   setTimeout(function(){
     if(laohTranslateShouldShow()) laohTranslateShow();
   }, 800);
+
+  // ── A2HS (Add to Home Screen) popup ────────────────────────────
+  setTimeout(function(){
+    try{
+      // ບໍ່ສະແດງຖ້າ: ເຄີຍ dismiss ແລ້ວ, ຫຼື ເປັນ standalone app ແລ້ວ
+      const dismissed=localStorage.getItem('laoh_a2hs_dismissed');
+      const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+      if(dismissed||isStandalone) return;
+      const popup=document.getElementById('laoh-a2hs-popup');
+      if(!popup) return;
+      const ua=navigator.userAgent||'';
+      const isIOS=/iphone|ipad|ipod/i.test(ua);
+      const isAndroid=/android/i.test(ua);
+      if(!isIOS&&!isAndroid) return; // desktop: ບໍ່ສະແດງ
+      // Show correct instructions
+      if(isIOS) document.getElementById('laoh-a2hs-ios').style.display='block';
+      else document.getElementById('laoh-a2hs-android').style.display='block';
+      popup.style.display='flex';
+    }catch(e){}
+  }, 3500);
 });
 
 // ── PULL TO REFRESH ────────────────────────────────────────────────

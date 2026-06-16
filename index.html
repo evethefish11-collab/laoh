@@ -1497,7 +1497,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.0.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.0.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -1739,31 +1739,35 @@ function buildFeedPage(){
   const reviews = getReviews();
   const audiobooks = getAudiobooks().filter(function(a){return a&&a.id&&!a.hidden;});
 
-  // Build mixed feed: Live first, then reviews + audiobooks interleaved
+  // ── ສ້າງ feed: Live ກ່ອນສະເໝີ (ບໍ່ສົນເວລາ), ຈາກນັ້ນ ຣີວິວ+ໂພສຮ້ານ+audiobook ທັງໝົດ ຮຽງຕາມເວລາລ່າສຸດກ່ອນຮ່ວມກັນ ──
+  // ── (ກ່ອນໜ້ານີ້ແຕ່ລະປະເພດຖືກແຊກແບບສະຫຼັບກັນຕາມຕຳແໜ່ງຄົງທີ່ ບໍ່ແມ່ນຕາມເວລາຈິງ — ແກ້ໄຂແລ້ວ) ──
   const liveShopIds = new Set(feedRooms.map(r=>r.shopId));
-  const feedItems = []; // {type:"live"|"review"|"audio", data:...}
+  const feedItems = []; // {type:"live"|"review"|"audio"|"shoppost", data:...}
   feedRooms.forEach(r=>feedItems.push({type:"live",data:r}));
+
+  // Merge reviews + shopPosts + audiobooks into one list, each tagged with its effective timestamp
+  const chronoItems=[];
   reviews.filter(function(rv){return rv&&rv.id&&!rv.hidden;}).forEach(function(rv){
-    if(rv.shopId&&liveShopIds.has(rv.shopId)){
-      var insertIdx=feedItems.map(function(x,i){return x.type==="live"&&x.data&&x.data.shopId===rv.shopId?i:-1;}).filter(function(i){return i>=0;}).pop();
-      if(insertIdx!==undefined) feedItems.splice(insertIdx+1,0,{type:"review",data:rv});
-      else feedItems.push({type:"review",data:rv});
-    } else {
-      feedItems.push({type:"review",data:rv});
+    chronoItems.push({type:"review",data:rv,_at:rv.at||0});
+  });
+  getShopPosts().filter(function(p){return p&&p.id&&!p.hidden;}).forEach(function(post){
+    chronoItems.push({type:"shoppost",data:post,_at:post.at||0});
+  });
+  audiobooks.forEach(function(ab){
+    chronoItems.push({type:"audio",data:ab,_at:ab.createdAt||ab.id||0});
+  });
+  chronoItems.sort(function(a,b){return b._at-a._at;}); // ໃໝ່ສຸດກ່ອນ
+
+  // ── ຮັກສາພຶດຕິກຳເກົ່າ: ຖ້າຣີວິວເປັນຂອງຮ້ານທີ່ກຳລັງ Live ຢູ່ ໃຫ້ໄປຢູ່ຕິດກັບຫ້ອງ Live ນັ້ນ ──
+  const placedAfterLive=new Set();
+  chronoItems.forEach(function(item){
+    if(item.type==="review"&&item.data.shopId&&liveShopIds.has(item.data.shopId)){
+      var insertIdx=feedItems.map(function(x,i){return x.type==="live"&&x.data&&x.data.shopId===item.data.shopId?i:-1;}).filter(function(i){return i>=0;}).pop();
+      if(insertIdx!==undefined){feedItems.splice(insertIdx+1,0,item);placedAfterLive.add(item);return;}
     }
   });
-  // Inject shopPosts into feed (after reviews, before audio, sorted by date)
-  const shopPosts=getShopPosts().filter(function(p){return !p.hidden;})
-    .slice().sort(function(a,b){return (b.at||0)-(a.at||0);});
-  shopPosts.forEach(function(post,i){
-    const insertAt=Math.min(2+i*3, feedItems.length);
-    feedItems.splice(insertAt,0,{type:"shoppost",data:post});
-  });
-
-  // Interleave audiobooks into feed (every 4 items)
-  audiobooks.forEach(function(ab,i){
-    const insertAt=Math.min(4+i*5, feedItems.length);
-    feedItems.splice(insertAt,0,{type:"audio",data:ab});
+  chronoItems.forEach(function(item){
+    if(!placedAfterLive.has(item))feedItems.push(item);
   });
 
   const hasLive = feedRooms.length > 0;
@@ -3334,7 +3338,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.0.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.0.4")
   );
 
   // Icon style helper
@@ -4051,33 +4055,38 @@ function buildFeedEntryStrip(){
     .concat(getShopPosts().filter(function(p){return p&&p.id&&!p.hidden;}))
     .sort(function(a,b){return (b.at||0)-(a.at||0);});
   const latest=allFeedContent[0];
-  const strip=el("div",{style:{margin:"14px 14px 0",background:"#fff",borderRadius:"14px",padding:"12px 14px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",border:"1.5px solid #E8F5EE",boxShadow:"0 1px 6px rgba(0,0,0,.05)"},
+  const strip=el("div",{style:{margin:"14px 14px 0",background:"#fff",borderRadius:"14px",overflow:"hidden",cursor:"pointer",border:"1.5px solid #E8F5EE",boxShadow:"0 1px 6px rgba(0,0,0,.05)"},
     onclick:function(){view="feed";render();}
   });
-  strip.appendChild(el("img",{src:_ICON_FEED,style:{width:"40px",height:"40px",objectFit:"contain",borderRadius:"8px",flexShrink:"0"},alt:"Feed"}));
+  // ── ແຖວເທິງ: ໄອຄອນ Feed + ຫົວຂໍ້ + ຂໍ້ຄວາມຊວນກົດ ──
+  const headRow=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px"}});
+  headRow.appendChild(el("img",{src:_ICON_FEED,style:{width:"34px",height:"34px",objectFit:"contain",borderRadius:"7px",flexShrink:"0"},alt:"Feed"}));
   const textCol=el("div",{style:{flex:"1",minWidth:"0"}});
   textCol.appendChild(el("div",{style:{fontWeight:"800",fontSize:".88rem",color:"#1A2B5F",marginBottom:"2px"}},_lang==="lo"?"🎬 Feed ຣີວິວ":"🎬 Review Feed"));
   textCol.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}},
     latest?(_lang==="lo"?"ລ່າສຸດ: ":"Latest: ")+(latest.caption||latest.userName||(_lang==="lo"?"ຮີວິວໃໝ່":"New review")):(_lang==="lo"?"ເຂົ້າໄປເບິ່ງໜ້າ Feed ສິນຄ້າຣີວິວອື່ນໆອີກ":"View more product reviews in the Feed")
   ));
-  if(latest){
-    textCol.appendChild(el("div",{style:{fontSize:".62rem",color:"#1B6B3A",fontWeight:"700",marginTop:"2px"}},_lang==="lo"?"ເຂົ້າໄປເບິ່ງໜ້າ Feed ສິນຄ້າຣີວິວອື່ນໆອີກ →":"View more reviews in Feed →"));
-  }
-  strip.appendChild(textCol);
-  // Thumbnail preview of the latest item's media, if any
+  headRow.appendChild(textCol);
+  strip.appendChild(headRow);
+  // ── ພື້ນທີ່ preview ຮູບ/ວິດີໂອ ໃຫຍ່ຂຶ້ນຫຼາຍ (ບໍ່ແມ່ນ thumbnail ນ້ອຍແບບເກົ່າ) ──
   if(latest&&latest.mediaUrl){
-    const thumb=el("div",{style:{width:"44px",height:"44px",borderRadius:"8px",overflow:"hidden",flexShrink:"0",background:"#000"}});
+    const mediaArea=el("div",{style:{width:"100%",height:"220px",position:"relative",overflow:"hidden",background:"#000"}});
     if(latest.mediaType==="video"){
       const vT=document.createElement("video");vT.src=latest.mediaUrl;vT.muted=true;vT.playsInline=true;vT.preload="metadata";
-      vT.style.cssText="width:100%;height:100%;object-fit:cover;";
+      vT.style.cssText="width:100%;height:100%;object-fit:cover;display:block;";
       vT.addEventListener("loadedmetadata",function(){try{vT.currentTime=Math.min(0.1,(vT.duration||1)/2);}catch(e){}});
-      thumb.appendChild(vT);
+      mediaArea.appendChild(vT);
+      mediaArea.appendChild(el("div",{style:{position:"absolute",top:"10px",right:"10px",background:"rgba(0,0,0,.55)",color:"#fff",borderRadius:"50%",width:"30px",height:"30px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1rem"}},"▶️"));
     } else {
-      const iT=document.createElement("img");iT.src=latest.mediaUrl;iT.style.cssText="width:100%;height:100%;object-fit:cover;";
-      thumb.appendChild(iT);
+      const iT=document.createElement("img");iT.src=latest.mediaUrl;iT.style.cssText="width:100%;height:100%;object-fit:cover;display:block;";
+      mediaArea.appendChild(iT);
     }
-    strip.appendChild(thumb);
+    strip.appendChild(mediaArea);
   }
+  // ── ຂໍ້ຄວາມ "ເບິ່ງເພີ່ມ" ຢູ່ລຸ່ມສຸດ ──
+  strip.appendChild(el("div",{style:{padding:"10px 14px 12px",fontSize:".68rem",color:"#1B6B3A",fontWeight:"700"}},
+    _lang==="lo"?"ເຂົ້າໄປເບິ່ງໜ້າ Feed ສິນຄ້າຣີວິວອື່ນໆອີກ →":"View more reviews in Feed →"
+  ));
   return strip;
 }
 
@@ -10307,6 +10316,15 @@ function buildAdminTab(){
           +(isToday?" 🟢 ມື້ນີ້":"")));
         ph.appendChild(el("div",{style:{display:"flex",gap:"5px"}},
           el("span",{style:{fontSize:".62rem",color:"#888"}},"❤️ "+(post.likes||0)),
+          el("button",{
+            style:{background:"none",border:"1.5px solid #1B6B3A",color:"#1B6B3A",borderRadius:"6px",padding:"2px 8px",fontSize:".62rem",cursor:"pointer",fontFamily:"inherit"},
+            onclick:function(){
+              const newCaption=prompt(_lang==="lo"?"ແກ້ໄຂຄຳອະທິບາຍ:":"Edit caption:",post.caption||"");
+              if(newCaption===null)return; // ກົດ cancel
+              saveShopPost(Object.assign({},post,{caption:newCaption.trim()}));
+              toast(_lang==="lo"?"✅ ແກ້ໄຂແລ້ວ":"✅ Updated");render();
+            }
+          },"✏️ "+(_lang==="lo"?"ແກ້ໄຂ":"Edit")),
           el("button",{
             style:{background:"none",border:"1.5px solid #c00",color:"#c00",borderRadius:"6px",padding:"2px 8px",fontSize:".62rem",cursor:"pointer",fontFamily:"inherit"},
             onclick:function(){if(confirm("ລຶບໂພສນີ້?")){{deleteShopPost(post.id);toast("ລຶບໂພສແລ້ວ");render();}}}

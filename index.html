@@ -122,7 +122,7 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 
 /* ── LIVE FEED (TikTok style) ─────────────────────────── */
 .feed-page{position:fixed;inset:0;top:0;background:#000;z-index:150;overflow:hidden;}
-.feed-scroll{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;}
+.feed-scroll{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior-y:contain;}
 .feed-scroll::-webkit-scrollbar{display:none;}
 .feed-item{height:100%;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;overflow:hidden;}
 .feed-video{position:absolute;inset:0;background:linear-gradient(135deg,#0D1A3A,#1a1a2e);}
@@ -1497,7 +1497,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.0.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.0.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2014,7 +2014,11 @@ function buildFeedPage(){
     // Shop header
     const hdr=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px 8px",cursor:"pointer",flexShrink:"0"},
       onclick:function(){prevView="feed";fShop=post.shopId;view="shopProfile";render();}});
-    hdr.appendChild(el("div",{style:{width:"38px",height:"38px",borderRadius:"50%",background:"#E8F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",flexShrink:"0"}},sh.emoji||"🏪"));
+    hdr.appendChild(el("div",{style:{width:"38px",height:"38px",borderRadius:"50%",background:"#E8F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",flexShrink:"0",overflow:"hidden"}},
+      sh.logo&&isUrl(sh.logo)
+        ? el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}})
+        : el("span",null,sh.emoji||"🏪")
+    ));
     hdr.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
       el("div",{style:{fontWeight:"800",fontSize:".85rem",color:"#1A2B5F"}},(sh.emoji?"":"")+sh.name),
       el("div",{style:{fontSize:".65rem",color:"#6B8F75"}},new Date(post.at||Date.now()).toLocaleDateString("lo-LA",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))
@@ -2060,12 +2064,9 @@ function buildFeedPage(){
       prodRow.appendChild(el("button",{
         style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"8px",padding:"6px 12px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
         onclick:function(e){e.stopPropagation();
-          const sz=(pp.sizes&&pp.sizes[0])||"";const co=(pp.colors&&pp.colors[0])||"";
-          const k=String(pp.id)+(co?"-"+co:"")+(sz?"-"+sz:"");
-          const ex=cart.find(function(x){return x.k===k;});
-          if(ex){const ei=cart.findIndex(function(x){return x.k===k;});if(ei>=0)cart[ei]=Object.assign({},cart[ei],{q:(cart[ei].q||1)+1});}
-          else cart.push(Object.assign({},pp,{k:k,co:co,si:sz,q:1,preorder:false,dispPrice:pp.price,orderSource:"shoppost",shopPostId:post.id,shopPostCaption:post.caption||""}));
-          saveCart();toast("🛒 ເພີ່ມ "+pp.name+" ແລ້ວ ✓");render();
+          // ── ເປີດໜ້າ card ສິນຄ້າໃຫ້ລູກຄ້າເລືອກສີ/ຂະໜາດເອງ ກ່ອນເພີ່ມລົງກະຕ່າ (ຄືແບບ review card ຂອງລູກຄ້າ) ──
+          const _sp2=prods.find(function(x){return String(x.id)===String(pp.id)||x.id===pp.id;});
+          if(_sp2)showProduct(_sp2);
         }
       },"🛒 ຊື້"));
       card.appendChild(prodRow);
@@ -3333,7 +3334,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.0.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.0.2")
   );
 
   // Icon style helper
@@ -3607,6 +3608,10 @@ function buildShopProfile(shopId){
       const vidThumb=document.createElement("video");
       vidThumb.src=v.mediaUrl;vidThumb.muted=true;vidThumb.playsInline=true;vidThumb.preload="metadata";
       vidThumb.style.cssText="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;";
+      // ── ກວດສອບ: preload="metadata" ໂດດດ່ຽວບໍ່ສະແດງເຟຣມຮູບ (ຈໍດຳ) — seek ໄປ 0.1s ເພື່ອໃຫ້ browser render ເຟຣມຈິງມາສະແດງເປັນ thumbnail ໂດຍບໍ່ຕ້ອງກົດ play ──
+      vidThumb.addEventListener("loadedmetadata",function(){
+        try{vidThumb.currentTime=Math.min(0.1,(vidThumb.duration||1)/2);}catch(e){}
+      });
       cell.appendChild(vidThumb);
       cell.appendChild(el("div",{style:{position:"absolute",top:"4px",right:"4px",fontSize:"1rem"}},"▶️"));
       if(v.userName){cell.appendChild(el("div",{style:{position:"absolute",bottom:"3px",left:"4px",right:"4px",fontSize:".6rem",color:"#fff",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,.8)"}},v.userName));}
@@ -4040,6 +4045,42 @@ function buildUserProfile(uid){
   return page;
 }
 
+// ── Feed entry strip ສຳລັບໜ້າຫຼັກ: ໄອຄອນ Feed (ຄືກັນກັບ navbar) + preview ໂພສ/ຣີວິວລ່າສຸດ, ກົດແລ້ວໄປໜ້າ Feed ──
+function buildFeedEntryStrip(){
+  const allFeedContent=getReviews().filter(function(r){return r&&r.id&&!r.hidden;})
+    .concat(getShopPosts().filter(function(p){return p&&p.id&&!p.hidden;}))
+    .sort(function(a,b){return (b.at||0)-(a.at||0);});
+  const latest=allFeedContent[0];
+  const strip=el("div",{style:{margin:"14px 14px 0",background:"#fff",borderRadius:"14px",padding:"12px 14px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",border:"1.5px solid #E8F5EE",boxShadow:"0 1px 6px rgba(0,0,0,.05)"},
+    onclick:function(){view="feed";render();}
+  });
+  strip.appendChild(el("img",{src:_ICON_FEED,style:{width:"40px",height:"40px",objectFit:"contain",borderRadius:"8px",flexShrink:"0"},alt:"Feed"}));
+  const textCol=el("div",{style:{flex:"1",minWidth:"0"}});
+  textCol.appendChild(el("div",{style:{fontWeight:"800",fontSize:".88rem",color:"#1A2B5F",marginBottom:"2px"}},_lang==="lo"?"🎬 Feed ຣີວິວ":"🎬 Review Feed"));
+  textCol.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}},
+    latest?(_lang==="lo"?"ລ່າສຸດ: ":"Latest: ")+(latest.caption||latest.userName||(_lang==="lo"?"ຮີວິວໃໝ່":"New review")):(_lang==="lo"?"ເຂົ້າໄປເບິ່ງໜ້າ Feed ສິນຄ້າຣີວິວອື່ນໆອີກ":"View more product reviews in the Feed")
+  ));
+  if(latest){
+    textCol.appendChild(el("div",{style:{fontSize:".62rem",color:"#1B6B3A",fontWeight:"700",marginTop:"2px"}},_lang==="lo"?"ເຂົ້າໄປເບິ່ງໜ້າ Feed ສິນຄ້າຣີວິວອື່ນໆອີກ →":"View more reviews in Feed →"));
+  }
+  strip.appendChild(textCol);
+  // Thumbnail preview of the latest item's media, if any
+  if(latest&&latest.mediaUrl){
+    const thumb=el("div",{style:{width:"44px",height:"44px",borderRadius:"8px",overflow:"hidden",flexShrink:"0",background:"#000"}});
+    if(latest.mediaType==="video"){
+      const vT=document.createElement("video");vT.src=latest.mediaUrl;vT.muted=true;vT.playsInline=true;vT.preload="metadata";
+      vT.style.cssText="width:100%;height:100%;object-fit:cover;";
+      vT.addEventListener("loadedmetadata",function(){try{vT.currentTime=Math.min(0.1,(vT.duration||1)/2);}catch(e){}});
+      thumb.appendChild(vT);
+    } else {
+      const iT=document.createElement("img");iT.src=latest.mediaUrl;iT.style.cssText="width:100%;height:100%;object-fit:cover;";
+      thumb.appendChild(iT);
+    }
+    strip.appendChild(thumb);
+  }
+  return strip;
+}
+
 function buildShop(){
   const PM=getPromoMap();
   const activeShopIds=new Set(shops.filter(function(s){return s.active;}).map(function(s){return s.id;}));
@@ -4234,6 +4275,7 @@ function buildShop(){
 
   return el("div",null,
     buildMemberBanner(),
+    buildFeedEntryStrip(),
     hero,
     searchBar,
     fSearch.trim()?null:catsSection,
@@ -12651,13 +12693,22 @@ window.addEventListener('load', function(){
     document.body.appendChild(ptrEl);
   }
   createPtr();
+  // ── ກວດສອບວ່າຕອນນີ້ຢູ່ໃນໜ້າ Feed ບໍ່ — ຖ້າແມ່ນ ໃຫ້ເບິ່ງ scrollTop ຂອງ .feed-scroll ແທນ window.scrollY ──
+  // ── ເພາະ Feed ມີ scroll container ຂອງມັນເອງ, window.scrollY ຈະຄ້າງຢູ່ 0 ຕະຫຼອດ ເຮັດໃຫ້ pull-to-refresh ໄວເກີນໄປ ແລະ reload ທັງໜ້າ ──
+  function atTop(){
+    if(typeof view!=="undefined"&&view==="feed"){
+      const fs=document.querySelector(".feed-scroll");
+      return fs?fs.scrollTop<=0:window.scrollY===0;
+    }
+    return window.scrollY===0;
+  }
   document.addEventListener("touchstart",function(e){
-    if(window.scrollY===0)startY=e.touches[0].clientY;
+    if(atTop())startY=e.touches[0].clientY;
   },{passive:true});
   document.addEventListener("touchmove",function(e){
     if(!startY)return;
     const dy=e.touches[0].clientY-startY;
-    if(dy>10&&window.scrollY===0){
+    if(dy>10&&atTop()){
       pulling=true;
       const prog=Math.min(dy,threshold*1.5);
       const show=Math.min(prog/threshold,1);
@@ -12672,7 +12723,14 @@ window.addEventListener('load', function(){
     if(dy>=threshold){
       ptrEl.textContent="🔄 ກຳລັງ Refresh...";
       ptrEl.style.transform="translateX(-50%) translateY(0)";
-      setTimeout(function(){location.reload();},400);
+      // ── ຖ້າຢູ່ໃນໜ້າ Feed: ໂຫຼດຂໍ້ມູນໃໝ່ ແລະ render ໃໝ່ ໂດຍບໍ່ອອກຈາກໜ້າ Feed (ບໍ່ໃຊ້ location.reload) ──
+      if(typeof view!=="undefined"&&view==="feed"){
+        Promise.resolve(typeof loadFromCloud==="function"?loadFromCloud():null).then(function(){
+          try{render();}catch(e){}
+        }).catch(function(){try{render();}catch(e){}});
+      } else {
+        setTimeout(function(){location.reload();},400);
+      }
     }
     startY=0;pulling=false;
   },{passive:true});

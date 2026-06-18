@@ -1743,7 +1743,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.2.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.2.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3598,7 +3598,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.2.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.2.6")
   );
 
   // Icon style helper
@@ -6906,7 +6906,7 @@ function buildAdmin(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw","📸 ໂພສ"]:
-    isSuperAdmin?[_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"]:
+    isSuperAdmin?[_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"]:
     [_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings"];
   return el("div",{style:{padding:"14px 14px 60px"}},
     el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}},
@@ -7004,9 +7004,9 @@ function buildAdminTab(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw","📸 ໂພສ"]:
-    isSuperAdmin?[_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"]:
+    isSuperAdmin?[_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"]:
     [_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings"];
-  const superAdminTabMap={0:5,1:7,2:8,3:9,4:4,5:10,6:11,7:12,8:13,9:14,10:30};
+  const superAdminTabMap={0:5,1:7,2:8,3:9,4:15,5:4,6:10,7:11,8:12,9:13,10:14,11:30};
   const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:20};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
@@ -11008,6 +11008,273 @@ function buildAdminTab(){
         return w;
       })()
     ));
+
+    return section;
+  }
+  // ── TAB 15: Accounting (Super Admin only) ─────────────────────────────
+  if(effectiveTab===15){
+    if(!window._acctState)window._acctState={dateFrom:"",dateTo:"",subTab:"products"};
+    const acct=window._acctState;
+    const section=el("div",null);
+    section.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",marginBottom:"10px"}},"📊 ບັນຊີ"));
+
+    // ── ตัวกรองช่วงวันที่ ──────────────────────────────────────────
+    const filterCard=el("div",{className:"acard",style:{marginBottom:"12px"}});
+    filterCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".8rem",marginBottom:"8px",color:"#1A2B5F"}},"📅 ກອງຕາມຊ່ວງວັນທີ"));
+    const dateRow=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"6px"}});
+    const fromInp=document.createElement("input"); fromInp.type="date"; fromInp.className="inp"; fromInp.value=acct.dateFrom;
+    fromInp.oninput=function(){acct.dateFrom=this.value;render();};
+    const toInp=document.createElement("input"); toInp.type="date"; toInp.className="inp"; toInp.value=acct.dateTo;
+    toInp.oninput=function(){acct.dateTo=this.value;render();};
+    dateRow.appendChild(fromInp); dateRow.appendChild(toInp);
+    filterCard.appendChild(dateRow);
+    if(acct.dateFrom||acct.dateTo){
+      filterCard.appendChild(el("button",{style:{background:"none",border:"1px dashed #c00",color:"#c00",borderRadius:"8px",padding:"5px 10px",fontSize:".7rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){acct.dateFrom="";acct.dateTo="";render();}},"✕ ລ້າງການກອງ"));
+    }
+    section.appendChild(filterCard);
+
+    // ── helper: ตรวจสอบว่าวันที่ (string YYYY-MM-DD หรือ timestamp) อยู่ในช่วงที่กรองหรือไม่ ──
+    function inDateRange(dateLike){
+      if(!acct.dateFrom&&!acct.dateTo)return true;
+      let d;
+      if(typeof dateLike==="number")d=new Date(dateLike);
+      else if(typeof dateLike==="string"&&/^\d+$/.test(dateLike))d=new Date(Number(dateLike));
+      else d=new Date(dateLike);
+      if(isNaN(d.getTime()))return true; // ข้อมูลวันที่อ่านไม่ได้ — ไม่กรองออก
+      const dStr=d.toISOString().slice(0,10);
+      if(acct.dateFrom&&dStr<acct.dateFrom)return false;
+      if(acct.dateTo&&dStr>acct.dateTo)return false;
+      return true;
+    }
+
+    // ── สลับ sub-tab ──────────────────────────────────────────────
+    const subTabRow=el("div",{className:"tabs",style:{marginBottom:"12px"}});
+    [["products","🛍 ສິນຄ້າ"],["shipping","🚚 ຂົນສົ່ງ"],["reviews","📸 ຮີວິວ"]].forEach(function(t){
+      subTabRow.appendChild(el("button",{type:"button",style:{flex:"1",padding:"9px",border:"none",background:acct.subTab===t[0]?"#1A2B5F":"#fff",color:acct.subTab===t[0]?"#fff":"#1A2B5F",fontSize:".78rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){acct.subTab=t[0];render();}},t[1]));
+    });
+    section.appendChild(subTabRow);
+
+    // ════════════════════════════════════════════════════════════
+    // ── PRODUCTS SUB-ACCOUNT ───────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    if(acct.subTab==="products"){
+      const incomeOrders=orders.filter(function(o){return inDateRange(o.id);}).sort(function(a,b){return b.id-a.id;});
+      const incomeTotal=incomeOrders.reduce(function(s,o){return s+(o.subtotal||0);},0);
+
+      section.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1B6B3A",marginBottom:"8px"}},"⬆️ ຂາເຂົ້າ — ຍອດສິນຄ້າຈາກອໍເດີ ("+incomeOrders.length+")"));
+      const incCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+      incCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#1B6B3A",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #E8F5EE"}},
+        el("span",null,"ລວມຍອດສິນຄ້າ"),el("span",null,"₭"+fmt(incomeTotal))));
+      if(incomeOrders.length===0){
+        incCard.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີອໍເດີໃນຊ່ວງວັນທີນີ້"));
+      } else {
+        incomeOrders.slice(0,200).forEach(function(o){
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",padding:"7px 4px",borderBottom:"1px solid #f0f0f0",flexWrap:"wrap"}});
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},"#"+String(o.id).slice(-6)+(o.shopName?" · "+o.shopName:"")));
+          info.appendChild(el("div",{style:{fontSize:".65rem",color:"#888"}},(o.at||"")+" · ₭"+fmt(o.subtotal||0)+(o.slipVerified?" · ✅ ກວດສອບແລ້ວ":"")));
+          row.appendChild(info);
+          // ปุ่มดูสลิป
+          const viewSlipBtn=el("button",{type:"button",style:{background:"none",border:"1.5px solid #1565c0",color:"#1565c0",padding:"3px 8px",borderRadius:"14px",fontSize:".62rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+            function showSlipImg(src){
+              const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+              m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+              m.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💳 ສລິບ #"+String(o.id).slice(-6)));
+              m.appendChild(el("img",{src:src,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));
+              showOv(m,null);
+            }
+            const cachedSlip=o.slip||(function(){try{return localStorage.getItem("slip_"+o.id);}catch(e){return null;}}());
+            if(cachedSlip){showSlipImg(cachedSlip);return;}
+            if(!db){toast("⚠️ ບໍ່ສາມາດເຊື່ອມຕໍ່ຖານຂໍ້ມູນ");return;}
+            toast("⏳ ກຳລັງໂຫລດສລິບ...");
+            db.collection("slips").doc(String(o.id)).get().then(function(doc){
+              if(doc.exists&&doc.data().slip){showSlipImg(doc.data().slip);}
+              else{toast("📭 ບໍ່ພົບສລິບສຳລັບອໍເດີນີ້");}
+            }).catch(function(){toast("⚠️ ໂຫລດສລິບບໍ່ສຳເລັດ");});
+          }},"💳 ສລິບ");
+          row.appendChild(viewSlipBtn);
+          // ช่องกรอกเลขสลิป + ปุ่มตรวจสอบ
+          if(!o.slipVerified){
+            const slipInp=document.createElement("input");
+            slipInp.placeholder="ເລກສລິບ"; slipInp.style.cssText="width:90px;padding:4px 6px;border-radius:7px;border:1.5px solid #ddd;font-size:.68rem;font-family:inherit;";
+            slipInp.value=o.slipNo||"";
+            const verifyBtn=el("button",{type:"button",style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"14px",padding:"4px 9px",fontSize:".62rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+              const result=verifyAndSaveSlipNo(o,slipInp.value);
+              if(result.ok){toast("✅ ກວດສອບເລກສລິບສຳເລັດ");render();}
+              else if(result.dupOrderId){toast("❌ ເລກສລິບນີ້ຊ້ຳກັບອໍເດີ #"+String(result.dupOrderId).slice(-6));}
+              else{toast("⚠️ ກະລຸນາໃສ່ເລກສລິບ");}
+            }},"✓ ກວດສອບ");
+            row.appendChild(slipInp); row.appendChild(verifyBtn);
+          }
+          incCard.appendChild(row);
+        });
+        if(incomeOrders.length>200)incCard.appendChild(el("div",{style:{textAlign:"center",fontSize:".68rem",color:"#888",padding:"6px 0"}},"... ສະແດງ 200 ລາຍການລ່າສຸດ"));
+      }
+      section.appendChild(incCard);
+
+      // ── EXPENSE: withdrawals (payouts to shops) ──
+      const expWds=withdrawals.filter(function(w){return inDateRange(w.date||w.id);}).sort(function(a,b){return b.id-a.id;});
+      const expTotal=expWds.reduce(function(s,w){return s+(w.amount||0);},0);
+      const expCommTotal=expWds.reduce(function(s,w){return s+(w.totalComm||0);},0);
+
+      section.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#c0392b",marginBottom:"8px"}},"⬇️ ຂາອອກ — ໂອນຈ່າຍໃຫ້ຮ້ານ ("+expWds.length+")"));
+      const expCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+      expCard.appendChild(el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #E8F5EE"}},
+        el("div",null,el("div",{style:{fontSize:".62rem",color:"#888"}},"ລວມໂອນຈ່າຍ"),el("div",{style:{fontWeight:"800",color:"#c0392b"}},"₭"+fmt(expTotal))),
+        el("div",null,el("div",{style:{fontSize:".62rem",color:"#888"}},"Commission ຫັກໄວ້"),el("div",{style:{fontWeight:"800",color:"#1B6B3A"}},"₭"+fmt(expCommTotal)))
+      ));
+      if(expWds.length===0){
+        expCard.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີການໂອນຈ່າຍໃນຊ່ວງວັນທີນີ້"));
+      } else {
+        expWds.forEach(function(w){
+          const sh=shops.find(function(s){return s.id===w.shopId;});
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 4px",borderBottom:"1px solid #f0f0f0"}});
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},(sh?sh.name:"ຮ້ານ #"+w.shopId)+" · "+(w.orderIds||[]).length+" Order"));
+          info.appendChild(el("div",{style:{fontSize:".65rem",color:"#888"}},"📅 "+(w.date||"")+" · Comm "+(w.commPct||0)+"%"));
+          row.appendChild(info);
+          row.appendChild(el("div",{style:{textAlign:"right",flexShrink:"0"}},el("div",{style:{fontWeight:"800",color:"#c0392b",fontSize:".82rem"}},"₭"+fmt(w.amount))));
+          if(w.slip){
+            row.appendChild(el("button",{type:"button",style:{background:"none",border:"1.5px solid #1565c0",color:"#1565c0",padding:"3px 8px",borderRadius:"14px",fontSize:".62rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+              const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+              m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+              m.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💳 ສລິບໂອນ — "+(sh?sh.name:"")));
+              m.appendChild(el("img",{src:w.slip,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));
+              showOv(m,null);
+            }},"💳 ສລິບ"));
+          }
+          expCard.appendChild(row);
+        });
+      }
+      section.appendChild(expCard);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── SHIPPING SUB-ACCOUNT ───────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    if(acct.subTab==="shipping"){
+      const shipOrders=orders.filter(function(o){return inDateRange(o.id)&&(o.shipping||0)>0;}).sort(function(a,b){return b.id-a.id;});
+      const shipIncomeTotal=shipOrders.reduce(function(s,o){return s+(o.shipping||0);},0);
+
+      section.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1B6B3A",marginBottom:"8px"}},"⬆️ ຂາເຂົ້າ — ຄ່າຈັດສົ່ງຈາກອໍເດີ ("+shipOrders.length+")"));
+      const shipIncCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+      shipIncCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#1B6B3A",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #E8F5EE"}},
+        el("span",null,"ລວມຄ່າຈັດສົ່ງ"),el("span",null,"₭"+fmt(shipIncomeTotal))));
+      if(shipOrders.length===0){
+        shipIncCard.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີຄ່າຈັດສົ່ງໃນຊ່ວງວັນທີນີ້"));
+      } else {
+        shipOrders.slice(0,200).forEach(function(o){
+          const row=el("div",{style:{display:"flex",justifyContent:"space-between",padding:"6px 4px",borderBottom:"1px solid #f0f0f0"}});
+          row.appendChild(el("div",{style:{fontSize:".76rem",color:"#1A2B5F"}},"#"+String(o.id).slice(-6)+" · "+(o.at||"")));
+          row.appendChild(el("div",{style:{fontWeight:"700",color:"#1B6B3A",fontSize:".78rem"}},"₭"+fmt(o.shipping||0)));
+          shipIncCard.appendChild(row);
+        });
+        if(shipOrders.length>200)shipIncCard.appendChild(el("div",{style:{textAlign:"center",fontSize:".68rem",color:"#888",padding:"6px 0"}},"... ສະແດງ 200 ລາຍການລ່າສຸດ"));
+      }
+      section.appendChild(shipIncCard);
+
+      // ── EXPENSE: shipping expenses (manual entry) ──
+      const shipExps=shippingExpenses.filter(function(e){return inDateRange(e.date||e.id);}).sort(function(a,b){return b.id-a.id;});
+      const shipExpTotal=shipExps.reduce(function(s,e){return s+(e.amount||0);},0);
+
+      section.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#c0392b",marginBottom:"8px"}},"⬇️ ຂາອອກ — ລາຍຈ່າຍຄ່າຂົນສົ່ງ ("+shipExps.length+")"));
+      const shipExpCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+
+      // ── ฟอร์มเพิ่มรายจ่าย ──
+      const addForm=el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px",marginBottom:"10px",border:"1px dashed #f0a500"}});
+      addForm.appendChild(el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#8B5E00",marginBottom:"6px"}},"➕ ເພີ່ມລາຍຈ່າຍໃໝ່"));
+      const expDateInp=document.createElement("input"); expDateInp.type="date"; expDateInp.className="inp"; expDateInp.value=new Date().toISOString().slice(0,10);
+      expDateInp.style.marginBottom="6px";
+      const expDescInp=document.createElement("input"); expDescInp.className="inp"; expDescInp.placeholder="ລາຍລະອຽດ (ເຊັ່ນ: ຄ່ານ້ຳມັນລົດ, ຄ່າຫຸ້ມຫໍ່)"; expDescInp.style.marginBottom="6px";
+      const expAmtInp=document.createElement("input"); expAmtInp.type="number"; expAmtInp.className="inp"; expAmtInp.placeholder="ຈຳນວນເງິນ (₭)"; expAmtInp.style.marginBottom="8px";
+      addForm.appendChild(expDateInp); addForm.appendChild(expDescInp); addForm.appendChild(expAmtInp);
+      addForm.appendChild(el("button",{type:"button",style:{width:"100%",padding:"9px",borderRadius:"9px",background:"#f0a500",color:"#fff",border:"none",fontWeight:"700",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+        const result=addShippingExpense(expDateInp.value,expDescInp.value,expAmtInp.value);
+        if(result.ok){toast("✅ ບັນທຶກລາຍຈ່າຍແລ້ວ");render();}
+        else{toast("⚠️ ກະລຸນາໃສ່ຂໍ້ມູນໃຫ້ຄົບ (ວັນທີ, ລາຍລະອຽດ, ຈຳນວນເງິນ)");}
+      }},"💾 ບັນທຶກລາຍຈ່າຍ"));
+      shipExpCard.appendChild(addForm);
+
+      shipExpCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#c0392b",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #E8F5EE"}},
+        el("span",null,"ລວມລາຍຈ່າຍ"),el("span",null,"₭"+fmt(shipExpTotal))));
+      if(shipExps.length===0){
+        shipExpCard.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີລາຍຈ່າຍໃນຊ່ວງວັນທີນີ້"));
+      } else {
+        shipExps.forEach(function(e){
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 4px",borderBottom:"1px solid #f0f0f0"}});
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},e.description));
+          info.appendChild(el("div",{style:{fontSize:".65rem",color:"#888"}},"📅 "+e.date+" · ໂດຍ "+(e.by||"-")));
+          row.appendChild(info);
+          row.appendChild(el("div",{style:{fontWeight:"800",color:"#c0392b",fontSize:".82rem",flexShrink:"0"}},"₭"+fmt(e.amount)));
+          row.appendChild(el("button",{type:"button",style:{background:"none",border:"none",color:"#c00",fontSize:"1rem",cursor:"pointer",flexShrink:"0",padding:"0 4px"},onclick:function(){
+            if(!confirm("ລຶບລາຍຈ່າຍນີ້?"))return;
+            shippingExpenses=shippingExpenses.filter(function(x){return x.id!==e.id;});
+            deleteFromCloud("shippingExpenses",e.id);
+            toast("ລຶບລາຍຈ່າຍແລ້ວ");render();
+          }},"✕"));
+          shipExpCard.appendChild(row);
+        });
+      }
+      section.appendChild(shipExpCard);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── REVIEWS SUB-ACCOUNT (Expense only) ─────────────────────
+    // ════════════════════════════════════════════════════════════
+    if(acct.subTab==="reviews"){
+      const rvWds=reviewWithdrawals.filter(function(w){return inDateRange(w.date||w.id);}).sort(function(a,b){return b.id-a.id;});
+      const rvWdTotal=rvWds.reduce(function(s,w){return s+(w.amount||0);},0);
+
+      section.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#c0392b",marginBottom:"8px"}},"⬇️ ຂາອອກ — ໂອນຈ່າຍຄ່າຄອມຮີວິວ ("+rvWds.length+")"));
+      const rvCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+      rvCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#c0392b",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #E8F5EE"}},
+        el("span",null,"ລວມໂອນຈ່າຍ"),el("span",null,"₭"+fmt(rvWdTotal))));
+      if(rvWds.length===0){
+        rvCard.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີການໂອນຈ່າຍຄ່າຄອມຮີວິວໃນຊ່ວງວັນທີນີ້"));
+      } else {
+        rvWds.forEach(function(w){
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 4px",borderBottom:"1px solid #f0f0f0"}});
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},w.userName||w.uid));
+          info.appendChild(el("div",{style:{fontSize:".65rem",color:"#888"}},"📅 "+(w.date||"")+" · "+(w.reviewIds||[]).length+" ຮີວິວ"));
+          row.appendChild(info);
+          row.appendChild(el("div",{style:{textAlign:"right",flexShrink:"0"}},el("div",{style:{fontWeight:"800",color:"#c0392b",fontSize:".82rem"}},"₭"+fmt(w.amount))));
+          if(w.slip){
+            row.appendChild(el("button",{type:"button",style:{background:"none",border:"1.5px solid #1565c0",color:"#1565c0",padding:"3px 8px",borderRadius:"14px",fontSize:".62rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+              const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+              m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+              m.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💳 ສລິບໂອນ — "+(w.userName||"")));
+              m.appendChild(el("img",{src:w.slip,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));
+              showOv(m,null);
+            }},"💳 ສລິບ"));
+          }
+          rvCard.appendChild(row);
+        });
+      }
+      section.appendChild(rvCard);
+    }
+
+    // ── Export Excel button ──────────────────────────────────────
+    section.appendChild(el("button",{type:"button",style:{width:"100%",padding:"12px",borderRadius:"10px",background:"#1A2B5F",color:"#fff",border:"none",fontWeight:"800",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit",marginTop:"6px"},onclick:function(){
+      const wb=XLSX.utils.book_new();
+      // Sheet 1: Products
+      const pIncRows=orders.filter(function(o){return inDateRange(o.id);}).map(function(o){return {"ວັນທີ":o.at||"","Order":String(o.id).slice(-6),"ຍອດສິນຄ້າ(₭)":o.subtotal||0,"ເລກສລິບ":o.slipNo||"","ກວດສອບແລ້ວ":o.slipVerified?"✓":""};});
+      const pExpRows=withdrawals.filter(function(w){return inDateRange(w.date||w.id);}).map(function(w){const sh=shops.find(function(s){return s.id===w.shopId;});return {"ວັນທີ":w.date||"","ຮ້ານ":sh?sh.name:w.shopId,"ຈຳນວນ Order":(w.orderIds||[]).length,"ຍອດຂາຍ(₭)":w.totalSale||0,"Commission(₭)":w.totalComm||0,"ໂອນຈ່າຍ(₭)":w.amount||0};});
+      const wsP1=XLSX.utils.json_to_sheet(pIncRows); XLSX.utils.book_append_sheet(wb,wsP1,"ສິນຄ້າ-ຂາເຂົ້າ");
+      const wsP2=XLSX.utils.json_to_sheet(pExpRows); XLSX.utils.book_append_sheet(wb,wsP2,"ສິນຄ້າ-ຂາອອກ");
+      // Sheet 2: Shipping
+      const sIncRows=orders.filter(function(o){return inDateRange(o.id)&&(o.shipping||0)>0;}).map(function(o){return {"ວັນທີ":o.at||"","Order":String(o.id).slice(-6),"ຄ່າຈັດສົ່ງ(₭)":o.shipping||0};});
+      const sExpRows=shippingExpenses.filter(function(e){return inDateRange(e.date||e.id);}).map(function(e){return {"ວັນທີ":e.date||"","ລາຍລະອຽດ":e.description||"","ຈຳນວນເງິນ(₭)":e.amount||0,"ໂດຍ":e.by||""};});
+      const wsS1=XLSX.utils.json_to_sheet(sIncRows); XLSX.utils.book_append_sheet(wb,wsS1,"ຂົນສົ່ງ-ຂາເຂົ້າ");
+      const wsS2=XLSX.utils.json_to_sheet(sExpRows); XLSX.utils.book_append_sheet(wb,wsS2,"ຂົນສົ່ງ-ຂາອອກ");
+      // Sheet 3: Reviews
+      const rExpRows=reviewWithdrawals.filter(function(w){return inDateRange(w.date||w.id);}).map(function(w){return {"ວັນທີ":w.date||"","ຊື່ຮີວິວເວີ":w.userName||w.uid,"ຈຳນວນຮີວິວ":(w.reviewIds||[]).length,"ໂອນຈ່າຍ(₭)":w.amount||0};});
+      const wsR1=XLSX.utils.json_to_sheet(rExpRows); XLSX.utils.book_append_sheet(wb,wsR1,"ຮີວິວ-ຂາອອກ");
+      const fname="LaoH_Accounting_"+(acct.dateFrom||"all")+"_to_"+(acct.dateTo||"all")+".xlsx";
+      XLSX.writeFile(wb,fname);
+      toast("✅ ດາວໂຫລດ Excel ສຳເລັດ");
+    }},"📊 ດາວໂຫລດ Excel (3 ບັນຊີ)"));
 
     return section;
   }

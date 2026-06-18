@@ -1500,7 +1500,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.1.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.1.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3355,7 +3355,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.1.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.1.5")
   );
 
   // Icon style helper
@@ -7236,6 +7236,10 @@ function buildAdminTab(){
       }).filter(function(x){return x;});
       return parts.length>0?"|"+parts.join("|")+"|":"";
     }
+    // ── ແປງ \n ເປັນ \r\n ກ່ອນເຂົ້າ Excel cell, ເພາະ SheetJS ບໍ່ຮອງຮັບ \n ຢ່າງດຽວ (cell ຈະວ່າງເປົ່າ) ──
+    function toExcelMultiline(s){
+      return String(s||"").replace(/\r\n/g,"\n").replace(/\n/g,"\r\n");
+    }
     function downloadProductsExcel(){
       const data=myProds.map(function(p){
         return {
@@ -7251,8 +7255,8 @@ function buildAdminTab(){
           "ຮັບປ່ຽນ/ຄືນໄດ້ (TRUE/FALSE)":p.refundable?"TRUE":"FALSE",
           "ເປີດ Pre-order (TRUE/FALSE)":p.allowPreorder?"TRUE":"FALSE",
           "ໄລຍະ Pre-order (5-7 ຫຼື 10-15)":p.preorderDays||"",
-          "ລາຍລະອຽດສິນຄ້າ":p.desc||"",
-          "ວິທີໃຊ້":p.usage||"",
+          "ລາຍລະອຽດສິນຄ້າ":toExcelMultiline(p.desc),
+          "ວິທີໃຊ້":toExcelMultiline(p.usage),
           "ລະຫັດກ່ອງ (A-H)":p.boxSize||""
         };
       });
@@ -7278,13 +7282,14 @@ function buildAdminTab(){
       // ── ສ້າງລາຍການແຖວ: ສິນຄ້າທີ່ມີ colorImgs → 1 ແຖວ/ສີ; ບໍ່ມີ → 1 ແຖວ ໃຊ້ຮູບລວມ ──
       const rows=[];
       myProds.forEach(function(p){
+        const sizesStr=(p.sizes||[]).join(", ");
         const cImgs=p.colorImgs||{};
         const validColors=Object.keys(cImgs).filter(function(c){return cImgs[c]&&isUrl(cImgs[c]);});
         if(validColors.length>0){
-          validColors.forEach(function(c){rows.push({id:p.id,name:p.name,color:c,img:cImgs[c]});});
+          validColors.forEach(function(c){rows.push({id:p.id,sizes:sizesStr,color:c,img:cImgs[c]});});
         } else {
           const mainImg=(p.imgs&&p.imgs[0]&&isUrl(p.imgs[0]))?p.imgs[0]:(isUrl(p.img)?p.img:null);
-          if(mainImg)rows.push({id:p.id,name:p.name,color:null,img:mainImg});
+          if(mainImg)rows.push({id:p.id,sizes:sizesStr,color:null,img:mainImg});
         }
       });
       if(rows.length===0){toast("⚠️ ບໍ່ມີຮູບສິນຄ້າໃຫ້ສ້າງ PDF");return;}
@@ -7308,7 +7313,7 @@ function buildAdminTab(){
         const table=document.createElement("table");
         table.style.cssText="width:100%;border-collapse:collapse;";
         const thead=document.createElement("tr");
-        thead.innerHTML="<th style='background:#1B6B3A;color:#fff;padding:8px;font-size:12px;text-align:center;width:90px;'>ຮູບ</th><th style='background:#1B6B3A;color:#fff;padding:8px;font-size:12px;text-align:left;width:160px;'>ລະຫັດສິນຄ້າ</th><th style='background:#1B6B3A;color:#fff;padding:8px;font-size:12px;text-align:left;'>ຊື່ສິນຄ້າ</th>";
+        thead.innerHTML="<th style='background:#1B6B3A;color:#fff;padding:8px;font-size:12px;text-align:center;width:90px;'>ຮູບ</th><th style='background:#1B6B3A;color:#fff;padding:8px;font-size:12px;text-align:left;width:160px;'>ລະຫັດສິນຄ້າ</th><th style='background:#1B6B3A;color:#fff;padding:8px;font-size:12px;text-align:left;'>ໄຊສ໌</th>";
         table.appendChild(thead);
         chunk.forEach(function(r,idx){
           const tr=document.createElement("tr");
@@ -7321,10 +7326,10 @@ function buildAdminTab(){
           const tdId=document.createElement("td");
           tdId.style.cssText="padding:8px;border:1px solid #E8F5EE;font-size:13px;color:#1A2B5F;vertical-align:middle;";
           tdId.innerHTML=String(r.id)+(r.color?"<br/><span style='color:#1B6B3A;font-weight:700;'>"+r.color+"</span>":"");
-          const tdName=document.createElement("td");
-          tdName.style.cssText="padding:8px;border:1px solid #E8F5EE;font-size:12px;color:#555;vertical-align:middle;";
-          tdName.textContent=r.name;
-          tr.appendChild(tdImg);tr.appendChild(tdId);tr.appendChild(tdName);
+          const tdSizes=document.createElement("td");
+          tdSizes.style.cssText="padding:8px;border:1px solid #E8F5EE;font-size:13px;color:#555;vertical-align:middle;font-weight:600;";
+          tdSizes.textContent=r.sizes||"-";
+          tr.appendChild(tdImg);tr.appendChild(tdId);tr.appendChild(tdSizes);
           table.appendChild(tr);
         });
         page.appendChild(table);
@@ -11434,6 +11439,9 @@ function showExcelUploadModal(myProds,isShopUser){
   };
   fi.click();
 }
+function fromExcelMultiline(s){
+  return String(s||"").replace(/\r\n/g,"\n");
+}
 function processExcelRows(rows,myProds,isShopUser){
   const boxIds=getBoxSizes().map(function(b){return b.id;});
   const allErrs=[]; // {row, msg}
@@ -11469,7 +11477,7 @@ function processExcelRows(rows,myProds,isShopUser){
       refundable:String(r["ຮັບປ່ຽນ/ຄືນໄດ້ (TRUE/FALSE)"]||"").trim().toUpperCase()==="TRUE",
       allowPreorder:String(r["ເປີດ Pre-order (TRUE/FALSE)"]||"").trim().toUpperCase()==="TRUE",
       preorderDays:preorderDays,
-      desc:String(r["ລາຍລະອຽດສິນຄ້າ"]||"").trim(),usage:String(r["ວິທີໃຊ້"]||"").trim(),
+      desc:fromExcelMultiline(r["ລາຍລະອຽດສິນຄ້າ"]).trim(),usage:fromExcelMultiline(r["ວິທີໃຊ້"]).trim(),
       boxSize:boxId,rowNum:rowNum
     });
   });

@@ -1980,7 +1980,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.5.10")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.5.11")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3919,7 +3919,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.5.10")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.5.11")
   );
 
   // Icon style helper
@@ -13715,17 +13715,18 @@ function buildProfile(){
           "📦 "+(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders")+" ("+freshOrders.length+")"
         ));
         const listWrap2=el("div",null);
-        function drawOrderList(){
-          while(listWrap2.firstChild)listWrap2.removeChild(listWrap2.firstChild);
-          const curOrders=orders.filter(function(o){return o.uid===(user&&user.id);});
-          curOrders.forEach(function(o){
-            const c=buildMyOrderCard(o,drawOrderList);
-            if(c)listWrap2.appendChild(c);
-          });
+        function drawOneCard(o){
+          // ── ແທນທີ່ card ຄົນດຽວໃນ DOM ໂດຍບໍ່ touch ລາຍການອື່ນ ──
+          const newCard=buildMyOrderCard(o,function(){drawOneCard(o);});
+          if(!newCard)return;
+          newCard.dataset.oid=String(o.id);
+          const existing=listWrap2.querySelector('[data-oid="'+String(o.id)+'"]');
+          if(existing){listWrap2.replaceChild(newCard,existing);}
+          else{listWrap2.appendChild(newCard);}
         }
         freshOrders.forEach(function(o){
-          const c=buildMyOrderCard(o,drawOrderList);
-          if(c)listWrap2.appendChild(c);
+          const c=buildMyOrderCard(o,function(){drawOneCard(o);});
+          if(c){c.dataset.oid=String(o.id);listWrap2.appendChild(c);}
         });
         modal.appendChild(listWrap2);
         showOv(modal);
@@ -14143,16 +14144,17 @@ function buildProfile(){
           "📦 "+(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders")+" ("+freshOrders2.length+")"
         ));
         const listWrap3=el("div",null);
-        function drawOrderList2(){
-          while(listWrap3.firstChild)listWrap3.removeChild(listWrap3.firstChild);
-          orders.filter(function(o){return o.uid===(user&&user.id);}).forEach(function(o){
-            const c=buildMyOrderCard(o,drawOrderList2);
-            if(c)listWrap3.appendChild(c);
-          });
+        function drawOneCard2(o){
+          const newCard=buildMyOrderCard(o,function(){drawOneCard2(o);});
+          if(!newCard)return;
+          newCard.dataset.oid=String(o.id);
+          const existing=listWrap3.querySelector('[data-oid="'+String(o.id)+'"]');
+          if(existing){listWrap3.replaceChild(newCard,existing);}
+          else{listWrap3.appendChild(newCard);}
         }
         freshOrders2.forEach(function(o){
-          const c=buildMyOrderCard(o,drawOrderList2);
-          if(c)listWrap3.appendChild(c);
+          const c=buildMyOrderCard(o,function(){drawOneCard2(o);});
+          if(c){c.dataset.oid=String(o.id);listWrap3.appendChild(c);}
         });
         modal2.appendChild(listWrap3);
         showOv(modal2);

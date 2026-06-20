@@ -1338,7 +1338,7 @@ function buildMyOrderCard(o,redrawFn){
   // ── ສະຫຼຸບລາຄາ (ເຕັມເໝືອນຊູເປີແອັດມິນ ແຕ່ບໍ່ມີຕົ້ນທຶນ/ກຳໄລ/ຄອມມິຊັນ) ──
   const sumBox=el("div",{style:{background:"#fff",borderRadius:"10px",padding:"9px 11px",marginTop:"8px"}});
   sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#2E5A3A",marginBottom:"4px"}},
-    el("span",null,"ລາຄາສິນຄ້າລວມ"),el("span",null,"₭"+fmt(subtotalAmt))));
+    el("span",null,"ລາຄາສິນຄ້າລວມ"),el("span",null,"₭"+fmt(o.subtotal!=null?Number(o.subtotal):(Number(o.total)||0)+(Number(o.discount)||0)))));
   sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#2E5A3A",marginBottom:"4px"}},
     el("span",null,"⚙️ ຄ່າຈັດສົ່ງ"),el("span",null,(o.shipping||0)===0?"🆓 ຟຣີ":"₭"+fmt(o.shipping||0))));
   if(o.discount>0){
@@ -1427,30 +1427,24 @@ function buildMyOrderCard(o,redrawFn){
     card.appendChild(refundBox);
   }
   // ── ປຸ່ມດຽວ: ປະຫວັດ (read-only, ບໍ່ມີປຸ່ມແກ້ໄຂ/ປ່ຽນສະຖານະ/ສລິບ) ──
-  const histBtn=el("button",{style:{marginTop:"8px",width:"100%",padding:"7px",borderRadius:"8px",background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(e){
-    e.stopPropagation();
+  const histBtn=el("button",{style:{marginTop:"8px",width:"100%",padding:"7px",borderRadius:"8px",background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
     const logs=o.statusLog||[];
-    // ── ໃຊ້ sub-overlay ແຍກ ບໍ່ overlay ຫຼັກ ເພື່ອບໍ່ໃຫ້ close ຕົ້ນ modal ──
-    const existSub=document.getElementById("hist-sub-ov");
-    if(existSub)existSub.remove();
-    const closeSub=function(){const s=document.getElementById("hist-sub-ov");if(s)s.remove();};
-    const subMod=el("div",{className:"mod",onclick:function(ev){ev.stopPropagation();}});
-    subMod.appendChild(el("button",{className:"mcl",onclick:closeSub},"✕"));
-    subMod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📋 ປະຫວັດ #"+String(o.id).slice(-6)));
+    const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+    modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+    modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📋 ປະຫວັດ #"+String(o.id).slice(-6)));
     if(logs.length===0){
-      subMod.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"14px 0"}},"ຍັງບໍ່ມີປະຫວັດ"));
+      modal.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"14px 0"}},"ຍັງບໍ່ມີປະຫວັດ"));
     } else {
       logs.slice().reverse().forEach(function(l){
         const r2=el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"8px 10px",marginBottom:"6px",borderLeft:"3px solid #1B6B3A"}});
         r2.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"3px"}},l.at+(l.by?" · "+l.by:"")));
         if(l.from!=="-"||l.to!=="-")r2.appendChild(el("div",{style:{fontSize:".78rem",color:"#1A2B5F",fontWeight:"600"}},l.from+" → "+l.to));
         if(l.note)r2.appendChild(el("div",{style:{fontSize:l.from==="-"&&l.to==="-"?".78rem":".68rem",color:l.from==="-"&&l.to==="-"?"#1A2B5F":"#888",fontWeight:l.from==="-"&&l.to==="-"?"600":"400"}},l.note));
-        subMod.appendChild(r2);
+        modal.appendChild(r2);
       });
     }
-    subMod.appendChild(el("div",{style:{borderTop:"1px solid #eee",marginTop:"10px",paddingTop:"8px",fontSize:".72rem",color:"#888"}},"ສ້າງ: "+(o.at||"")));
-    const subOv=el("div",{id:"hist-sub-ov",className:"ov",onclick:function(ev){if(ev.target.id==="hist-sub-ov")closeSub();}},subMod);
-    document.body.appendChild(subOv);
+    modal.appendChild(el("div",{style:{borderTop:"1px solid #eee",marginTop:"10px",paddingTop:"8px",fontSize:".72rem",color:"#888"}},"ສ້າງ: "+(o.at||"")));
+    showOv(modal);
   }},"📋 ປະຫວັດ");
   card.appendChild(histBtn);
   return card;
@@ -1978,7 +1972,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.6.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.6.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3917,7 +3911,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.6.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.6.1")
   );
 
   // Icon style helper

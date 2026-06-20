@@ -1980,7 +1980,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.5.8")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.5.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3919,7 +3919,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.5.8")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.5.9")
   );
 
   // Icon style helper
@@ -13716,8 +13716,15 @@ function buildProfile(){
         ));
         const listWrap2=el("div",null);
         function drawOrderList(){
-          listWrap2.innerHTML="";
-          myO.forEach(function(o){listWrap2.appendChild(buildMyOrderCard(o,drawOrderList));});
+          while(listWrap2.firstChild)listWrap2.removeChild(listWrap2.firstChild);
+          const snapshot=orders.filter(function(o){return o.uid===(user&&user.id);});
+          snapshot.forEach(function(o){
+            const c=buildMyOrderCard(o,drawOrderList);
+            if(c)listWrap2.appendChild(c);
+          });
+          if(snapshot.length===0){
+            listWrap2.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"20px 0",fontSize:".8rem"}},"ຍັງບໍ່ມີຄຳສັ່ງ"));
+          }
         }
         drawOrderList();
         modal.appendChild(listWrap2);
@@ -14135,8 +14142,15 @@ function buildProfile(){
             ));
             const listWrap3=el("div",null);
             function drawOrderList2(){
-              listWrap3.innerHTML="";
-              myO.forEach(function(o){listWrap3.appendChild(buildMyOrderCard(o,drawOrderList2));});
+              while(listWrap3.firstChild)listWrap3.removeChild(listWrap3.firstChild);
+              const snapshot2=orders.filter(function(o){return o.uid===(user&&user.id);});
+              snapshot2.forEach(function(o){
+                const c=buildMyOrderCard(o,drawOrderList2);
+                if(c)listWrap3.appendChild(c);
+              });
+              if(snapshot2.length===0){
+                listWrap3.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"20px 0",fontSize:".8rem"}},"ຍັງບໍ່ມີຄຳສັ່ງ"));
+              }
             }
             drawOrderList2();
             modal2.appendChild(listWrap3);

@@ -1972,7 +1972,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.6.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.6.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3911,7 +3911,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.6.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.6.2")
   );
 
   // Icon style helper
@@ -5729,7 +5729,7 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
                 const closedShop=shops.find(function(s){return s.username===aF.u&&s.password===aF.p;});
                 if(closedShop){aErr=_lang==="lo"?"🚫 ຮ້ານຄ້າຂອງທ່ານຖືກປິດ ກະລຸນາຕິດຕໍ່ Admin":"🚫 Your shop is closed. Please contact Admin";drawAuth();return;}
               }
-              if(foundShop){user={role:"shop",shopId:foundShop.id,name:foundShop.name};window._fShopOrder=null;
+              if(foundShop){user={role:"shop",id:foundShop.id,shopId:foundShop.id,name:foundShop.name};window._fShopOrder=null;
               try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
               closeOv();view="admin";render();toast("ยินดีต้อนรับ "+foundShop.name+" 🏪");}
               else{
@@ -6209,7 +6209,7 @@ function renderCo(){
             _orderSaveCalls.push(saveToCloud("orders",sOid,o));
             // ── ແຈ້ງຮ້ານຄ້າ + admin ວ່າມີ Order ໃໝ່ ──
             const orderNo2="#"+String(sOid).slice(-6);
-            if(sh&&sh.uid)pushNotif(sh.uid,null,"order_new","📦 Order ໃໝ່ "+orderNo2,(user&&user.name||"ລູກຄ້າ")+" ສັ່ງ "+sitems.length+" ລາຍການ",sOid);
+            if(sh&&sh.id)pushNotif(sh.id,null,"order_new","📦 Order ໃໝ່ "+orderNo2,(user&&user.name||"ລູກຄ້າ")+" ສັ່ງ "+sitems.length+" ລາຍການ",sOid);
             pushNotifAdmin("order_new","📦 Order ໃໝ່ "+orderNo2,(user&&user.name||"ລູກຄ້າ")+" ສັ່ງ "+(sh?sh.name:""),sOid);
             // ── Deduct stock for each item in this order ──────────
             sitems.forEach(function(item){
@@ -9224,7 +9224,7 @@ function buildAdminTab(){
               // ແຈ້ງຮ້ານຄ້າ (ຖ້າ admin ເປັນຄົນປ່ຽນ)
               if(isSuperAdmin&&o.shopId){
                 const shop2=shops.find(function(s){return s.id===o.shopId;});
-                if(shop2&&shop2.uid)pushNotif(shop2.uid,null,"order_status",statusEmoji+" Order "+orderNo+" "+newSt,"ສະຖານະໃໝ່: "+newSt,o.id);
+                if(shop2&&shop2.id)pushNotif(shop2.id,null,"order_status",statusEmoji+" Order "+orderNo+" "+newSt,"ສະຖານະໃໝ່: "+newSt,o.id);
               }
               render();
             }
@@ -10717,7 +10717,7 @@ function buildAdminTab(){
                 saveToCloud("withdrawals",w.id,w);
                 // ── ແຈ້ງຮ້ານຄ້າວ່າຖອນເງິນສຳເລັດ ──
                 const shopObj=shops.find(function(s){return s.id===_shId;});
-                if(shopObj&&shopObj.uid)pushNotif(shopObj.uid,null,"withdrawal","💸 ຢືນຢັນໂອນເງິນ ₭"+fmt(totS2),_shName+" — "+selV.length+" Order",null);
+                if(shopObj&&shopObj.id)pushNotif(shopObj.id,null,"withdrawal","💸 ຢືນຢັນໂອນເງິນ ₭"+fmt(totS2),_shName+" — "+selV.length+" Order",null);
                 oIds.forEach(function(oid){
                   const o=orders.find(function(x){return x.id===oid;});
                   if(o){o.withdrawn=true;saveToCloud("orders",o.id,o);}
@@ -11104,7 +11104,7 @@ function buildAdminTab(){
           saveShopApplications(shopApplications);
           saveToCloud("shopApplications",app.id,app);
           // ── ແຈ້ງຮ້ານຄ້າວ່າຖືກອະນຸມັດ ──
-          if(app.uid)pushNotif(app.uid,null,"shop_approved","✅ ຮ້ານ "+ns.name+" ໄດ້ຮັບການອະນຸມັດ","ຍິນດີຕ້ອນຮັບເຂົ້າ LaoH ລາວເຮັດ! ເລີ່ມເພີ່ມສິນຄ້າໄດ້ເລີຍ",null);
+          if(app.id)pushNotif(app.id,null,"shop_approved","✅ ຮ້ານ "+ns.name+" ໄດ້ຮັບການອະນຸມັດ","ຍິນດີຕ້ອນຮັບເຂົ້າ LaoH ລາວເຮັດ! ເລີ່ມເພີ່ມສິນຄ້າໄດ້ເລີຍ",null);
           render();
           toast("✅ ອະນຸມັດຮ້ານ "+ns.name+" ແລ້ວ!");
         };
@@ -11116,7 +11116,7 @@ function buildAdminTab(){
           saveShopApplications(shopApplications);
           saveToCloud("shopApplications",app.id,app);
           // ── ແຈ້ງຮ້ານຄ້າວ່າຖືກປະຕິເສດ ──
-          if(app.uid)pushNotif(app.uid,null,"shop_rejected","❌ ຄຳຂໍເປີດຮ້ານ "+app.name+" ຖືກປະຕິເສດ","ກະລຸນາຕິດຕໍ່ທີ່ LiveChat LaoH ເພື່ອຂໍຂໍ້ມູນເພີ່ມເຕີມ",null);
+          if(app.id)pushNotif(app.id,null,"shop_rejected","❌ ຄຳຂໍເປີດຮ້ານ "+app.name+" ຖືກປະຕິເສດ","ກະລຸນາຕິດຕໍ່ທີ່ LiveChat LaoH ເພື່ອຂໍຂໍ້ມູນເພີ່ມເຕີມ",null);
           render();
           toast("ປະຕິເສດຄຳຂໍ "+app.name+" ແລ້ວ");
         };

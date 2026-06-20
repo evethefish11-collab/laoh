@@ -1383,16 +1383,18 @@ function buildMyOrderCard(o,redrawFn){
         r.onload=function(ev){
           const b64=ev.target.result;
           rState.uploading=true; rState.failed=false;
-          o.refundQr=b64; render();
+          o.refundQr=b64;
+          if(typeof redrawFn==="function")redrawFn();else render();
           uploadFile(b64,"laoh/refundQr/"+o.id+".jpg","image/jpeg").then(function(url){
             rState.uploading=false; rState.failed=false;
             o.refundQr=url;
             if(!o.statusLog)o.statusLog=[];
             o.statusLog.push({at:new Date().toLocaleString("lo-LA"),from:"-",to:"-",by:o.name||"ລູກຄ້າ",note:"ອັບໂຫລດ QR Code ສຳລັບຄືນເງິນ"});
             saveToCloud("orders",o.id,o);
-            render();
+            if(typeof redrawFn==="function")redrawFn();else render();
           }).catch(function(){
-            rState.uploading=false; rState.failed=true; render();
+            rState.uploading=false; rState.failed=true;
+            if(typeof redrawFn==="function")redrawFn();else render();
           });
         };
         r.readAsDataURL(f);
@@ -1978,7 +1980,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.5.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.5.8")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3917,7 +3919,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.5.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.5.8")
   );
 
   // Icon style helper

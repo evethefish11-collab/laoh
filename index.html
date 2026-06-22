@@ -2046,7 +2046,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3985,7 +3985,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.2")
   );
 
   // Icon style helper
@@ -5359,7 +5359,7 @@ function showProduct(p){
         el("div",{style:{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap",marginBottom:"4px"}},
           el("span",{style:{fontSize:"1.2rem",color:promo?"#C0392B":P,fontWeight:"700"}},"₭"+fmt(dp)),
           promo?[el("span",{style:{fontSize:".78rem",color:"#6B8F75",textDecoration:"line-through"}},"₭"+fmt(p.price)),el("span",{style:{fontSize:".7rem",background:"#ff6b35",color:"#fff",padding:"2px 8px",borderRadius:"8px",fontWeight:"700"}},"🎁 -"+promo.pct+"%")]:null,
-          p.refundable?el("span",{style:{fontSize:".72rem",background:"#e8f5e9",color:"#1a7a3a",padding:"3px 10px",borderRadius:"20px",fontWeight:"600",border:"1px solid #c8e6c9"}},"🔄 คืนได้ภายใน 3 วัน"):null
+          p.refundable?el("span",{style:{fontSize:".72rem",background:"#e8f5e9",color:"#1a7a3a",padding:"3px 10px",borderRadius:"20px",fontWeight:"600",border:"1px solid #c8e6c9"}},t("refund")):null
         ),
         promo?el("div",{style:{fontSize:".68rem",color:"#ff6b35",fontWeight:"600"}},
           "🎁 "+(promo.promoName||"ລາຄາໂປຣໂມຊັ່ນ")+(promo.dateTo?" · "+(_lang==="lo"?"ຮອດ":"until")+" "+promo.dateTo:"")

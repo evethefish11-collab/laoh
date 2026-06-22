@@ -2046,7 +2046,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3985,7 +3985,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.1")
   );
 
   // Icon style helper
@@ -7566,49 +7566,107 @@ function buildAdmin(){
         },(_lang==="lo"?"🪪 ໂປຣໄຟລ໌":"🪪 Profile")),
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"#5D2D7A",border:"none",color:"#fff",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
           onclick:function(){
-            const guideModal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",padding:"16px"}});
-            guideModal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-            guideModal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},"📖 "+(_lang==="lo"?"ຄູ່ມືການໃຊ້ງານຮ້ານຄ້າ":"Shop Guide")));
-            guideModal.appendChild(el("div",{style:{fontSize:".75rem",color:"#6B8F75",marginBottom:"14px"}},"laohmarket.com"));
-            // ── ສາລະບານ ──
-            const toc=[
-              ["1","ການສະໝັກ ແລະ ເຂົ້າສູ່ລະບົບ"],["2","Dashboard ຫຼັກ"],
-              ["3","📦 ເພີ່ມ & ຈັດການສິນຄ້າ"],["4","📊 ຈັດການສະຕ໊ອກ"],
-              ["5","🚚 ຈັດການຄຳສັ່ງ"],["6","📈 ການເງິນ & ຖອນ"],
-              ["7","🎁 ໂປຣໂມຊັ່ນ"],["8","📸 ໂພສ & ແຈ້ງເຕືອນ"],["9","🏪 ໂປຣໄຟລ໌ຮ້ານ"]
-            ];
-            const tocDiv=el("div",{style:{background:"#F0F7F2",border:"1.5px solid #C8E6D4",borderRadius:"10px",padding:"12px 14px",marginBottom:"14px"}});
-            tocDiv.appendChild(el("div",{style:{fontWeight:"700",fontSize:".78rem",color:"#1B6B3A",marginBottom:"8px"}},"📋 ສາລະບານ"));
-            toc.forEach(function(t){tocDiv.appendChild(el("div",{style:{fontSize:".72rem",color:"#2E5A3A",padding:"3px 0",display:"flex",gap:"6px"}},el("span",{style:{background:"#1B6B3A",color:"#fff",borderRadius:"50%",width:"18px",height:"18px",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:".62rem",fontWeight:"700",flexShrink:"0"}},t[0]),el("span",null,t[1])));});
-            guideModal.appendChild(tocDiv);
-            // ── ຂໍ້ຄວາມທ້າຍ ──
-            guideModal.appendChild(el("div",{style:{background:"#FFF8E7",border:"1.5px solid #F0C040",borderRadius:"10px",padding:"12px 14px",marginBottom:"10px",fontSize:".75rem"}},"💡 ສຳລັບຄູ່ມືສົມບູນ ດາວໂຫຼດໄຟລ໌ PDF ຈາກ Admin ຂອງທ່ານ"));
-            // ── ແຕ່ລະໝວດ ──
-            const sections=[
-              {icon:"1",title:"ການສະໝັກ ແລະ ເຂົ້າສູ່ລະບົບ",items:["ໄປທີ່ laohmarket.com → ກົດ 👤 Navbar","ກົດ ⚙️ ແອດມິນ (ຕ້ອງໃຊ້ Tab ນີ້ — ບໍ່ແມ່ນ ລູກຄ້າ)","ໃສ່ Username + Password → ເຂົ້າສູ່ລະບົບ","ສະໝັກ: ກົດ 'ສະໝັກເປີດຮ້ານ' → ລໍຖ້າ Admin ອະນຸມັດ"]},
-              {icon:"3",title:"📦 ເພີ່ມ & ຈັດການສິນຄ້າ",items:["ກົດແທັບ ➕ ເພີ່ມ → ກຮອກຂໍ້ມູນ (ຊື່, ລາຄາ, ສີ★, ຮູບ...)","ສີ / ກິ່ນ / ລົດຊາດ ★ ບັງຄັບ ຢ່າງໜ້ອຍ 1 ລາຍການ","Excel ທາງເລືອກ 2: ດາວໂຫຼດ → ແກ້ → ອັບໂຫຼດ","Product ID ເດີມ = ອັບເດດ (ຮູບຢູ່), ວ່າງ = ສ້າງໃໝ່"]},
-              {icon:"4",title:"📊 ຈັດການສະຕ໊ອກ",items:["ກົດ +/- ຕໍ່ variant (ສີ/ໄຊ) ທັນທີ","ສີໄຫຍ່ = ເຫຼືອໜ້ອຍ ⚠️, ສີເຫຼືອງ = ຂາຍດີ 🔥","Format Stock: |ສີ:ໄຊ=ຈຳ,ໄຊ=ຈຳ| ຫຼື |ສີ:=ຈຳ|"]},
-              {icon:"5",title:"🚚 ຄຳສັ່ງ",items:["ອັບເດດສະຖານະ: ລໍຢືນຢັນ → ແພັກ → ສົ່ງ → ສຳເລັດ","ດາວໂຫຼດ PDF / ພິມ / ໃບສົ່ງສິນຄ້າ"]},
-              {icon:"6",title:"📈 ການເງິນ & ຖອນ",items:["ແທັບ 📈: ລາຍຮັບ, ກຳໄລ, ຕົ້ນທຶນ ລາຍເດືອນ","ແທັບ 💸: ເລືອກ Order ທີ່ສຳເລັດ → ຂໍຖອນ → Admin ໂອນ"]},
-              {icon:"7",title:"🎁 ໂປຣໂມຊັ່ນ",items:["ສ້າງໂປຣ: ຊື່ + % ຫຼຸດ + ວັນທີ + ເລືອກສິນຄ້າ","ສິນຄ້າໂປຣຈະຂຶ້ນໜ້າຫຼັກ LaoH ອັດຕະໂນມັດ"]},
-              {icon:"9",title:"🏪 ໂປຣໄຟລ໌ຮ້ານ",items:["ກົດ ✏️ ແກ້ໄຂ: ໂລໂກ້, Banner, Slogan, About, GPS","ກົດ 🔗 ລິ້ງ: copy ລິ້ງຮ້ານ ສົ່ງໃຫ້ລູກຄ້າໄດ້ທັນທີ"]}
-            ];
-            sections.forEach(function(s){
-              const sec=el("div",{style:{marginBottom:"12px",border:"1.5px solid #C8E6D4",borderRadius:"10px",overflow:"hidden"}});
-              sec.appendChild(el("div",{style:{background:"linear-gradient(135deg,#1B6B3A,#2E8B57)",color:"#fff",padding:"8px 12px",fontWeight:"700",fontSize:".78rem",display:"flex",gap:"8px",alignItems:"center"}},
-                el("span",{style:{background:"rgba(255,255,255,.25)",borderRadius:"50%",width:"20px",height:"20px",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:".65rem",fontWeight:"900",flexShrink:"0"}},s.icon),
-                el("span",null,s.title)
-              ));
-              const body=el("div",{style:{padding:"10px 12px",background:"#fff"}});
-              s.items.forEach(function(item){
-                body.appendChild(el("div",{style:{fontSize:".72rem",color:"#444",padding:"3px 0",paddingLeft:"12px",position:"relative"}},
-                  el("span",{style:{position:"absolute",left:"0",color:"#1B6B3A"}},"▸"),item
-                ));
+            const GM=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",padding:"16px"}});
+            GM.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+            GM.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"📖 ຄູ່ມືໃຊ້ງານຮ້ານຄ້າ"));
+            GM.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75",marginBottom:"14px"}},"ທຸກປຸ່ມ ທຸກແຖບ — laohmarket.com"));
+            var G=function(icon,title,items){
+              var s=el("div",{style:{marginBottom:"10px",border:"1.5px solid #C8E6D4",borderRadius:"10px",overflow:"hidden"}});
+              s.appendChild(el("div",{style:{background:"linear-gradient(135deg,#1B6B3A,#2E8B57)",color:"#fff",padding:"8px 12px",fontWeight:"700",fontSize:".78rem",display:"flex",alignItems:"center",gap:"8px"}},
+                el("span",null,icon),el("span",null,title)));
+              var b=el("div",{style:{padding:"10px 12px",background:"#fff"}});
+              items.forEach(function(row){
+                var r=el("div",{style:{display:"flex",gap:"8px",alignItems:"flex-start",padding:"4px 0",borderBottom:"1px solid #F0F7F2"}});
+                r.appendChild(el("div",{style:{background:"#1B6B3A",color:"#fff",borderRadius:"6px",padding:"2px 7px",fontSize:".65rem",fontWeight:"700",whiteSpace:"nowrap",flexShrink:"0",marginTop:"2px"}},row[0]));
+                r.appendChild(el("div",{style:{fontSize:".72rem",color:"#333",lineHeight:"1.5"}},row[1]));
+                b.appendChild(r);
               });
-              sec.appendChild(body);
-              guideModal.appendChild(sec);
-            });
-            showOv(guideModal,null);
+              s.appendChild(b);
+              GM.appendChild(s);
+            };
+            G("📦","ແຖບ 1 — ສິນຄ້າ (ລາຍການສິນຄ້າທັງໝົດ)",[
+              ["🔍 ຄົ້ນຫາ","ພິມຊື່ ຫຼື #ID ຄົ້ນຫາສິນຄ້າໄດ້ທັນທີ"],
+              ["📥 Excel","ດາວໂຫຼດສິນຄ້າທັງໝົດເປັນໄຟລ໌ Excel ເພື່ອແກ້ໄຂພ້ອມກັນ"],
+              ["📤 Excel","ອັບໂຫຼດ Excel ກັບ — ລະບົບຈະອັບເດດ/ສ້າງສິນຄ້າຕາມໄຟລ໌"],
+              ["✏️ ແກ້ໄຂ","ກົດທີ່ icon ✏️ ຂ້າງສິນຄ້າ → ເປີດ form ແກ້ໄຂຂໍ້ມູນ"],
+              ["🗑 ລຶບ","ກົດ icon 🗑 ຂ້າງສິນຄ້າ → ລຶບສິນຄ້ານັ້ນທັນທີ (ຄືນບໍ່ໄດ້)"],
+              ["🔽 Filter","ກຣອງສິນຄ້າຕາມ: ທັງໝົດ / ມີສະຕ໊ອກ / ໝົດ / ໂປຣ / ຂາຍດີ"],
+            ]);
+            G("➕","ແຖບ 2 — ເພີ່ມສິນຄ້າ (ສ້າງສິນຄ້າໃໝ່)",[
+              ["ຊື່★","ຊື່ສິນຄ້າ — ຈຳເປັນຕ້ອງໃສ່"],
+              ["ລາຄາ★","ລາຄາຂາຍ (₭) — ຈຳເປັນ"],
+              ["ຕົ້ນທຶນ","ຕົ້ນທຶນ (₭) — ໃຊ້ຄິດກຳໄລ ລູກຄ້າບໍ່ເຫັນ"],
+              ["Tag","ເລືອກ: ບໍ່ມີ / 🔥 ຂາຍດີ / ✨ ໃໝ່ — ສະແດງ badge ໃນການ໌ດ"],
+              ["ໝວດ★","ໝວດໝູ່ຫຼັກ + ໝວດຍ່ອຍ"],
+              ["🎨 ສີ★","ສີ/ກິ່ນ/ລົດຊາດ — ຈຳເປັນ ≥1 — ພິມ+Enter ເພີ່ມໃໝ່"],
+              ["🖼 ຮູບສີ","ອັບໂຫຼດຮູບສະເພາະແຕ່ລະສີ — ລູກຄ້າຈະເຫັນຮູບທີ່ຕົງສີ"],
+              ["📏 ໄຊ","ຂະໜາດ — ວ່າງໄດ້ຖ້າໄມ່ມີໄຊ"],
+              ["📦 ກ່ອງ","ລະຫັດກ່ອງ A-H ສຳລັບຄິດຄ່າສົ່ງ"],
+              ["📝 ລາຍລະອຽດ","ຄຳອະທິບາຍສິນຄ້າ + ວິທີໃຊ້"],
+              ["🔄 ຮັບຄືນ","ຕິກ = ຮ້ານຮັບປ່ຽນ/ຄືນໄດ້"],
+              ["📦 Pre-order","ຕິກ + ເລືອກ 5-7 ຫຼື 10-15 ວັນ — ລູກຄ້າສັ່ງໄດ້ເຖິງສະຕ໊ອກໝົດ"],
+              ["🛍 ແນະນຳ","ເລືອກສິນຄ້າໃຫ້ຊື້ຮ່ວມ ≤3 — ສະແດງໃນໜ້າລາຍລະອຽດ"],
+              ["🖼 ຮູບລວມ","ອັບໂຫຼດຮູບຫຼາຍຮູບ — ກົດຮູບ = ຕັ້ງເປັນຮູບຫຼັກ"],
+              ["➕ ເພີ່ມ","ປຸ່ມ submit — ບັນທຶກສິນຄ້າໃໝ່ລົງລະບົບ"],
+            ]);
+            G("📊","ແຖບ 3 — ສະຕ໊ອກ (ຈັດການຈຳນວນ)",[
+              ["🔍 ຄົ້ນຫາ","ຄົ້ນຫາສິນຄ້າໃນ list ໄດ້ທັນທີ"],
+              ["➕ / ➖","ກົດ + ຫຼື - ຂ້າງ variant (ສີ/ໄຊ) ເພື່ອເພີ່ມ/ຫຼຸດສະຕ໊ອກ"],
+              ["💾 ບັນທຶກ","ບັນທຶກການປ່ຽນສະຕ໊ອກທັງໝົດໃນຄັ້ງດຽວ"],
+              ["⚠️ ສີໄຫຍ່","ສິນຄ້າ/variant ທີ່ເຫຼືອ < 3 ຊິ້ນ — ຕ້ອງເຕີມດ່ວນ"],
+              ["🔥 ສີເຫຼືອງ","variant ຂາຍດີ — ມີຍອດຂາຍສູງ"],
+              ["Filter","ກຣອງ: ທັງໝົດ / ມີສະຕ໊ອກ / ໝົດ / ຂາຍດີ / ໂປຣ"],
+            ]);
+            G("🚚","ແຖບ 4 — ຄຳສັ່ງ (ຈັດການ Order)",[
+              ["🔍 ຄົ້ນຫາ","ຄົ້ນຫາຕາມຊື່ ຫຼື ເບີໂທລູກຄ້າ"],
+              ["Filter","ກຣອງຕາມສະຖານະ: ລໍຢືນ / ກຳລັງສົ່ງ / ສຳເລັດ / ຍົກເລີກ"],
+              ["Status","ກົດສະຖານະ → ເລືອກໃໝ່: ຮ້ານກຳລັງແພັກ → ສົ່ງອອກ → ສຳເລັດ"],
+              ["📄 PDF","ດາວໂຫຼດໃບກຳກັບ Order ເປັນໄຟລ໌ PDF"],
+              ["🖨 ພິມ","ພິມໃບ Order ທາງ Printer ໂດຍກົງ"],
+              ["🖨 ໃບສົ່ງ","ພິມໃບສົ່ງສິນຄ້າ ສຳລັບຕິດກ່ອງ"],
+              ["📋 ປະຫວັດ","ດູປະຫວັດການປ່ຽນສະຖານະທັງໝົດຂອງ Order"],
+              ["📤 Admin","ແຈ້ງ Admin — ໃຊ້ຕິດຕໍ່ຫາ Admin ກ່ຽວກັບ Order ນັ້ນ"],
+              ["❌ ຍົກເລີກ","ຍົກເລີກ Order ທັງໝົດ ຫຼື ຍົກເລີກສິນຄ້າທີລະລາຍການ"],
+              ["🔔 ແຈ້ງເຕືອນ","ຈະໄດ້ຮັບ notification ທັນທີທຸກຄັ້ງທີ່ມີ Order ໃໝ່"],
+            ]);
+            G("📈","ແຖບ 5 — ການເງິນ (ລາຍຮັບ/ກຳໄລ)",[
+              ["ເດືອນ","ກົດປຸ່ມເດືອນ ←/→ ເພື່ອເບິ່ງລາຍຮັບຕາມເດືອນ"],
+              ["📊 ສະຫຼຸບ","ສະແດງ: ຍອດຂາຍ, Commission LaoH, ຮ້ານໄດ້ຮັບ, ກຳໄລ"],
+              ["📄 ດາວໂຫຼດ","ດາວໂຫຼດລາຍງານການເງິນເດືອນນັ້ນ"],
+              ["Order list","ລາຍການ Order ທີ່ include ໃນ statement"],
+            ]);
+            G("💸","ແຖບ 6 — ຖອນເງິນ",[
+              ["☑ ເລືອກ","ຕິກ Order ທີ່ຕ້ອງການຖອນ (ສາມາດເລືອກຫຼາຍ Order)"],
+              ["💸 ຖອນ","ກົດ 'ຂໍຖອນ' → ອັບໂຫຼດ slip ການໂອນ → ສົ່ງຄຳຂໍ"],
+              ["📄 ດາວໂຫຼດ","ດາວໂຫຼດໃບສະຫຼຸບ Order ທີ່ຈະຖອນ"],
+              ["✅ ໂອນແລ້ວ","Admin ຢືນຢັນໂອນ → Order ນັ້ນຈະ mark ວ່າ 'ຖອນແລ້ວ'"],
+              ["🔔 ແຈ້ງ","ຮ້ານຈະໄດ້ຮັບ notification ເມື່ອ Admin ໂອນສຳເລັດ"],
+            ]);
+            G("🎁","ແຖບ 7 — ໂປຣໂມຊັ່ນ",[
+              ["ຊື່ໂປຣ","ຊື່ໂປຣໂມຊັ່ນ (ສະແດງໃຫ້ລູກຄ້າ)"],
+              ["% ຫຼຸດ","ສ່ວນຫຼຸດ (ເຊັ່ນ 20 = ຫຼຸດ 20%)"],
+              ["ວັນທີ","ວັນທີເລີ່ມ ແລະ ວັນທີສິ້ນສຸດ — ໂປຣເຮັດວຽກໃນຊ່ວງນີ້ເທົ່ານັ້ນ"],
+              ["ເລືອກສິນຄ້າ","ຄົ້ນຫາ + ກົດ ✓ ເລືອກສິນຄ້າທີ່ໃຊ້ໂປຣ (ໄດ້ຫຼາຍລາຍການ)"],
+              ["✨ ສ້າງ","ກົດ 'ສ້າງໂປຣໂມຊັ່ນ' → ສິນຄ້ານັ້ນຈະຂຶ້ນໜ້າຫຼັກ LaoH ທັນທີ"],
+              ["🗑 ລຶບ","ລຶບໂປຣໂມຊັ່ນນັ້ນ"],
+              ["✅/⏸ Status","ສີຂຽວ = ກຳລັງໃຊ້ງານ (ຢູ່ໃນຊ່ວງວັນທີ), ສີຂາວ = ຍັງບໍ່ຮອດ/ໝົດແລ້ວ"],
+            ]);
+            G("📸","ແຖບ 8 — ໂພສ (Feed)",[
+              ["🖼 ຮູບ/ວິດີໂອ","ເລືອກຮູບ ຫຼື ວິດີໂອທີ່ຈະໂພສ"],
+              ["📝 Caption","ໃສ່ຄຳອະທິບາຍ / ຂໍ້ຄວາມ"],
+              ["📤 ໂພສ","ກົດ 'ໂພສໃສ່ Feed' → ຈະສະແດງໃນໜ້າ Feed ທັນທີ"],
+              ["✏️ ແກ້ໄຂ","ແກ້ caption ຂອງໂພສທີ່ໂພສໄປແລ້ວ"],
+              ["🗑 ລຶບ","ລຶບໂພສທີ່ໂພສໄປແລ້ວ"],
+            ]);
+            G("🏪","ປຸ່ມ Dashboard (ດ້ານເທິງ)",[
+              ["✏️ ແກ້ໄຂຮ້ານ","ແກ້ຂໍ້ມູນຮ້ານ: ໂລໂກ້, Banner, Slogan, GPS, ຊື່ຮ້ານ..."],
+              ["🪪 ໂປຣໄຟລ໌","ໄປເບິ່ງໜ້າໂປຣໄຟລ໌ຮ້ານ ທີ່ລູກຄ້າເຫັນ"],
+              ["📖 ຄູ່ມື","ຄູ່ມືທີ່ທ່ານກຳລັງອ່ານຢູ່ນີ້"],
+              ["🚪 ອອກ","Logout ອອກຈາກລະບົບ"],
+              ["🔔 ກະດິ່ງ","ກົດໄອຄອນ 🔔 Navbar → ເບິ່ງ/ອ່ານການແຈ້ງເຕືອນທັງໝົດ"],
+              ["🔗 ລິ້ງ","ໃນໜ້າໂປຣໄຟລ໌ → ກົດ '🔗 ລິ້ງ' → copy ລິ້ງຮ້ານ"],
+            ]);
+            showOv(GM,null);
           }
         },(_lang==="lo"?"📖 ຄູ່ມື":"📖 Guide")),
         el("button",{style:{padding:"6px 10px",borderRadius:"20px",background:"rgba(220,53,69,.1)",border:"1.5px solid rgba(220,53,69,.5)",color:"#C0392B",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},

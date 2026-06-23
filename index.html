@@ -1745,8 +1745,12 @@ async function uploadFile(base64Data, path, contentType){
     const url = await snap.ref.getDownloadURL();
     return url;
   }catch(e){
+    // ຖ້າເປັນ video ໃຫ້ throw error ໂດຍກົງ ບໍ່ silent fallback
+    if(contentType&&contentType.startsWith("video/")){
+      throw e;
+    }
     console.warn("Storage upload failed, using base64 fallback:", e.message);
-    return base64Data; // fallback: still works, just not shared
+    return base64Data; // fallback for images only
   }
 }
 
@@ -2046,7 +2050,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3985,7 +3989,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.4")
   );
 
   // Icon style helper
@@ -12271,9 +12275,21 @@ function buildAdminTab(){
             if(isVid){
               toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
               uploadVideoToStorage(b64,Date.now()+".mp4").then(function(url){
-                npost.mediaUrl=url;
-                toast(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ ✓":"Video uploaded ✓");
-              }).catch(function(){npost.mediaUrl=b64;});
+                if(url&&url.startsWith("http")){
+                  npost.mediaUrl=url;
+                  toast(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ ✓":"Video uploaded ✓");
+                } else {
+                  // url = base64 fallback = Firebase failed silently
+                  npost.mediaUrl=null;
+                  toast("❌ ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ — Firebase Storage ປະຕິເສດ (ກວດ Rules ຫຼື content-type)");
+                  mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);
+                }
+              }).catch(function(err){
+                npost.mediaUrl=null;
+                toast("❌ ອັບໂຫຼດວິດີໂອ error: "+(err&&err.message?err.message:"unknown"));
+                console.error("Video upload error:",err);
+                mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);
+              });
             } else {
               uploadImage(b64,"laoh/shopPosts").then(function(url){
                 npost.mediaUrl=url;

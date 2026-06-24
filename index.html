@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v145 — Bug fixes: duplicate printOrder, commission history double-write, coupon discount inconsistency, product name→id matching, stock qty cap, saveAll warning -->
+<!-- LaoH Marketplace v280 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2055,7 +2055,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.7.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.8.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3994,7 +3994,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.7.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.8.0")
   );
 
   // Icon style helper
@@ -5866,9 +5866,11 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
                 el("button",{className:"btn btn-p",style:{width:"100%"},onclick:function(){drawAuth();}},_lang==="lo"?"ກັບໄປຍອມຮັບ":"Go Back & Accept")
               ));
               return;
-            }if(aF.p!==aF.c2){aErr="รหัสผ่านไม่ตรงกัน";drawAuth();return;}if(users.find(x=>x.username===aF.u)){aErr="ชื่อผู้ใช้นี้มีอยู่แล้ว";drawAuth();return;}const nu={id:Date.now(),username:aF.u,password:aF.p,name:aF.n,phone:aF.ph,facebook:aF.fb};users.push(nu);saveToCloud("users",nu.id,nu);user={role:"c",...nu};window._addrCache=[];window._addrCacheUid=nu.id;closeOv();render();
+            }if(aF.p!==aF.c2){aErr="รหัสผ่านไม่ตรงกัน";drawAuth();return;}if(users.find(x=>x.username===aF.u)){aErr="ชื่อผู้ใช้นี้มีอยู่แล้ว";drawAuth();return;}const nu={id:Date.now(),username:aF.u,password:aF.p,name:aF.n,phone:aF.ph,facebook:aF.fb};users.push(nu);saveToCloud("users",nu.id,nu);user={role:"c",...nu};window._addrCache=[];window._addrCacheUid=nu.id;closeOv();
 pushNotifAdmin("new_user","👤 ສະມາຊິກໃໝ່: "+nu.name,nu.phone||nu.username,null);
-toast(_lang==="lo"?"ສະໝັກສຳເລັດ 🎉 ໃຊ້ LAOH15 ຫຼຸດ 15% ສຳລັບຄຳສັ່ງທຳອິດ!":"Registered! Use LAOH15 for 15% off your first order!");}
+toast(_lang==="lo"?"ສະໝັກສຳເລັດ 🎉 ໃຊ້ LAOH15 ຫຼຸດ 15% ສຳລັບຄຳສັ່ງທຳອິດ!":"Registered! Use LAOH15 for 15% off your first order!");
+// ── ຖ້າສະໝັກຈາກໜ້າ Checkout ໃຫ້ກັບຄືນ Checkout ທັນທີ ──
+if(_checkoutCart&&_checkoutCart.length>0){showCheckout();}else{render();}}
       }},aType==="a"?_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login":aMode==="login"?_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login":_lang==="lo"?"ສະໝັກສະມາຊິກ":"Register"),
       // Remember me checkbox (login only)
       aMode==="login"||aType==="a"?el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginTop:"8px"}},
@@ -8844,6 +8846,60 @@ function buildAdminTab(){
         const cs=p.colors||[],sz=p.sizes||[];
         const combos=cs.flatMap(c=>sz.map(s=>({k:c+"|"+s,c,s,q:(p.stock?p.stock[c+"|"+s]||0:0)||0,sold:soldMap[p.name+"|"+c+"|"+s]||0})));
         if(!combos.length)return;
+
+        // ── ປຸ່ມ ✏️ ແກ້ໄຂ Stock — ເປີດ popup modal ──
+        function openStockEditModal(){
+          const pidx=prods.findIndex(function(x){return x&&x.id===p.id;});
+          if(pidx<0)return;
+          const cur=prods[pidx];
+          const curCombos=((cur.colors||[]).flatMap(function(c){return (cur.sizes||[]).map(function(s){return {k:c+"|"+s,c:c,s:s,q:(cur.stock?cur.stock[c+"|"+s]||0:0)||0};});}));
+          // draft: map key → qty (editable)
+          const draft={};
+          curCombos.forEach(function(cb){draft[cb.k]=cb.q;});
+
+          const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxWidth:"360px",maxHeight:"80vh",overflowY:"auto",padding:"18px 16px"}});
+          mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+          mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"4px"}},"📦 ແກ້ໄຂ Stock"));
+          mod.appendChild(el("div",{style:{fontSize:".76rem",color:"#6B8F75",marginBottom:"14px"}},cur.name+" · #"+String(cur.id).slice(-6)));
+
+          const inputs={};
+          curCombos.forEach(function(cb){
+            const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 10px",background:C,borderRadius:"8px",marginBottom:"6px"}});
+            row.appendChild(el("div",{style:{flex:"1",fontSize:".8rem",fontWeight:"600",color:"#1A2B5F"}},cb.c+(cb.s?" / "+cb.s:"")));
+            const inp=document.createElement("input");
+            inp.type="number";inp.min="0";inp.step="1";
+            inp.value=String(draft[cb.k]);
+            inp.style.cssText="width:72px;padding:6px 8px;border:1.5px solid #C8E6D4;border-radius:8px;font-size:.9rem;font-weight:700;text-align:center;font-family:inherit;";
+            inp.oninput=function(){draft[cb.k]=Math.max(0,parseInt(inp.value)||0);};
+            inputs[cb.k]=inp;
+            row.appendChild(inp);
+            mod.appendChild(row);
+          });
+
+          const saveBtn=el("button",{className:"btn btn-p",style:{width:"100%",marginTop:"14px"}},
+            "💾 "+(_lang==="lo"?"ບັນທຶກ Stock":"Save Stock"));
+          saveBtn.onclick=function(){
+            saveBtn.disabled=true;
+            saveBtn.textContent=_lang==="lo"?"⏳ ກຳລັງບັນທຶກ...":"⏳ Saving...";
+            const newStock=Object.assign({},cur.stock||{});
+            curCombos.forEach(function(cb){newStock[cb.k]=Math.max(0,parseInt(inputs[cb.k].value)||0);});
+            const updated=Object.assign({},prods[pidx],{stock:newStock});
+            prods[pidx]=updated;
+            saveToCloud("prods",updated.id,updated).then(function(){
+              toast("💾 "+(_lang==="lo"?"ບັນທຶກ Stock ສຳເລັດ ✓":"Stock saved ✓"));
+              closeOv();
+              renderStockList();
+            }).catch(function(){
+              saveBtn.disabled=false;
+              saveBtn.textContent=_lang==="lo"?"💾 ບັນທຶກ Stock":"Save Stock";
+              toast(_lang==="lo"?"❌ ບັນທຶກບໍ່ສຳເລັດ":"❌ Save failed");
+            });
+          };
+          mod.appendChild(saveBtn);
+          showOv(mod,null);
+        }
+
+        // ── card ──
         listDiv.appendChild(el("div",{className:"acard",style:{marginBottom:"10px"}},
           el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}},
             (function(){
@@ -8856,22 +8912,11 @@ function buildAdminTab(){
             el("div",{style:{flex:"1",minWidth:"0"}},
               el("b",{style:{fontSize:".84rem"}},p.name),
               el("div",{style:{fontSize:".64rem",color:"#6B8F75"}},"#"+String(p.id).slice(-6))
-            )
+            ),
+            el("button",{onclick:openStockEditModal,style:{background:"#5D2D7A",color:"#fff",border:"none",borderRadius:"20px",padding:"5px 13px",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"}},
+              "✏️ "+(_lang==="lo"?"ແກ້ໄຂ":"Edit"))
           ),
-          ...combos.map(({k,c,s,q,sold})=>{
-            const qEl=el("span",{style:{width:"28px",textAlign:"center",fontSize:".82rem",fontWeight:"700"}},String(q));
-            const upd=(d)=>{
-              const pidx=prods.findIndex(function(x){return x&&x.id===p.id;});
-              if(pidx>=0){
-                // Always deep-copy to avoid readonly Firebase object issues
-                const newStock=Object.assign({},prods[pidx].stock||{});
-                newStock[k]=Math.max(0,(newStock[k]||0)+d);
-                prods[pidx]=Object.assign({},prods[pidx],{stock:newStock});
-                p=prods[pidx];
-                qEl.textContent=String(newStock[k]);
-              }
-            };
-            // ── ໄຮໄລ້ໃຫ້ເຫັນຊັດ: ສິນຄ້າເຫຼືອໜ້ອຍ (q<3) ແລະ ສິນຄ້າຂາຍແລ້ວ (sold>0) ──
+          ...combos.map(function({k,c,s,q,sold}){
             const isLow=q>0&&q<3;
             const isSold=sold>0;
             const rowBg=isLow?"#FFF0EE":(isSold?"#FFF9E5":C);
@@ -8881,8 +8926,7 @@ function buildAdminTab(){
                 el("span",{style:{fontSize:".78rem",fontWeight:"600",color:"#1A2B5F"}},c+" / "+s),
                 el("span",{style:{fontSize:".68rem",color:q>0?"#1a7a3a":"#8A7A9E",marginLeft:"6px",fontWeight:isLow?"800":"400"}},q>0?(isLow?"⚠️ "+q+" ຊີ້ນ (ເຫຼືອໜ້ອຍ)":q+" ຊີ້ນ"):"ພຣີໂອເດີ"),
                 isSold?el("span",{style:{fontSize:".68rem",color:"#fff",background:"#E8B800",marginLeft:"6px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"🔥 ຂາຍແລ້ວ "+sold+" ຊີ້ນ"):el("span",{style:{fontSize:".68rem",color:"#5D2D7A",marginLeft:"6px",fontWeight:"600"}},"· ຂາຍແລ້ວ "+sold+" ຊີ້ນ")
-              ),
-              el("div",{className:"qctrl"},el("button",{onclick:()=>upd(-1)},"-"),qEl,el("button",{onclick:()=>upd(1)},"+"))
+              )
             );
           })
         ));
@@ -15079,10 +15123,14 @@ window.addEventListener('load', function(){
   }, 3500);
 });
 
-// ── PULL TO REFRESH ────────────────────────────────────────────────
+// ── PULL TO REFRESH (ສະເພາະໜ້າ shop ແລະ feed ເທົ່ານັ້ນ) ────────────────────────────────────────────────
 (function(){
   let startY=0,pulling=false,ptrEl=null;
   const threshold=70;
+  // ── ກວດສອບວ່າ PTR ເປີດໃຊ້ໃນ view ນີ້ ຫຼື ບໍ່ ──
+  function ptrAllowed(){
+    return typeof view!=="undefined"&&(view==="shop"||view==="feed");
+  }
   function createPtr(){
     ptrEl=document.createElement("div");
     ptrEl.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-60px);background:#1B6B3A;color:#fff;padding:8px 20px;border-radius:0 0 18px 18px;font-size:.78rem;font-weight:700;z-index:9999;transition:transform .2s;box-shadow:0 2px 10px rgba(0,0,0,.2);font-family:'DM Sans','Noto Sans Lao',sans-serif;pointer-events:none;";
@@ -15090,8 +15138,7 @@ window.addEventListener('load', function(){
     document.body.appendChild(ptrEl);
   }
   createPtr();
-  // ── ກວດສອບວ່າຕອນນີ້ຢູ່ໃນໜ້າ Feed ບໍ່ — ຖ້າແມ່ນ ໃຫ້ເບິ່ງ scrollTop ຂອງ .feed-scroll ແທນ window.scrollY ──
-  // ── ເພາະ Feed ມີ scroll container ຂອງມັນເອງ, window.scrollY ຈະຄ້າງຢູ່ 0 ຕະຫຼອດ ເຮັດໃຫ້ pull-to-refresh ໄວເກີນໄປ ແລະ reload ທັງໜ້າ ──
+  // ── ກວດສອບວ່າ scroll ຢູ່ທີ່ top ຫຼື ບໍ່ — Feed ໃຊ້ .feed-scroll container ──
   function atTop(){
     if(typeof view!=="undefined"&&view==="feed"){
       const fs=document.querySelector(".feed-scroll");
@@ -15100,10 +15147,10 @@ window.addEventListener('load', function(){
     return window.scrollY===0;
   }
   document.addEventListener("touchstart",function(e){
-    if(atTop())startY=e.touches[0].clientY;
+    if(ptrAllowed()&&atTop())startY=e.touches[0].clientY;
   },{passive:true});
   document.addEventListener("touchmove",function(e){
-    if(!startY)return;
+    if(!startY||!ptrAllowed())return;
     const dy=e.touches[0].clientY-startY;
     if(dy>10&&atTop()){
       pulling=true;
@@ -15120,12 +15167,13 @@ window.addEventListener('load', function(){
     if(dy>=threshold){
       ptrEl.textContent="🔄 ກຳລັງ Refresh...";
       ptrEl.style.transform="translateX(-50%) translateY(0)";
-      // ── ຖ້າຢູ່ໃນໜ້າ Feed: ໂຫຼດຂໍ້ມູນໃໝ່ ແລະ render ໃໝ່ ໂດຍບໍ່ອອກຈາກໜ້າ Feed (ບໍ່ໃຊ້ location.reload) ──
+      // ── Feed: ໂຫຼດຂໍ້ມູນໃໝ່ ແລະ render ໃໝ່ ໂດຍບໍ່ reload ທັງໜ້າ ──
       if(typeof view!=="undefined"&&view==="feed"){
         Promise.resolve(typeof loadFromCloud==="function"?loadFromCloud():null).then(function(){
           try{render();}catch(e){}
         }).catch(function(){try{render();}catch(e){}});
       } else {
+        // ── shop: reload ໜ້າປົກກະຕິ ──
         setTimeout(function(){location.reload();},400);
       }
     }

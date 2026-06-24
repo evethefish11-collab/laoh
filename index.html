@@ -5270,7 +5270,7 @@ function showProduct(p){
   const draw=()=>{
     const qN=selColor&&selSize?gQ(selColor,selSize):null;
     const dp=promo?promo.price:p.price;
-    showOv(el("div",{className:"mod",onclick:e=>e.stopPropagation()},
+    showOv(el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation()},
       el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"),
 
       (function(){
@@ -8934,9 +8934,8 @@ function buildAdminTab(){
     }
     renderStockList();
 
-    return el("div",null,stockSearchInp,filterBtnRow,listDiv,
-    // ── Inventory Summary + Save Button ─────────────────────
-    (function(){
+    // ── Inventory Summary (top) ───────────────────────────────
+    const summaryBlock=(function(){
       const relevantProds=isShop?prods.filter(function(p){return p.shopId===(user&&user.shopId);}):prods;
       let totalQty=0, totalCostValue=0;
       relevantProds.forEach(function(p){
@@ -8949,8 +8948,8 @@ function buildAdminTab(){
           }
         });
       });
-      return el("div",{className:"acard",style:{marginTop:"10px"}},
-        el("div",{style:{fontWeight:"700",marginBottom:"10px",fontSize:".88rem",color:"#1A2B5F"}},"📊 ສະຫຼຸບສິນຄ້າຄົງຄ້ວ"),
+      return el("div",{className:"acard",style:{marginBottom:"10px"}},
+        el("div",{style:{fontWeight:"700",marginBottom:"10px",fontSize:".88rem",color:"#1A2B5F"}},"📊 ສິນຄ້າໃນຄັງ stock"),
         el("div",{style:{display:"flex",gap:"0",background:"#F0F7F2",borderRadius:"10px",marginBottom:"12px"}},
           el("div",{style:{flex:"1",textAlign:"center",padding:"10px 0",borderRight:"1px solid #C8E6D4"}},
             el("div",{style:{fontWeight:"900",fontSize:"1.1rem",color:"#1B6B3A"}},String(totalQty)),
@@ -8970,8 +8969,9 @@ function buildAdminTab(){
           toast("💾 ບັນທຶກ Stock "+saved+" ລາຍການ ✓");
         }},"💾 ບັນທຶກ Stock ທັງໝົດ")
       );
-    })()
-    );
+    })();
+
+    return el("div",null,summaryBlock,stockSearchInp,filterBtnRow,listDiv);
   }
   if(effectiveTab===4){
     function renderMemberList(q,listEl,countEl){
@@ -15129,7 +15129,11 @@ window.addEventListener('load', function(){
   const threshold=70;
   // ── ກວດສອບວ່າ PTR ເປີດໃຊ້ໃນ view ນີ້ ຫຼື ບໍ່ ──
   function ptrAllowed(){
-    return typeof view!=="undefined"&&(view==="shop"||view==="feed");
+    if(typeof view==="undefined")return false;
+    if(view==="shop"||view==="feed")return true;
+    // Dashboard ຂອງ Shop ແລະ SuperAdmin (admin view, aTab=0)
+    if(view==="admin"&&typeof aTab!=="undefined"&&aTab===0)return true;
+    return false;
   }
   function createPtr(){
     ptrEl=document.createElement("div");

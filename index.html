@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v280 -->
+<!-- LaoH Marketplace v281 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2055,7 +2055,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.8.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.8.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3994,7 +3994,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.8.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.8.1")
   );
 
   // Icon style helper
@@ -15131,8 +15131,8 @@ window.addEventListener('load', function(){
   function ptrAllowed(){
     if(typeof view==="undefined")return false;
     if(view==="shop"||view==="feed")return true;
-    // Dashboard ຂອງ Shop ແລະ SuperAdmin (admin view, aTab=0)
-    if(view==="admin"&&typeof aTab!=="undefined"&&aTab===0)return true;
+    // ທຸກ tab ຂອງ admin/shop/superAdmin (ທຸກ aTab)
+    if(view==="admin")return true;
     return false;
   }
   function createPtr(){
@@ -15171,14 +15171,18 @@ window.addEventListener('load', function(){
     if(dy>=threshold){
       ptrEl.textContent="🔄 ກຳລັງ Refresh...";
       ptrEl.style.transform="translateX(-50%) translateY(0)";
-      // ── Feed: ໂຫຼດຂໍ້ມູນໃໝ່ ແລະ render ໃໝ່ ໂດຍບໍ່ reload ທັງໜ້າ ──
+      // ── Feed: render ໃໝ່ໂດຍບໍ່ reload — ທຸກ view ອື່ນ: loadFromCloud ແລ້ວ render ຄືນ (ເກັບ session ໄວ້) ──
       if(typeof view!=="undefined"&&view==="feed"){
         Promise.resolve(typeof loadFromCloud==="function"?loadFromCloud():null).then(function(){
           try{render();}catch(e){}
         }).catch(function(){try{render();}catch(e){}});
       } else {
-        // ── shop: reload ໜ້າປົກກະຕິ ──
-        setTimeout(function(){location.reload();},400);
+        // loadFromCloud ດຶງຂໍ້ມູນໃໝ່ທັງໝົດ ແລ້ວ render — ບໍ່ reload ໜ້າ ຈຶ່ງບໍ່ລ້າງ session
+        Promise.resolve(typeof loadFromCloud==="function"?loadFromCloud():null).then(function(){
+          try{render();}catch(e){}
+        }).catch(function(){
+          try{render();}catch(e){}
+        });
       }
     }
     startY=0;pulling=false;

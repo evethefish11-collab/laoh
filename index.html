@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v287 -->
+<!-- LaoH Marketplace v290 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2072,7 +2072,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.8.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.9.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4011,7 +4011,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.8.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.9.0")
   );
 
   // Icon style helper
@@ -6210,7 +6210,24 @@ function renderCo(){
       el("div",{style:{background:"#1B6B3A",color:"#fff",borderRadius:"10px",padding:"10px 14px",textAlign:"center",marginBottom:"12px"}},
         el("div",{style:{fontSize:".78rem",opacity:".85",marginBottom:"2px"}},(_lang==="lo"?"ຍອດທີ່ຕ້ອງຊຳລະ":"Amount Due")),
         el("div",{style:{fontSize:"1.5rem",fontWeight:"900"}},"₭"+fmt(finalAmt3)),
-        disc3>0?el("div",{style:{fontSize:".7rem",opacity:".75"}},"(ຫຼຸດ ₭"+fmt(disc3)+(discShip3>0?" + ຄ່າສົ່ງ ₭"+fmt(discShip3):"")+")"):null
+        disc3>0?el("div",{style:{fontSize:".7rem",opacity:".75"}},"(ຫຼຸດ ₭"+fmt(disc3)+(discShip3>0?" + ຄ່າສົ່ງ ₭"+fmt(discShip3):"")+")"):null,
+        // ── ປຸ່ມ copy ຈຳນວນເງິນ ──
+        (function(){
+          const copyBtn=el("button",{type:"button",style:{marginTop:"8px",background:"rgba(255,255,255,.2)",border:"1.5px solid rgba(255,255,255,.6)",color:"#fff",borderRadius:"20px",padding:"5px 16px",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},
+            "📋 "+(_lang==="lo"?"ກ໋ອບປີຈຳນວນເງິນ":"Copy Amount"));
+          copyBtn.onclick=function(){
+            const amt=String(finalAmt3);
+            if(navigator.clipboard&&navigator.clipboard.writeText){
+              navigator.clipboard.writeText(amt).then(function(){
+                copyBtn.textContent="✅ "+(_lang==="lo"?"ກ໋ອບປີແລ້ວ!":"Copied!");
+                setTimeout(function(){copyBtn.textContent="📋 "+(_lang==="lo"?"ກ໋ອບປີຈຳນວນເງິນ":"Copy Amount");},2000);
+              }).catch(function(){toast(amt);});
+            } else {
+              toast((_lang==="lo"?"ຈຳນວນເງິນ: ":"Amount: ")+amt);
+            }
+          };
+          return copyBtn;
+        })()
       ),
       // QR Code
       el("div",{style:{textAlign:"center",marginBottom:"12px"}},
@@ -8874,7 +8891,7 @@ function buildAdminTab(){
       listDiv.innerHTML="";
       const filtered=stockProds.filter(function(p){
         if(_stockQ&&!((p.name&&p.name.toLowerCase().includes(_stockQ))||String(p.id).slice(-6).includes(_stockQ)||String(p.id).includes(_stockQ)))return false;
-        const cs=p.colors||[],sz=p.sizes||[];
+        const cs=p.colors&&p.colors.length?p.colors:[""],sz=p.sizes&&p.sizes.length?p.sizes:[""];
         const combos=cs.flatMap(function(c){return sz.map(function(s){return {k:c+"|"+s,c:c,s:s,q:(p.stock?p.stock[c+"|"+s]||0:0)||0,sold:soldMap[p.name+"|"+c+"|"+s]||0};});});
         if(!combos.length)return false;
         if(_stockFilter==="low"&&!comboHasLowStock(combos))return false;
@@ -8888,7 +8905,7 @@ function buildAdminTab(){
       }
 
       filtered.forEach(function(p){
-        const cs=p.colors||[],sz=p.sizes||[];
+        const cs=p.colors&&p.colors.length?p.colors:[""],sz=p.sizes&&p.sizes.length?p.sizes:[""];
         const combos=cs.flatMap(c=>sz.map(s=>({k:c+"|"+s,c,s,q:(p.stock?p.stock[c+"|"+s]||0:0)||0,sold:soldMap[p.name+"|"+c+"|"+s]||0})));
         if(!combos.length)return;
 
@@ -8897,7 +8914,8 @@ function buildAdminTab(){
           const pidx=prods.findIndex(function(x){return x&&x.id===p.id;});
           if(pidx<0)return;
           const cur=prods[pidx];
-          const curCombos=((cur.colors||[]).flatMap(function(c){return (cur.sizes||[]).map(function(s){return {k:c+"|"+s,c:c,s:s,q:(cur.stock?cur.stock[c+"|"+s]||0:0)||0};});}));
+          const _cc=cur.colors&&cur.colors.length?cur.colors:[""],_cs=cur.sizes&&cur.sizes.length?cur.sizes:[""];
+          const curCombos=(_cc.flatMap(function(c){return _cs.map(function(s){return {k:c+"|"+s,c:c,s:s,q:(cur.stock?cur.stock[c+"|"+s]||0:0)||0};});}));
           // draft: map key → qty (editable)
           const draft={};
           curCombos.forEach(function(cb){draft[cb.k]=cb.q;});
@@ -8910,7 +8928,8 @@ function buildAdminTab(){
           const inputs={};
           curCombos.forEach(function(cb){
             const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 10px",background:C,borderRadius:"8px",marginBottom:"6px"}});
-            row.appendChild(el("div",{style:{flex:"1",fontSize:".8rem",fontWeight:"600",color:"#1A2B5F"}},cb.c+(cb.s?" / "+cb.s:"")));
+            const _cbLabel=cb.c||cb.s?(cb.c+(cb.s?" / "+cb.s:"")):(_lang==="lo"?"ສິນຄ້າ":"Item");
+            row.appendChild(el("div",{style:{flex:"1",fontSize:".8rem",fontWeight:"600",color:"#1A2B5F"}},_cbLabel));
             const inp=document.createElement("input");
             inp.type="number";inp.min="0";inp.step="1";
             inp.value=String(draft[cb.k]);
@@ -8968,7 +8987,7 @@ function buildAdminTab(){
             const rowBorder=isLow?"1.5px solid #E8503A":(isSold?"1.5px solid #E8B800":"none");
             return el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 9px",background:rowBg,borderRadius:"8px",marginBottom:"4px",border:rowBorder}},
               el("div",{style:{flex:"1"}},
-                el("span",{style:{fontSize:".78rem",fontWeight:"600",color:"#1A2B5F"}},c+" / "+s),
+                el("span",{style:{fontSize:".78rem",fontWeight:"600",color:"#1A2B5F"}},(c||s)?(c+(s?" / "+s:"")):(_lang==="lo"?"ສິນຄ້າ":"Item")),
                 el("span",{style:{fontSize:".68rem",color:q>0?"#1a7a3a":"#8A7A9E",marginLeft:"6px",fontWeight:isLow?"800":"400"}},q>0?(isLow?"⚠️ "+q+" ຊີ້ນ (ເຫຼືອໜ້ອຍ)":q+" ຊີ້ນ"):"ພຣີໂອເດີ"),
                 isSold?el("span",{style:{fontSize:".68rem",color:"#fff",background:"#E8B800",marginLeft:"6px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"🔥 ຂາຍແລ້ວ "+sold+" ຊີ້ນ"):el("span",{style:{fontSize:".68rem",color:"#5D2D7A",marginLeft:"6px",fontWeight:"600"}},"· ຂາຍແລ້ວ "+sold+" ຊີ້ນ")
               )
@@ -15288,6 +15307,9 @@ window.addEventListener('load', function(){
   // ── ກວດສອບວ່າ PTR ເປີດໃຊ້ໃນ view ນີ້ ຫຼື ບໍ່ ──
   function ptrAllowed(){
     if(typeof view==="undefined")return false;
+    // ຖ້າກຳລັງ checkout ຢູ່ ຫ້າມ pull-to-refresh ເດັດຂາດ
+    if(typeof coStep!=="undefined"&&coStep>0)return false;
+    if(typeof _checkoutCart!=="undefined"&&_checkoutCart&&_checkoutCart.length>0)return false;
     if(view==="shop"||view==="feed")return true;
     // ທຸກ tab ຂອງ admin/shop/superAdmin (ທຸກ aTab)
     if(view==="admin")return true;

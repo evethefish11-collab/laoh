@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v292 -->
+<!-- LaoH Marketplace v297 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2072,7 +2072,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.9.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v2.9.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4011,7 +4011,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.9.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v2.9.7")
   );
 
   // Icon style helper
@@ -7589,7 +7589,7 @@ function buildAdmin(){
   const isSuperAdmin=user&&user.role==="admin";
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
-    isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ"]:
+    isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
     [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
   return el("div",{style:{padding:"14px 14px 60px"}},
     el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}},
@@ -7770,9 +7770,24 @@ function buildAdmin(){
     return isNarrator?
       [["🎙️",myAbs.length,"ຄລິບ"],["👁",totalAbViews,"ວິວ"],["💰","₭"+fmt(totalAbComm),"ຄ່າຄອມ"],["📚",myAbs.filter(function(a){return a.pinnedProdId;}).length,"ມີສິນຄ້າ"]]:
       isShop?
-        [["🛍",myProds2.length,"ສິນຄ້າ"],["🚚",myOrders2.length,"ຄຳສັ່ງ"],["📈",myOrders2.filter(function(o){return o.status!=="ຍົກເລີກ";}).length,"ຢືນຢັນແລ້ວ"],["💸",myOrders2.filter(function(o){return o.status==="ສົ່ງແລ້ວ";}).length,"ສົ່ງແລ້ວ"]]:
-        [["🛍",prods.length,"ສິນຄ້າ"],["👥",users.length,"ສະມາຊິກ"],["🚚",orders.length,"ຄຳສັ່ງ"],["🎁",promos.length,"ໂປຣ"]];
-  })().map(([ic,v,lb])=>el("div",{style:{background:"#fff",borderRadius:"10px",padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 6px rgba(59,32,96,.05)"}},el("div",{style:{fontSize:"1.1rem"}},ic),el("div",{style:{fontSize:"1.3rem",fontWeight:"900",color:"#1B6B3A"}},String(v)),el("div",{style:{fontSize:".65rem",color:"#6B8F75"}},lb)))
+        (function(){
+          // ── ຄຳນວນຍອດ POS offline ──
+          const myPosProds=prods.filter(function(p){return p.shopId===(user&&user.shopId);});
+          let posOfflineQty=0;myPosProds.forEach(function(p){posOfflineQty+=(p.soldOffline||0);});
+          const finRev=myOrders2.filter(function(o){return o.status==="ອໍເດີສຳເລັດແລ້ວ";}).reduce(function(s,o){return s+getShopNetTotal(o);},0);
+          // [icon, value, label, aTabIndex (null=no link)]
+          return [
+            ["🛍",myProds2.length,"ສິນຄ້າ",0],
+            ["🚚",myOrders2.length,"ຄຳສັ່ງ",3],
+            ["📈","₭"+fmt(finRev),"ການເງິນ",4],
+            ["🏪",posOfflineQty,"POS Offline",8]
+          ];
+        })():
+        [["🛍",prods.length,"ສິນຄ້າ",null],["👥",users.length,"ສະມາຊິກ",null],["🚚",orders.length,"ຄຳສັ່ງ",null],["🎁",promos.length,"ໂປຣ",null]];
+  })().map(([ic,v,lb,tabIdx])=>el("div",{
+    style:{background:"#fff",borderRadius:"10px",padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 6px rgba(59,32,96,.05)",cursor:tabIdx!==null?"pointer":"default",transition:"box-shadow .15s"},
+    onclick:tabIdx!==null?function(){aTab=tabIdx;view="admin";render();}:null
+  },el("div",{style:{fontSize:"1.1rem"}},ic),el("div",{style:{fontSize:"1.3rem",fontWeight:"900",color:"#1B6B3A"}},String(v)),el("div",{style:{fontSize:".65rem",color:"#6B8F75"}},lb)))
     ),
     el("div",{style:{display:"flex",gap:"5px",marginBottom:"12px",overflowX:"auto",paddingBottom:"2px"}},TABS.map((lb,i)=>el("button",{style:{padding:"6px 11px",borderRadius:"40px",border:"1.5px solid "+(aTab===i?D:B),background:aTab===i?D:"none",fontSize:".73rem",cursor:"pointer",whiteSpace:"nowrap",color:aTab===i?"#fff":D,fontFamily:"inherit"},onclick:()=>{aTab=i;view="admin";render();}},lb))),
     (function(){
@@ -7791,10 +7806,10 @@ function buildAdminTab(){
   const isSuperAdmin=user&&user.role==="admin";
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
-    isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ"]:
+    isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
     [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
   const superAdminTabMap={0:5,1:7,2:8,3:9,4:15,5:4,6:10,7:11,8:12,9:13,10:14,11:30};
-  const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:31,7:20};
+  const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:31,7:20,8:32};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
 
@@ -8989,7 +9004,15 @@ function buildAdminTab(){
               el("div",{style:{flex:"1"}},
                 el("span",{style:{fontSize:".78rem",fontWeight:"600",color:"#1A2B5F"}},(c||s)?(c+(s?" / "+s:"")):(_lang==="lo"?"ສິນຄ້າ":"Item")),
                 el("span",{style:{fontSize:".68rem",color:q>0?"#1a7a3a":"#8A7A9E",marginLeft:"6px",fontWeight:isLow?"800":"400"}},q>0?(isLow?"⚠️ "+q+" ຊີ້ນ (ເຫຼືອໜ້ອຍ)":q+" ຊີ້ນ"):"ພຣີໂອເດີ"),
-                isSold?el("span",{style:{fontSize:".68rem",color:"#fff",background:"#E8B800",marginLeft:"6px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"🔥 ຂາຍແລ້ວ "+sold+" ຊີ້ນ"):el("span",{style:{fontSize:".68rem",color:"#5D2D7A",marginLeft:"6px",fontWeight:"600"}},"· ຂາຍແລ້ວ "+sold+" ຊີ້ນ")
+                (function(){
+              const soldOff=(p.soldOffline&&p.soldOffline>0)?p.soldOffline:0;
+              const totalSold=sold+soldOff;
+              const wrap=el("span",null);
+              if(isSold)wrap.appendChild(el("span",{style:{fontSize:".68rem",color:"#fff",background:"#E8B800",marginLeft:"6px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"🔥 Online "+sold));
+              else wrap.appendChild(el("span",{style:{fontSize:".68rem",color:"#5D2D7A",marginLeft:"6px",fontWeight:"600"}},"· Online "+sold));
+              if(soldOff>0)wrap.appendChild(el("span",{style:{fontSize:".68rem",color:"#fff",background:"#5D2D7A",marginLeft:"4px",fontWeight:"800",padding:"1px 7px",borderRadius:"10px"}},"🏪 Offline "+soldOff));
+              return wrap;
+            })()
               )
             );
           })
@@ -10079,9 +10102,49 @@ function buildAdminTab(){
     const tPro=finOrders.filter(function(o){return o.status==="ອໍເດີສຳເລັດແລ້ວ";}).reduce((s,o)=>{return s+getShopNetTotal(o)-getNonCancelledCost(o);},0);
     // ── ຕົ້ນທຶນສິນຄ້າຄົງຄ້ວ ຕ້ອງກອງສະເພາະຮ້ານຕົນເອງ (ບໍ່ແມ່ນທຸກຮ້ານໃນລະບົບ) ──
     const sCost=finProds.reduce((s,p)=>s+Object.entries(p.stock||{}).reduce((x,[,q])=>x+(q>0&&p.cost>0?(p.cost||0)*q:0),0),0);
+    // ── POS Offline Summary Card ──
+    const offlineRevCard=(function(){
+      let offRev=0,offQty=0,offProfit=0;
+      finProds.forEach(function(p){
+        const so=p.soldOffline||0;
+        if(so>0){
+          offRev+=(p.price||0)*so;
+          offQty+=so;
+          offProfit+=((p.price||0)-(p.cost||0))*so;
+        }
+      });
+      if(offQty===0)return null;
+      return el("div",{className:"acard",style:{marginBottom:"12px"}},
+        el("div",{style:{fontWeight:"700",fontSize:".88rem",marginBottom:"10px",color:"#1A2B5F"}},"🏪 ສະຫຼຸບຍອດຂາຍ POS Offline"),
+        el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"8px"}},
+          el("div",{style:{background:"linear-gradient(135deg,#EEF4FF,#6B9FFF)",borderRadius:"12px",padding:"14px 12px"}},
+            el("div",{style:{fontSize:".7rem",color:"#1A2B5F",marginBottom:"4px"}},"💰 ຍອດຂາຍ Offline"),
+            el("div",{style:{fontSize:"1.1rem",fontWeight:"900",color:"#1A2B5F"}},"₭"+fmt(offRev)),
+            el("div",{style:{fontSize:".68rem",color:"#3A5A9F"}},offQty+" ຊີ້ນ")
+          ),
+          el("div",{style:{background:"linear-gradient(135deg,#E8F5EE,#4CAF88)",borderRadius:"12px",padding:"14px 12px"}},
+            el("div",{style:{fontSize:".7rem",color:"#1a5c2e",marginBottom:"4px"}},"📊 ກຳໄລ Offline"),
+            el("div",{style:{fontSize:"1.1rem",fontWeight:"900",color:"#1A2B5F"}},"₭"+fmt(offProfit)),
+            el("div",{style:{fontSize:".68rem",color:"#1a5c2e"}},offRev>0?Math.round(offProfit/offRev*100)+"%":"0%"+" margin")
+          )
+        ),
+        // ── ແຖວລວມ Online + Offline ──
+        el("div",{style:{background:"linear-gradient(135deg,#1A2B5F,#0d1d3e)",borderRadius:"12px",padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          el("div",null,
+            el("div",{style:{color:"rgba(255,255,255,.75)",fontSize:".7rem",marginBottom:"2px"}},"🌐 ລວມ Online + Offline"),
+            el("div",{style:{color:"rgba(255,255,255,.6)",fontSize:".65rem"}},"ຍອດຂາຍ + ກຳໄລ")
+          ),
+          el("div",{style:{textAlign:"right"}},
+            el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1rem"}},"₭"+fmt(tRev+offRev)),
+            el("div",{style:{color:"rgba(255,255,255,.7)",fontSize:".72rem"}},"ກຳໄລ ₭"+fmt(tPro+offProfit))
+          )
+        )
+      );
+    })();
     return el("div",null,
       commSummary,
       reviewCommDash,
+      offlineRevCard,
       el("div",{className:"acard"},el("div",{style:{fontWeight:"700",marginBottom:"12px"}},"📈 ສະຫຼຸບການເງິນ"),
         el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",marginBottom:"8px"}},
           el("div",{style:{background:"linear-gradient(135deg,#E8F5EE,#4CAF88)",borderRadius:"12px",padding:"14px 12px"}},el("div",{style:{fontSize:".7rem",color:"#1A2B5F",marginBottom:"4px"}},"💰 ລາຍຮັບທັງໝົດ"),el("div",{style:{fontSize:"1.15rem",fontWeight:"900",color:D}},"₭"+fmt(tRev)),el("div",{style:{fontSize:".68rem",color:"#2E5A3A"}},finOrders.filter(function(o){return o.status==="ອໍເດີສຳເລັດແລ້ວ";}).length+" ຄຳສັ່ງ")),
@@ -10656,6 +10719,38 @@ function buildAdminTab(){
       ),
       el("div",{className:"acard"},
         el("div",{style:{fontWeight:"700",marginBottom:"10px"}},"⚙️ ຕັ້ງຄ່າຮ້ານ"),
+        // ── VAT % setting ──
+        (function(){
+          const _mysh=shops.find(function(s){return s.id===(user&&user.shopId);})||{};
+          const _vw=el("div",{style:{marginBottom:"14px"}});
+          _vw.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",color:"#1A2B5F",marginBottom:"6px"}},"🧾 VAT % (ໃນ POS ບິນ)"));
+          const _vr=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}});
+          const _vi=document.createElement("input");_vi.type="number";_vi.min="0";_vi.max="30";_vi.step="0.5";_vi.className="inp";_vi.style.cssText="width:80px;font-size:.9rem;font-weight:700;";_vi.value=String(_mysh.posVat||0);
+          const _vb=el("button",{type:"button",className:"btn btn-p",style:{padding:"6px 14px",fontSize:".74rem",width:"auto"}},_lang==="lo"?"💾 ບັນທຶກ VAT":"💾 Save VAT");
+          _vb.onclick=function(){const v=Math.max(0,Math.min(30,parseFloat(_vi.value)||0));const si=shops.findIndex(function(s){return s.id===(user&&user.shopId);});if(si>=0){const now=new Date().toISOString().slice(0,16).replace("T"," ");const h=(shops[si].posVatHistory||[]).concat([{pct:shops[si].posVat||0,to:v,at:now}]).slice(-20);shops[si]=Object.assign({},shops[si],{posVat:v,posVatHistory:h});saveToCloud("shops",shops[si].id,shops[si]);toast("💾 VAT "+v+"% ✓");}}
+          _vr.appendChild(_vi);_vr.appendChild(el("span",{style:{fontSize:".8rem",color:"#6B8F75"}},"%"));_vr.appendChild(_vb);
+          _vw.appendChild(_vr);
+          _vw.appendChild(el("div",{style:{fontSize:".65rem",color:"#8A7A9E",marginBottom:"4px"}},"ຕັ້ງ 0 = ບໍ່ມີ VAT · ສະແດງໃນ POS ບິນ"));
+          return _vw;
+        })(),
+        // ── Member Discount % ──
+        (function(){
+          const _mysh2=shops.find(function(s){return s.id===(user&&user.shopId);})||{};
+          const _mw=el("div",{style:{marginBottom:"14px"}});
+          _mw.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",color:"#1A2B5F",marginBottom:"4px"}},"🎟 ສ່ວນຫຼຸດສະມາຊິກ (Follower) %"));
+          _mw.appendChild(el("div",{style:{fontSize:".65rem",color:"#6B8F75",marginBottom:"6px"}},"ສ່ວນຫຼຸດສຳລັບ Follower ທີ່ໃຊ້ POS ຊື້ທີ່ຮ້ານ"));
+          const _mr=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}});
+          const _mi=document.createElement("input");_mi.type="number";_mi.min="0";_mi.max="50";_mi.step="1";_mi.className="inp";_mi.style.cssText="width:80px;font-size:.9rem;font-weight:700;";_mi.value=String(_mysh2.memberDiscPct||0);
+          const _mb=el("button",{type:"button",className:"btn btn-p",style:{padding:"6px 14px",fontSize:".74rem",width:"auto"}},_lang==="lo"?"💾 ບັນທຶກ":"💾 Save");
+          _mb.onclick=function(){const v2=Math.max(0,Math.min(50,parseInt(_mi.value)||0));const si2=shops.findIndex(function(s){return s.id===(user&&user.shopId);});if(si2>=0){const now2=new Date().toISOString().slice(0,16).replace("T"," ");const h2=(shops[si2].memberDiscHistory||[]).concat([{from:shops[si2].memberDiscPct||0,to:v2,at:now2}]).slice(-20);shops[si2]=Object.assign({},shops[si2],{memberDiscPct:v2,memberDiscHistory:h2});saveToCloud("shops",shops[si2].id,shops[si2]);toast("💾 ສ່ວນຫຼຸດ "+v2+"% ✓");}}
+          _mr.appendChild(_mi);_mr.appendChild(el("span",{style:{fontSize:".8rem",color:"#6B8F75"}},"%"));_mr.appendChild(_mb);
+          _mw.appendChild(_mr);
+          const _mhb=el("button",{type:"button",style:{background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",borderRadius:"20px",padding:"4px 12px",fontSize:".68rem",cursor:"pointer",fontFamily:"inherit",marginTop:"4px"}},"📋 ປະຫວັດ ("+((_mysh2.memberDiscHistory||[]).length)+")");
+          _mhb.onclick=function(){const _hs=(_mysh2.memberDiscHistory||[]).slice().reverse();const _hmod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"70vh",overflowY:"auto",padding:"16px"}});_hmod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));_hmod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"📋 ປະຫວັດສ່ວນຫຼຸດ"));if(_hs.length===0){_hmod.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",padding:"20px"}},"ຍັງບໍ່ມີ"));}else{_hs.forEach(function(h){_hmod.appendChild(el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"8px 10px",marginBottom:"6px",fontSize:".78rem"}},h.from+"%→"+h.to+"% · "+h.at));});}showOv(_hmod,null);};
+          _mw.appendChild(_mhb);
+          return _mw;
+        })(),
+        el("div",{style:{borderTop:"1px solid #E8F5EE",paddingTop:"8px",marginBottom:"10px"}}),
         el("label",{className:"lbl"},"💳 QR Code ຊຳລະ"),
         prev,
         el("label",{className:"uplbl"},qrImg?"🔄 ປ່ຽນ QR":"📷 ອັບໂຫຼດ QR Code",el("input",{type:"file",accept:"image/*",style:{display:"none"},onchange:e=>{
@@ -10932,6 +11027,46 @@ function buildAdminTab(){
                 showOv(mod,null);
               };
               wrap.appendChild(histBtn);
+              // ── POS VAT + Member Discount info ──
+              const posInfoWrap=el("div",{style:{marginTop:"6px"}});
+              // VAT
+              const vatPct=sh.posVat||0;
+              const vatRow2=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#F0F7F2",borderRadius:"8px",padding:"7px 10px",marginBottom:"5px"}});
+              vatRow2.appendChild(el("span",{style:{fontSize:".7rem",color:"#1A2B5F",fontWeight:"700"}},"🧾 POS VAT"));
+              vatRow2.appendChild(el("span",{style:{fontSize:".78rem",fontWeight:"900",color:vatPct>0?"#c00":"#6B8F75"}},vatPct+"%"));
+              posInfoWrap.appendChild(vatRow2);
+              // Member Discount
+              const mdPct=sh.memberDiscPct||0;
+              const mdRow2=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#F0F7F2",borderRadius:"8px",padding:"7px 10px",marginBottom:"5px"}});
+              mdRow2.appendChild(el("span",{style:{fontSize:".7rem",color:"#1A2B5F",fontWeight:"700"}},"🎟 ສ່ວນຫຼຸດສະມາຊິກ"));
+              const mdRight=el("div",{style:{display:"flex",alignItems:"center",gap:"6px"}});
+              mdRight.appendChild(el("span",{style:{fontSize:".78rem",fontWeight:"900",color:mdPct>0?"#1B6B3A":"#6B8F75"}},mdPct+"%"));
+              // history btn
+              if((sh.memberDiscHistory||[]).length>0){
+                const mdHBtn=el("button",{style:{background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",borderRadius:"12px",padding:"2px 8px",fontSize:".6rem",cursor:"pointer",fontFamily:"inherit"}},
+                  "📋 "+((sh.memberDiscHistory||[]).length));
+                mdHBtn.onclick=function(){
+                  const _hs2=(sh.memberDiscHistory||[]).slice().reverse();
+                  const _hm2=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"70vh",overflowY:"auto",padding:"16px"}});
+                  _hm2.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+                  _hm2.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"📋 ປະຫວັດສ່ວນຫຼຸດ — "+sh.name));
+                  if(_hs2.length===0){_hm2.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",padding:"16px"}},"ຍັງບໍ່ມີ"));}
+                  else{_hs2.forEach(function(h){_hm2.appendChild(el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"8px 10px",marginBottom:"6px",fontSize:".78rem"}},h.from+"%→"+h.to+"% · "+h.at));});}
+                  showOv(_hm2,null);
+                };
+                mdRight.appendChild(mdHBtn);
+              }
+              mdRow2.appendChild(mdRight);
+              posInfoWrap.appendChild(mdRow2);
+              // ── ຈຳນວນ Order ອອຟໄລ (POS) ──
+              const shopProds_pos=prods.filter(function(p){return p.shopId===sh.id;});
+              let totalOfflineQty=0;
+              shopProds_pos.forEach(function(p){if(p.soldOffline&&p.soldOffline>0)totalOfflineQty+=p.soldOffline;});
+              const offRow=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#EEF4FF",borderRadius:"8px",padding:"7px 10px",marginBottom:"5px",border:"1.5px solid #C3D7FF"}});
+              offRow.appendChild(el("span",{style:{fontSize:".7rem",color:"#1A2B5F",fontWeight:"700"}},"🏪 ຍອດຂາຍ POS Offline (ຊີ້ນ)"));
+              offRow.appendChild(el("span",{style:{fontSize:".82rem",fontWeight:"900",color:totalOfflineQty>0?"#1A2B5F":"#aaa"}},String(totalOfflineQty)));
+              posInfoWrap.appendChild(offRow);
+              wrap.appendChild(posInfoWrap);
               return wrap;
             })()
           );
@@ -14090,6 +14225,250 @@ function buildNarratorProfile(){
     onclick:function(){view=prevView||"admin";render();}
   },"‹");
   page.appendChild(backBtn);
+
+  // ══════════════════════════════════════════════════════════════
+  // POS TAB (effectiveTab===32) — ຂາຍໜ້າຮ້ານ + ພິມບິນ
+  // ══════════════════════════════════════════════════════════════
+  if(effectiveTab===32){
+    const myShopId_pos=user&&user.shopId;
+    const myShop_pos=shops.find(function(s){return s.id===myShopId_pos;})||{};
+    const myProds_pos=prods.filter(function(p){return p.shopId===myShopId_pos;});
+    const posVatPct=myShop_pos.posVat||0;
+    const memberDiscPct=myShop_pos.memberDiscPct||0;
+    const myFollowers_pos=followers.filter(function(f){return f.shopId===myShopId_pos;});
+
+    if(!window._posCart)window._posCart=[];
+    if(!window._posMember)window._posMember=null;
+    const posCart=window._posCart;
+
+    const sec=el("div",null);
+
+    // ── Header ──
+    sec.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"12px",display:"flex",alignItems:"center",gap:"8px"}},
+      el("span",null,"🏪"),el("span",null,_lang==="lo"?"ຂາຍໜ້າຮ້ານ (POS)":"Point of Sale")));
+
+    // ── ຄົ້ນຫາສິນຄ້າ ──
+    const searchCard=el("div",{className:"acard",style:{marginBottom:"10px"}});
+    searchCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",marginBottom:"8px",color:"#1A2B5F"}},"📦 "+(_lang==="lo"?"ເພີ່ມສິນຄ້າ":"Add Products")));
+    const posSearch=document.createElement("input");
+    posSearch.className="inp";posSearch.placeholder=_lang==="lo"?"🔍 ຄົ້ນຫາຊື່ສິນຄ້າ...":"🔍 Search product...";
+    posSearch.style.marginBottom="8px";
+    const posResults=el("div",null);
+    function renderPosResults(q){
+      posResults.innerHTML="";
+      if(!q||q.length<1)return;
+      const sq=q.toLowerCase();
+      const found=myProds_pos.filter(function(p){return p.name&&p.name.toLowerCase().includes(sq);}).slice(0,8);
+      if(found.length===0){posResults.appendChild(el("div",{style:{fontSize:".76rem",color:"#aaa",padding:"6px 0"}},_lang==="lo"?"ບໍ່ພົບສິນຄ້າ":"No products found"));return;}
+      found.forEach(function(p){
+        const cs2=p.colors&&p.colors.length?p.colors:[""];
+        const sz2=p.sizes&&p.sizes.length?p.sizes:[""];
+        const combos2=cs2.flatMap(function(c){return sz2.map(function(s){return {k:c+"|"+s,c:c,s:s,q:(p.stock?p.stock[c+"|"+s]||0:0)};});});
+        const pRow=el("div",{style:{background:"#F0F7F2",borderRadius:"9px",padding:"8px 10px",marginBottom:"6px"}});
+        const th=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}});
+        th.appendChild(el("div",{style:{fontWeight:"700",fontSize:".8rem",color:"#1A2B5F",flex:"1"}},p.name));
+        th.appendChild(el("div",{style:{fontWeight:"800",fontSize:".82rem",color:"#1B6B3A"}},"₭"+fmt(p.price)));
+        pRow.appendChild(th);
+        combos2.forEach(function(cb){
+          const cRow=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"4px"}});
+          const lbl=(cb.c||cb.s)?(cb.c+(cb.s?" / "+cb.s:"")):"ສິນຄ້າ";
+          cRow.appendChild(el("span",{style:{fontSize:".72rem",color:"#444",flex:"1"}},lbl+" · ສ:"+cb.q));
+          const qInp=el("input",{type:"number",min:"1",value:"1",style:{width:"48px",padding:"4px 6px",border:"1.5px solid #C8E6D4",borderRadius:"7px",fontSize:".8rem",fontFamily:"inherit",textAlign:"center"}});
+          const addB=el("button",{type:"button",style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"8px",padding:"4px 10px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},"+");
+          addB.onclick=function(){
+            const qty=Math.max(1,parseInt(qInp.value)||1);
+            const key=p.id+"|"+cb.k;
+            const exist=posCart.find(function(x){return x.key===key;});
+            if(exist){exist.qty+=qty;}
+            else{posCart.push({key:key,pid:p.id,name:p.name,color:cb.c,size:cb.s,price:p.price,qty:qty,cost:p.cost||0});}
+            posSearch.value="";posResults.innerHTML="";
+            renderPosCartView();
+            toast("➕ "+p.name);
+          };
+          cRow.appendChild(qInp);cRow.appendChild(addB);
+          pRow.appendChild(cRow);
+        });
+        posResults.appendChild(pRow);
+      });
+    }
+    posSearch.oninput=function(){renderPosResults(this.value.trim());};
+    searchCard.appendChild(posSearch);searchCard.appendChild(posResults);
+    sec.appendChild(searchCard);
+
+    // ── ສະມາຊິກ / Follower ──
+    const memberCard=el("div",{className:"acard",style:{marginBottom:"10px"}});
+    memberCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",marginBottom:"8px",color:"#1A2B5F"}},"🎟 "+(_lang==="lo"?"ສ່ວນຫຼຸດສະມາຊິກ":"Member Discount")+" ("+memberDiscPct+"%)"));
+    const memberRow=el("div",{style:{display:"flex",gap:"8px",alignItems:"center"}});
+    const memberInp=document.createElement("input");
+    memberInp.className="inp";memberInp.placeholder=_lang==="lo"?"ກະລຸນາໃສ່ username ຫຼື ເບີໂທ":"Enter username or phone";
+    memberInp.style.flex="1";
+    if(window._posMember)memberInp.value=window._posMember.username||window._posMember.phone||"";
+    const memberLookup=el("button",{type:"button",className:"btn btn-p",style:{padding:"7px 12px",fontSize:".74rem",width:"auto"}},_lang==="lo"?"🔍 ຊອກ":"🔍 Find");
+    const memberStatus=el("div",{style:{fontSize:".76rem",marginTop:"6px"}});
+    if(window._posMember){
+      memberStatus.textContent="✅ "+window._posMember.name+" — ສ່ວນຫຼຸດ "+memberDiscPct+"%";
+      memberStatus.style.color="#1B6B3A";memberStatus.style.fontWeight="700";
+    }
+    memberLookup.onclick=function(){
+      const q2=(memberInp.value||"").trim().toLowerCase();
+      if(!q2){window._posMember=null;memberStatus.textContent=_lang==="lo"?"ຍົກເລີກສ່ວນຫຼຸດ":"Discount removed";memberStatus.style.color="#c00";renderPosCartView();return;}
+      // ຊອກຈາກ followers ຂອງຮ້ານ + users
+      const found=users.find(function(u2){return u2&&((u2.username||"").toLowerCase()===q2||(u2.phone||"")===q2);});
+      const isFollower=found&&myFollowers_pos.find(function(f){return f.uid===found.id;});
+      if(found&&isFollower){
+        window._posMember=found;
+        memberStatus.textContent="✅ "+found.name+" — ສ່ວນຫຼຸດ "+memberDiscPct+"%";
+        memberStatus.style.color="#1B6B3A";memberStatus.style.fontWeight="700";
+      } else if(found&&!isFollower){
+        window._posMember=null;
+        memberStatus.textContent=_lang==="lo"?"⚠️ ລູກຄ້ານີ້ບໍ່ໄດ້ Follow ຮ້ານ":"⚠️ Not a follower";
+        memberStatus.style.color="#E8A000";memberStatus.style.fontWeight="700";
+      } else {
+        window._posMember=null;
+        memberStatus.textContent=_lang==="lo"?"❌ ບໍ່ພົບສະມາຊິກ":"❌ Member not found";
+        memberStatus.style.color="#c00";memberStatus.style.fontWeight="700";
+      }
+      renderPosCartView();
+    };
+    memberRow.appendChild(memberInp);memberRow.appendChild(memberLookup);
+    memberCard.appendChild(memberRow);memberCard.appendChild(memberStatus);
+    sec.appendChild(memberCard);
+
+    // ── ຕະກ້ານ POS ──
+    const cartCard=el("div",{className:"acard",style:{marginBottom:"10px"}});
+    function renderPosCartView(){
+      cartCard.innerHTML="";
+      cartCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",marginBottom:"10px",color:"#1A2B5F"}},"🧾 "+(_lang==="lo"?"ລາຍການ":"Cart")+" ("+posCart.length+")"));
+      if(posCart.length===0){cartCard.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",padding:"20px",fontSize:".78rem"}},_lang==="lo"?"ຍັງບໍ່ໄດ້ເພີ່ມສິນຄ້າ":"No items yet"));return;}
+      let subTotal=0;
+      posCart.forEach(function(item,i){
+        subTotal+=item.price*item.qty;
+        const iRow=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 0",borderBottom:"1px solid #E8F5EE"}});
+        iRow.appendChild(el("div",{style:{flex:"1",fontSize:".78rem",color:"#1A2B5F"}},
+          el("div",null,el("b",null,item.name)),
+          el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},
+            (item.color||item.size)?(item.color+(item.size?" / "+item.size:"")):"",
+            " · ₭"+fmt(item.price)+" × "+item.qty
+          )
+        ));
+        // qty controls
+        const qCtrl=el("div",{style:{display:"flex",alignItems:"center",gap:"4px"}});
+        const qMinus=el("button",{type:"button",style:{width:"24px",height:"24px",border:"1.5px solid #C8E6D4",borderRadius:"50%",background:"none",cursor:"pointer",fontSize:".88rem",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}},"-");
+        const qNum=el("span",{style:{minWidth:"20px",textAlign:"center",fontWeight:"700",fontSize:".82rem"}},String(item.qty));
+        const qPlus=el("button",{type:"button",style:{width:"24px",height:"24px",border:"1.5px solid #C8E6D4",borderRadius:"50%",background:"none",cursor:"pointer",fontSize:".88rem",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}},"+");
+        qMinus.onclick=function(){if(item.qty>1){item.qty--;qNum.textContent=String(item.qty);renderPosTotals();}else{posCart.splice(i,1);renderPosCartView();}};
+        qPlus.onclick=function(){item.qty++;qNum.textContent=String(item.qty);renderPosTotals();};
+        qCtrl.appendChild(qMinus);qCtrl.appendChild(qNum);qCtrl.appendChild(qPlus);
+        // delete
+        const delB=el("button",{type:"button",style:{background:"none",border:"none",color:"#c00",cursor:"pointer",fontSize:"1rem"}},("🗑"));
+        delB.onclick=function(){posCart.splice(i,1);renderPosCartView();};
+        iRow.appendChild(qCtrl);iRow.appendChild(delB);
+        cartCard.appendChild(iRow);
+      });
+      renderPosTotals();
+    }
+    function renderPosTotals(){
+      // ລົບ totals block ເດີມ
+      const old=cartCard.querySelector(".pos-totals");
+      if(old)old.remove();
+      if(posCart.length===0)return;
+      let subTotal=0;
+      posCart.forEach(function(it){subTotal+=it.price*it.qty;});
+      const disc=window._posMember&&memberDiscPct>0?Math.round(subTotal*memberDiscPct/100):0;
+      const afterDisc=subTotal-disc;
+      const vatAmt=posVatPct>0?Math.round(afterDisc*posVatPct/100):0;
+      const grandTotal=afterDisc+vatAmt;
+      const totDiv=el("div",{className:"pos-totals",style:{marginTop:"10px",borderTop:"2px solid #E8F5EE",paddingTop:"10px"}});
+      totDiv.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".8rem",color:"#444",marginBottom:"4px"}},
+        el("span",null,_lang==="lo"?"ລວມກ່ອນສ່ວນຫຼຸດ":"Subtotal"),el("span",null,"₭"+fmt(subTotal))));
+      if(disc>0)totDiv.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".8rem",color:"#1B6B3A",marginBottom:"4px"}},
+        el("span",null,"🎟 "+_lang==="lo"?"ສ່ວນຫຼຸດ":"Discount"+" "+memberDiscPct+"%"),el("span",null,"-₭"+fmt(disc))));
+      if(vatAmt>0)totDiv.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".8rem",color:"#444",marginBottom:"4px"}},
+        el("span",null,"🧾 VAT "+posVatPct+"%"),el("span",null,"+₭"+fmt(vatAmt))));
+      totDiv.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:"1rem",fontWeight:"900",color:"#1A2B5F",marginTop:"6px",paddingTop:"6px",borderTop:"1px solid #C8E6D4"}},
+        el("span",null,_lang==="lo"?"ລວມທັງໝົດ":"Grand Total"),el("span",{style:{color:"#1B6B3A"}},"₭"+fmt(grandTotal))));
+      // ── ປຸ່ມ ──
+      const btnRow=el("div",{style:{display:"flex",gap:"8px",marginTop:"12px"}});
+      // ปุ่มพิมพ์บิล
+      const printBtn=el("button",{type:"button",className:"btn btn-p",style:{flex:"1"}},_lang==="lo"?"🖨 ພິມບິນ":"🖨 Print");
+      printBtn.onclick=function(){
+        const now=new Date();
+        const dateStr=now.toLocaleDateString("lo-LA",{year:"numeric",month:"short",day:"numeric"})+" "+now.toLocaleTimeString("lo-LA",{hour:"2-digit",minute:"2-digit"});
+        let rows="";
+        posCart.forEach(function(it){
+          rows+="<tr><td>"+(it.name+(it.color||it.size?" ("+it.color+(it.size?"/"+it.size:"")+")":""))+"</td><td style='text-align:center'>"+it.qty+"</td><td style='text-align:right'>"+fmt(it.price*it.qty)+"</td></tr>";
+        });
+        const w=window.open("","_blank","width=400,height=600");
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans Lao','DM Sans',sans-serif;font-size:12px;width:58mm;padding:8px 6px}
+h2{font-size:14px;font-weight:900;text-align:center;margin-bottom:2px}
+.sub{font-size:10px;text-align:center;color:#666;margin-bottom:8px}
+.divider{border-top:1px dashed #999;margin:6px 0}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;text-align:left;padding:2px 0;border-bottom:1px solid #ccc}
+td{font-size:11px;padding:2px 0;vertical-align:top}
+.total-row{font-weight:700;font-size:12px}
+.grand{font-weight:900;font-size:14px}
+.footer{text-align:center;font-size:9px;color:#888;margin-top:8px}
+@media print{body{margin:0}}
+</style></head><body>
+<h2>${myShop_pos.emoji||"🏪"} ${myShop_pos.name||"ຮ້ານ"}</h2>
+<div class="sub">${dateStr}${window._posMember?" · 🎟 "+window._posMember.name:""}</div>
+<div class="divider"></div>
+<table><thead><tr><th>ສິນຄ້າ</th><th style="text-align:center">ຈຳ</th><th style="text-align:right">ລາຄາ</th></tr></thead><tbody>${rows}</tbody></table>
+<div class="divider"></div>
+${disc>0?`<div style="display:flex;justify-content:space-between"><span>ສ່ວນຫຼຸດ ${memberDiscPct}%</span><span>-${fmt(disc)}</span></div>`:""}
+${vatAmt>0?`<div style="display:flex;justify-content:space-between"><span>VAT ${posVatPct}%</span><span>+${fmt(vatAmt)}</span></div>`:""}
+<div class="divider"></div>
+<div class="grand" style="display:flex;justify-content:space-between"><span>ລວມ</span><span>₭${fmt(grandTotal)}</span></div>
+<div class="footer">ຂອບໃຈທີ່ອຸດໜູນ · LaoH</div>
+</body></html>`);
+        w.document.close();
+        setTimeout(function(){w.print();},400);
+      };
+      // ปุ่ม confirm sale
+      const saleBtn=el("button",{type:"button",style:{flex:"1",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"10px",padding:"10px",fontSize:".82rem",fontWeight:"800",cursor:"pointer",fontFamily:"inherit"}},
+        _lang==="lo"?"✅ ຢືນຢັນການຂາຍ":"✅ Confirm Sale");
+      saleBtn.onclick=function(){
+        if(posCart.length===0){toast(_lang==="lo"?"ກາລຸນາເພີ່ມສິນຄ້າ":"Add items first");return;}
+        // save pos_order + deduct stock
+        const txn={
+          id:Date.now(),at:Date.now(),shopId:myShopId_pos,
+          member:window._posMember?{id:window._posMember.id,name:window._posMember.name}:null,
+          items:posCart.map(function(it){return {pid:it.pid,name:it.name,color:it.color,size:it.size,qty:it.qty,price:it.price};}),
+          subTotal:subTotal,disc:disc,vatAmt:vatAmt,total:grandTotal,
+          memberDiscPct:memberDiscPct,posVatPct:posVatPct
+        };
+        if(db){try{db.collection("pos_orders").doc(String(txn.id)).set(txn);}catch(e){}}
+        // หัก stock + บันทึก soldOffline
+        posCart.forEach(function(it){
+          const pi=prods.findIndex(function(p){return p.id===it.pid;});
+          if(pi>=0){
+            const stk=Object.assign({},prods[pi].stock||{});
+            const k2=it.color+"|"+it.size;
+            stk[k2]=Math.max(0,(stk[k2]||0)-it.qty);
+            const so=(prods[pi].soldOffline||0)+it.qty;
+            prods[pi]=Object.assign({},prods[pi],{stock:stk,soldOffline:so});
+            saveToCloud("prods",prods[pi].id,prods[pi]);
+          }
+        });
+        window._posCart=[];window._posMember=null;
+        toast(_lang==="lo"?"✅ ຂາຍສຳເລັດ!":"✅ Sale complete!");
+        render();
+      };
+      // ปุ่ม clear
+      const clearBtn=el("button",{type:"button",style:{background:"none",border:"1.5px solid #c00",color:"#c00",borderRadius:"10px",padding:"10px 14px",fontSize:".78rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},
+        _lang==="lo"?"🗑 ລ້າງ":"🗑 Clear");
+      clearBtn.onclick=function(){window._posCart=[];window._posMember=null;render();};
+      btnRow.appendChild(printBtn);btnRow.appendChild(saleBtn);btnRow.appendChild(clearBtn);
+      totDiv.appendChild(btnRow);
+      cartCard.appendChild(totDiv);
+    }
+    renderPosCartView();
+    sec.appendChild(cartCard);
+    return sec;
+  }
 
   return page;
 }

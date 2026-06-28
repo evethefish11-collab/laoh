@@ -8283,6 +8283,21 @@ function buildAdminTab(){
 
     // ── Excel ດາວໂຫລດ/ອັບໂຫລດສິນຄ້າ ──────────────────────────────────
     // ── ແປງ stock object {color|size:qty} ເປັນ string ແບບ |color:size=qty,size=qty|color2:...| ──
+    // ── ສ້າງ SKU ID ອັດຕະໂນມັດ: PRD{id}-{ສີ}-{ຂະໜາດ} ──────────────
+    function generateSkus(prodId,colors,sizes){
+      const skus={};
+      const cs=colors&&colors.length?colors:[""];
+      const sz=sizes&&sizes.length?sizes:[""];
+      cs.forEach(function(c){sz.forEach(function(s){
+        const k=c+"|"+s;
+        const parts=["PRD"+String(prodId)];
+        if(c)parts.push(c.replace(/\s+/g,"-"));
+        if(s)parts.push(s.replace(/\s+/g,"-"));
+        skus[k]=parts.join("-");
+      });});
+      return skus;
+    }
+
     function stockObjToExcelStr(stock,colors){
       if(!stock)return "";
       const parts=(colors||[]).map(function(c){
@@ -8308,6 +8323,7 @@ function buildAdminTab(){
           sz_e.forEach(function(s){
             const k=c+"|"+s;
             data.push({
+              "SKU ID":(p.skus&&p.skus[k])?p.skus[k]:(generateSkus(p.id,[c],[s])[k]||""),
               "Product ID":p.id,
               "ຊື່ສິນຄ້າ":p.name||"",
               "ໝວດໝູ່ຫຼັກ":p.cat||"",
@@ -8330,7 +8346,7 @@ function buildAdminTab(){
         });
       });
       const ws=XLSX.utils.json_to_sheet(data);
-      ws["!cols"]=[{wch:16},{wch:24},{wch:12},{wch:14},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:18},{wch:16},{wch:16},{wch:18},{wch:38},{wch:28},{wch:22},{wch:14}];
+      ws["!cols"]=[{wch:22},{wch:16},{wch:24},{wch:12},{wch:14},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:18},{wch:16},{wch:16},{wch:18},{wch:38},{wch:28},{wch:22},{wch:14}];
       const wb=XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb,ws,"Products");
       // ── ຊີດອ້າງອິງລະຫັດກ່ອງ A-H ──
@@ -8857,7 +8873,8 @@ function buildAdminTab(){
         const cat=v.mainCat||(v.cats&&v.cats.length?v.cats[0]:(PCATS[0]||""));
         if(cat&&!PCATS.includes(cat)){PCATS.push(cat);CATS.push(cat);}
         const st={};cs.forEach(c=>sz.forEach(s=>{st[c+"|"+s]=0;}));
-        const np={id:Date.now(),name:v.name,cat:cat,subCat:v.subCat||"",price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colorImgs:v.colorImgs||{},colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,refundable:v.refundable||false,allowPreorder:v.allowPreorder||false,preorderDays:v.preorderDays||"",desc:v.desc||"",usage:v.usage||"",relatedIds:v.relatedIds||[],boxSize:v.boxSize||"",shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
+        const _npId=Date.now();
+        const np={id:_npId,name:v.name,cat:cat,subCat:v.subCat||"",price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colorImgs:v.colorImgs||{},colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,skus:generateSkus(_npId,cs,sz),refundable:v.refundable||false,allowPreorder:v.allowPreorder||false,preorderDays:v.preorderDays||"",desc:v.desc||"",usage:v.usage||"",relatedIds:v.relatedIds||[],boxSize:v.boxSize||"",shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
         prods.unshift(np);
         // Wait for Firebase Storage uploads to finish before saving to Firestore
         // (uploadFile returns a URL; if img is already URL it passes through)
@@ -13806,6 +13823,15 @@ function parseExcelStockStr(str,validSizes){
   });
   return {stock:stock,errs:errs};
 }
+function _generateSkus(prodId,colors,sizes){
+  var skus={};var cs=colors&&colors.length?colors:[""];var sz=sizes&&sizes.length?sizes:[""];
+  cs.forEach(function(c){sz.forEach(function(s){
+    var k=c+"|"+s;var parts=["PRD"+String(prodId)];
+    if(c)parts.push(c.replace(/\s+/g,"-"));
+    if(s)parts.push(s.replace(/\s+/g,"-"));
+    skus[k]=parts.join("-");
+  });});return skus;
+}
 function showExcelUploadModal(myProds,isShopUser){
   // ── ປ້ອງກັນຊັ້ນທີ 2: ຖ້າບໍ່ແມ່ນຮ້ານຄ້າ ຫ້າມດຳເນີນການ ເພາະຈະກະທົບສິນຄ້າທຸກຮ້ານ ──
   if(!isShopUser){toast("⚠️ ຄຸນສົມບັດນີ້ໃຊ້ໄດ້ສະເພາະຮ້ານຄ້າເທົ່ານັ້ນ");return;}
@@ -13839,7 +13865,13 @@ function processExcelRows(rows,myProds,isShopUser){
     const rowNum=idx+2;
     const name=String(r["ຊື່ສິນຄ້າ"]||"").trim();
     if(!name){allErrs.push({row:rowNum,msg:"ບໍ່ມີຊື່ສິນຄ້າ"});return;}
-    const pid=r["Product ID"]?Number(r["Product ID"]):null;
+    const skuId=String(r["SKU ID"]||"").trim();
+    // ── ຖ້າມີ SKU ID ໃຊ້ resolve ກັບ Product ID ຈາກ skus field ──
+    let pid=r["Product ID"]?Number(r["Product ID"]):null;
+    if(!pid&&skuId){
+      const matched=myProds.find(function(p){return p.skus&&Object.values(p.skus).includes(skuId);});
+      if(matched)pid=matched.id;
+    }
     const price=Number(r["ລາຄາ (₭)"]);
     if(isNaN(price)||price<0){allErrs.push({row:rowNum,msg:"ລາຄາບໍ່ຖືກຕ້ອງ"});return;}
     const cost=Number(r["ຕົ້ນທຶນ (₭)"]||0);
@@ -13859,7 +13891,7 @@ function processExcelRows(rows,myProds,isShopUser){
       prodMap[groupKey]={
         pid:pid,name:name,
         cat:String(r["ໝວດໝູ່ຫຼັກ"]||"").trim(),subCat:String(r["ໝວດໝູ່ຍ່ອຍ"]||"").trim(),
-        price:price,cost:cost,colors:[],sizes:[],stock:{},barcodes:{},
+        price:price,cost:cost,colors:[],sizes:[],stock:{},barcodes:{},skus:{},
         refundable:String(r["ຮັບປ່ຽນ/ຄືນໄດ້ (TRUE/FALSE)"]||"").trim().toUpperCase()==="TRUE",
         allowPreorder:String(r["ເປີດ Pre-order (TRUE/FALSE)"]||"").trim().toUpperCase()==="TRUE",
         preorderDays:preorderDays,
@@ -13873,6 +13905,7 @@ function processExcelRows(rows,myProds,isShopUser){
     if(size&&!pg.sizes.includes(size))pg.sizes.push(size);
     pg.stock[k]=stockQty;
     if(barcode)pg.barcodes[k]=barcode;
+    if(skuId)pg.skus[k]=skuId;
   });
 
   const parsedRows=Object.values(prodMap);
@@ -13936,6 +13969,8 @@ function applyExcelImport(parsedRows,toUpdate,toCreate,toDelete,isShopUser){
     const updated=Object.assign({},existing,{
       name:r.name,cat:r.cat||existing.cat,subCat:r.subCat,price:r.price,cost:r.cost,
       colors:r.colors,sizes:r.sizes,stock:r.stock,barcodes:r.barcodes||existing.barcodes||{},
+      skus:(function(){const ex=existing.skus||{};const merged=Object.assign({},ex,r.skus||{});// fill missing combos
+        r.colors.forEach(function(c){r.sizes.forEach(function(s){const k=c+"|"+s;if(!merged[k]){const g=_generateSkus(existing.id,[c],[s]);merged[k]=g[k]||"";}});});return merged;})(),
       refundable:r.refundable,allowPreorder:r.allowPreorder,preorderDays:r.preorderDays,
       desc:r.desc,usage:r.usage,relatedIds:r.relatedIds||[],boxSize:r.boxSize||existing.boxSize
       // img, imgs, colorImgs: ບໍ່ແກ້ໄຂ — ຄືນເຫຼືອຄືນເກົ່າ
@@ -13948,7 +13983,7 @@ function applyExcelImport(parsedRows,toUpdate,toCreate,toDelete,isShopUser){
       id:Date.now()+Math.floor(Math.random()*1000),name:r.name,cat:r.cat||(PCATS[0]||""),subCat:r.subCat||"",
       price:r.price,cost:r.cost,img:"🛍",imgs:[],colorImgs:{},
       colors:r.colors,sizes:r.sizes,tag:null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",
-      stock:r.stock,barcodes:r.barcodes||{},refundable:r.refundable,allowPreorder:r.allowPreorder,preorderDays:r.preorderDays,
+      stock:r.stock,barcodes:r.barcodes||{},skus:r.skus&&Object.keys(r.skus).length?r.skus:_generateSkus(np.id,r.colors,r.sizes),refundable:r.refundable,allowPreorder:r.allowPreorder,preorderDays:r.preorderDays,
       desc:r.desc,usage:r.usage,relatedIds:r.relatedIds||[],boxSize:r.boxSize||"",
       shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)
     };
@@ -13987,7 +14022,8 @@ function showEditProd(p){
     colorImgs:p.colorImgs?{...p.colorImgs}:{},
     desc:p.desc||"",usage:p.usage||"",boxSize:p.boxSize||"",
     refundable:p.refundable||false,
-    barcodes:p.barcodes?Object.assign({},p.barcodes):{}
+    barcodes:p.barcodes?Object.assign({},p.barcodes):{},
+    skus:p.skus?Object.assign({},p.skus):{}
   };
   if(fm.imgs.length===0&&isUrl(p.img))fm.imgs=[p.img];
 
@@ -14184,7 +14220,11 @@ function showEditProd(p){
     barcodeSection.appendChild(el("label",{className:"lbl"},"🔖 ບາໂຄດ (ກໍໃສ່ ຫຼື ບໍ່ໃສ່ກໍໄດ້)"));
     barcodeSection.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"6px"}},"ໃສ່ barcode ຂອງແຕ່ລະສີ/ຂະໜາດ — ໃຊ້ໃນ POS scanner"));
     combos_b.forEach(function(cb){
-      const row=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"5px"}});
+      const wrap=el("div",{style:{marginBottom:"8px"}});
+      // ── SKU ID label ──
+      const skuVal=(fm.skus&&fm.skus[cb.k])?fm.skus[cb.k]:(p&&p.skus&&p.skus[cb.k]?p.skus[cb.k]:"");
+      if(skuVal){wrap.appendChild(el("div",{style:{fontSize:".62rem",color:"#888",fontFamily:"monospace",letterSpacing:".3px",marginBottom:"2px"}},skuVal));}
+      const row=el("div",{style:{display:"flex",alignItems:"center",gap:"6px"}});
       const lbl=(cb.c||cb.s)?(cb.c+(cb.s?" / "+cb.s:"")):"ສິນຄ້າ";
       row.appendChild(el("div",{style:{minWidth:"80px",fontSize:".72rem",fontWeight:"600",color:"#1A2B5F"}},lbl));
       const inp=document.createElement("input");
@@ -14223,7 +14263,8 @@ function showEditProd(p){
         document.head.appendChild(sc);
       };
       row.appendChild(inp);row.appendChild(scanB);
-      barcodeSection.appendChild(row);
+      wrap.appendChild(row);
+      barcodeSection.appendChild(wrap);
     });
   }
   refreshBarcodeInputs();
@@ -14376,7 +14417,8 @@ function showEditProd(p){
         imgs:fm.imgs||[],img:fm.img||p.img,colorImgs:fm.colorImgs||{},
         desc:fm.desc||"",usage:fm.usage||"",relatedIds:fm.relatedIds||[],
         boxSize:fm.boxSize||"",refundable:fm.refundable||false,allowPreorder:fm.allowPreorder||false,preorderDays:fm.preorderDays||"10-15",changeLog:newLog,
-        barcodes:fm.barcodes||{}
+        barcodes:fm.barcodes||{},
+        skus:(function(){const existing=p.skus||{};const merged=generateSkus(p.id,cs,sz);Object.keys(merged).forEach(function(k){if(existing[k])merged[k]=existing[k];});return merged;})()
       });
       prods=prods.map(function(x){return x.id===p.id?updated:x;});
       (async function(){

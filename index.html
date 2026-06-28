@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v313 -->
+<!-- LaoH Marketplace v315 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2085,7 +2085,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.1.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.1.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4024,7 +4024,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.1.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.1.5")
   );
 
   // Icon style helper
@@ -7679,9 +7679,9 @@ function buildAdmin(){
             };
             G("📦","ແຖບ 1 — ສິນຄ້າ (ລາຍການສິນຄ້າທັງໝົດ)",[
               ["🔍 ຄົ້ນຫາ","ພິມຊື່ ຫຼື #ID ຄົ້ນຫາສິນຄ້າໄດ້ທັນທີ"],
-              ["📥 Excel","ດາວໂຫຼດສິນຄ້າທັງໝົດເປັນໄຟລ໌ Excel ເພື່ອແກ້ໄຂພ້ອມກັນ"],
+              ["📥 Excel","ດາວໂຫຼດສິນຄ້າທັງໝົດເປັນໄຟລ໌ Excel (ມີ SKU ID ທຸກ combo)"],
               ["📤 Excel","ອັບໂຫຼດ Excel ກັບ — ລະບົບຈະອັບເດດ/ສ້າງສິນຄ້າຕາມໄຟລ໌"],
-              ["✏️ ແກ້ໄຂ","ກົດທີ່ icon ✏️ ຂ້າງສິນຄ້າ → ເປີດ form ແກ້ໄຂຂໍ້ມູນ"],
+              ["✏️ ແກ້ໄຂ","ກົດ icon ✏️ ຂ້າງສິນຄ້າ → ເປີດ form ແກ້ໄຂຂໍ້ມູນ"],
               ["🗑 ລຶບ","ກົດ icon 🗑 ຂ້າງສິນຄ້າ → ລຶບສິນຄ້ານັ້ນທັນທີ (ຄືນບໍ່ໄດ້)"],
               ["🔽 Filter","ກຣອງສິນຄ້າຕາມ: ທັງໝົດ / ມີສະຕ໊ອກ / ໝົດ / ໂປຣ / ຂາຍດີ"],
             ]);
@@ -7750,6 +7750,25 @@ function buildAdmin(){
               ["📤 ໂພສ","ກົດ 'ໂພສໃສ່ Feed' → ຈະສະແດງໃນໜ້າ Feed ທັນທີ"],
               ["✏️ ແກ້ໄຂ","ແກ້ caption ຂອງໂພສທີ່ໂພສໄປແລ້ວ"],
               ["🗑 ລຶບ","ລຶບໂພສທີ່ໂພສໄປແລ້ວ"],
+            ]);
+            G("🏪","ແຖບ 9 — POS (ຂາຍໜ້າຮ້ານ)",[
+              ["🔍 ຄົ້ນຫາ","ພິມຊື່ / ລະຫັດ / ບາໂຄດ ຄົ້ນຫາສິນຄ້າ"],
+              ["📷 ສະແກນ","ກົດ 📷 → ເປີດກ້ອງສະແກນ Barcode ສິນຄ້າ"],
+              ["➕/➖","ປຸ່ມ +/- ປ່ຽນຈຳນວນ, ກົດ 🗑 ລຶບລາຍການໃນຕະກ້າ"],
+              ["🎟 ສະມາຊິກ","ຄົ້ນຫາດ້ວຍ ຊື່ ຫຼື ຕົວເລກທ້າຍເບີໂທ ≥4 ຕົວ → ໄດ້ສ່ວນຫຼຸດ Follower"],
+              ["💳 ຊຳລະ","ກົດ 'ຊຳລະ' → ເລືອກ: ເງິນສົດ / ໂອນ / QR → ພິມ/ສ່ງບິນ"],
+              ["🖨 ພິມບິນ","ກົດ 'ພິມ' → ໂດດໄປໜ້າບິນ ສາມາດ Print ໄດ້"],
+              ["📋 ປະຫວັດ","ກົດ 'ປະຫວັດ' → ດູ 50 bill ລ້າສຸດ ຂອງຮ້ານ"],
+              ["🏠 ກັບຫຼັງ","ກົດ ‹ ຫຼື 'ຍົກເລີກ' → ກັບໜ້າຫຼັກ POS"],
+            ]);
+            G("✏️","ແກ້ໄຂສິນຄ້າ (ກົດ ✏️ ໃນ Tab 1)",[
+              ["ຊື່/ລາຄາ","ແກ້ຊື່, ລາຄາ, ຕົ້ນທຶນໄດ້ທັນທີ"],
+              ["ໝວດ/Tag","ປ່ຽນໝວດໝູ່ ຫຼື Tag ຂາຍດີ/ໃໝ່"],
+              ["🎨 ສີ/ໄຊ","ເພີ່ມ/ລຶບ ສີ ຫຼື ຂະໜາດ — ສະຕ໊ອກຈະ reset ຕາມ combo ໃໝ່"],
+              ["🔖 SKU ID","ລະຫັດ SKU ສ້າງອັດຕະໂນມັດ PRD{id}-{ສີ}-{ໄຊ} — ສະແດງໃຫ້ເຫັນໜ້າ Barcode"],
+              ["📷 Barcode","ໃສ່ Barcode ດ້ວຍມື ຫຼື ກົດ 📷 ສະແກນ — ບັນທຶກ/ໃຊ້ໃນ POS"],
+              ["🖼 ຮູບ","ເພີ່ມ/ສ່ຽນຮູບ, ກົດຮູບ = ຕັ້ງເປັນຮູບຫຼັກ"],
+              ["💾 ບັນທຶກ","ກົດ 'ບັນທຶກ' → ອັບເດດທຸກຂໍ້ມູນລົງ Firebase ທັນທີ"],
             ]);
             G("🏪","ປຸ່ມ Dashboard (ດ້ານເທິງ)",[
               ["✏️ ແກ້ໄຂຮ້ານ","ແກ້ຂໍ້ມູນຮ້ານ: ໂລໂກ້, Banner, Slogan, GPS, ຊື່ຮ້ານ..."],
@@ -13006,7 +13025,7 @@ function buildAdminTab(){
     mFind.onclick=function(){
       var q=(mInp.value||"").trim().toLowerCase();
       if(!q){window._posMember=null;mSt.textContent="";renderBill();return;}
-      var u2=users.find(function(u){return u&&((u.username||"").toLowerCase()===q||(u.phone||"")===q);});
+      var qq=q.replace(/\D/g,"");var u2=users.find(function(u){var uname=(u.username||"").toLowerCase();var uphone=(u.phone||"").replace(/\D/g,"");return uname===q||(u.phone||"")===q||(qq.length>=4&&uphone.endsWith(qq));});
       var isF=u2&&_fol.find(function(f){return f.id===u2.id;});
       if(u2&&isF){window._posMember=u2;mSt.textContent="✅ "+u2.name+" −"+_mdisc+"%";mSt.style.color="#1B6B3A";}
       else if(u2){window._posMember=null;mSt.textContent="⚠️ "+(_lang==="lo"?"ບໍ່ໄດ້ Follow":"Not follower");mSt.style.color="#E8A000";}

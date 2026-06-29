@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v324 -->
+<!-- LaoH Marketplace v325 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2085,7 +2085,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.2.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.2.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4024,7 +4024,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.2.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.2.5")
   );
 
   // Icon style helper
@@ -13196,10 +13196,17 @@ function buildAdminTab(){
         if(_bk){var _bparts=_bk.split("|");addToCart(_bp,_bparts[0],_bparts[1],1);sInp.value="";return;}}
       // ── SKU exact match → addToCart ທັນທີ ──
       var _skuFound=false;
-      for(var _si=0;_si<_mp.length;_si++){var _sp=_mp[_si];if(!_sp.skus)continue;var _sk=Object.keys(_sp.skus).find(function(k){return _sp.skus[k]&&_sp.skus[k].toLowerCase()===sq;});
+      for(var _si=0;_si<_mp.length;_si++){var _sp=_mp[_si];
+        var _spSkus=_sp.skus&&Object.keys(_sp.skus).length?_sp.skus:_generateSkus(_sp.id,_sp.colors||[],_sp.sizes||[]);
+        var _sk=Object.keys(_spSkus).find(function(k){return _spSkus[k]&&_spSkus[k].toLowerCase()===sq;});
         if(_sk){var _skParts=_sk.split("|");addToCart(_sp,_skParts[0],_skParts[1],1);sInp.value="";_skuFound=true;break;}}
       if(_skuFound)return;
-      var found=_mp.filter(function(p){var bm=p.barcodes&&Object.values(p.barcodes).some(function(b){return b&&b.toLowerCase().includes(sq);});var sm=p.skus&&Object.values(p.skus).some(function(sk){return sk&&sk.toLowerCase().includes(sq);});return bm||sm||(p.name&&p.name.toLowerCase().includes(sq))||String(p.id).slice(-6)===sq;}).slice(0,5);
+      var found=_mp.filter(function(p){
+        var bm=p.barcodes&&Object.values(p.barcodes).some(function(b){return b&&b.toLowerCase().includes(sq);});
+        var pSkus=p.skus&&Object.keys(p.skus).length?p.skus:_generateSkus(p.id,p.colors||[],p.sizes||[]);
+        var sm=Object.values(pSkus).some(function(sk){return sk&&sk.toLowerCase().includes(sq);});
+        return bm||sm||(p.name&&p.name.toLowerCase().includes(sq))||String(p.id).slice(-6)===sq;
+      }).slice(0,5);
       if(found.length===0){sRes.appendChild(el("div",{style:{fontSize:".7rem",color:"#aaa",padding:"5px 0"}},_lang==="lo"?"ບໍ່ພົບ":"Not found"));return;}
       found.forEach(function(p){
         var cs=p.colors&&p.colors.length?p.colors:[""];var sz=p.sizes&&p.sizes.length?p.sizes:[""];

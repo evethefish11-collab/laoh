@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v320 -->
+<!-- LaoH Marketplace v322 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2085,7 +2085,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.2.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.2.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4024,7 +4024,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.2.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.2.2")
   );
 
   // Icon style helper
@@ -13134,7 +13134,7 @@ function buildAdminTab(){
             w2.document.write("<div class='shop'>"+shopName+"</div>");
             w2.document.write("<div class='meta'>#"+(ord.billId||String(ord.at).slice(-8))+" "+billDateStr+(ord.memberName?" 🎟 "+ord.memberName:"")+"</div>");
             w2.document.write("<hr><table><thead><tr><th>ສິນຄ້າ</th><th style='text-align:center'>ຈ</th><th style='text-align:right'>₭</th></tr></thead><tbody>"+rows2+"</tbody></table><hr>");
-            if(disc>0)w2.document.write("<div class='tr'><span>ສ່ວນຫຼຸດ "+mDiscPct+"%</span><span>-"+fmt(disc)+"</span></div>");
+            if(disc>0)w2.document.write("<div class='tr'><span>ສ່ວນຫຼຸດ "+mDiscPct+"%"+(ord.memberName?" ("+ord.memberName+")":"")+"</span><span>-"+fmt(disc)+"</span></div>");
             if(vat>0)w2.document.write("<div class='tr'><span>VAT "+vatPct+"%</span><span>+"+fmt(vat)+"</span></div>");
             w2.document.write("<div class='tr grand'><span>ລວມ</span><span>₭"+fmt(ord.total)+"</span></div>");
             w2.document.write("<div class='ft'>ຂອບໃຈ · "+shopName+"</div>");
@@ -13190,6 +13190,11 @@ function buildAdminTab(){
       sRes.innerHTML="";const sq=(q||"").replace("#","").toLowerCase().trim();if(!sq)return;
       for(var _bi=0;_bi<_mp.length;_bi++){var _bp=_mp[_bi];if(!_bp.barcodes)continue;var _bk=Object.keys(_bp.barcodes).find(function(k){return _bp.barcodes[k]===q||_bp.barcodes[k]===sq;});
         if(_bk){var _bparts=_bk.split("|");addToCart(_bp,_bparts[0],_bparts[1],1);sInp.value="";return;}}
+      // ── SKU exact match → addToCart ທັນທີ ──
+      var _skuFound=false;
+      for(var _si=0;_si<_mp.length;_si++){var _sp=_mp[_si];if(!_sp.skus)continue;var _sk=Object.keys(_sp.skus).find(function(k){return _sp.skus[k]&&_sp.skus[k].toLowerCase()===sq;});
+        if(_sk){var _skParts=_sk.split("|");addToCart(_sp,_skParts[0],_skParts[1],1);sInp.value="";_skuFound=true;break;}}
+      if(_skuFound)return;
       var found=_mp.filter(function(p){var bm=p.barcodes&&Object.values(p.barcodes).some(function(b){return b&&b.toLowerCase().includes(sq);});var sm=p.skus&&Object.values(p.skus).some(function(sk){return sk&&sk.toLowerCase().includes(sq);});return bm||sm||(p.name&&p.name.toLowerCase().includes(sq))||String(p.id).slice(-6)===sq;}).slice(0,5);
       if(found.length===0){sRes.appendChild(el("div",{style:{fontSize:".7rem",color:"#aaa",padding:"5px 0"}},_lang==="lo"?"ບໍ່ພົບ":"Not found"));return;}
       found.forEach(function(p){
@@ -13290,7 +13295,7 @@ function buildAdminTab(){
       var tw=el("div",{style:{borderTop:"2px dashed #C8E6D4",paddingTop:"7px"}});
       function tRow(lbl,val,clr,bold){var r=el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:bold?".95rem":".74rem",fontWeight:bold?"900":"400",color:clr||"#444",marginBottom:"3px"}});r.appendChild(el("span",null,lbl));r.appendChild(el("span",null,val));return r;}
       tw.appendChild(tRow(_lang==="lo"?"ລວມກ່ອນ":"Subtotal","₭"+fmt(t.sub)));
-      if(t.disc>0)tw.appendChild(tRow("🎟 −"+_mdisc+"%","−₭"+fmt(t.disc),"#1B6B3A"));
+      if(t.disc>0)tw.appendChild(tRow("🎟 −"+_mdisc+"% "+(window._posMember?"("+window._posMember.name+")":""),"−₭"+fmt(t.disc),"#1B6B3A"));
       if(t.vat>0)tw.appendChild(tRow("🧾 VAT "+_vat+"%","+₭"+fmt(t.vat),"#555"));
       tw.appendChild(el("div",{style:{height:"1px",background:"#C8E6D4",margin:"5px 0"}}));
       tw.appendChild(tRow(_lang==="lo"?"ລວມທັງໝົດ":"Total","₭"+fmt(t.grand),"#1B6B3A",true));
@@ -13306,7 +13311,7 @@ function buildAdminTab(){
       w.document.write("<div class='shop'>"+shopName+"</div>");
       w.document.write("<div class='meta'>#"+_billId+" "+_billDateStr+(window._posMember?" 🎟 "+window._posMember.name:"")+"</div>");
       w.document.write("<hr><table><thead><tr><th>ສິນຄ້າ</th><th style='text-align:center'>ຈ</th><th style='text-align:right'>₭</th></tr></thead><tbody>"+rows+"</tbody></table><hr>");
-      if(t.disc>0)w.document.write("<div class='tr'><span>ສ່ວນຫຼຸດ "+_mdisc+"%</span><span>-"+fmt(t.disc)+"</span></div>");
+      if(t.disc>0)w.document.write("<div class='tr'><span>ສ່ວນຫຼຸດ "+_mdisc+"%"+(window._posMember?" ("+window._posMember.name+")":"")+"</span><span>-"+fmt(t.disc)+"</span></div>");
       if(t.vat>0)w.document.write("<div class='tr'><span>VAT "+_vat+"%</span><span>+"+fmt(t.vat)+"</span></div>");
       w.document.write("<div class='tr grand'><span>ລວມ</span><span>₭"+fmt(t.grand)+"</span></div>");
       w.document.write("<div class='ft'>ຂອບໃຈ · "+shopName+"</div>");

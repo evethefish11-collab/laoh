@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v325 -->
+<!-- LaoH Marketplace v326 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2085,7 +2085,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.2.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.2.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4024,7 +4024,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.2.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.2.6")
   );
 
   // Icon style helper
@@ -4540,7 +4540,56 @@ function buildShopProfile(shopId){
 
   const grid = filteredProds.length===0
     ? el("div",{style:{textAlign:"center",padding:"32px",color:"#6B8F75"}},fShopSubCat!=="all"?(_lang==="lo"?"ບໍ່ມີສິນຄ້າໃນໝວດນີ້":"No products in this category"):"ຍັງບໍ່ມີສິນຄ້າ")
-    : el("div",{className:"grid",style:{padding:"0 14px 20px"}},filteredProds.map(p=>buildCard(p,PM)));
+    : (function(){
+        var _gridItems=[];
+        var _allRvs=window._reviews||[];
+        filteredProds.forEach(function(p){
+          _gridItems.push({type:"prod",data:p});
+          var _pRvs=_allRvs.filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.prodId===p.id&&rv.mediaUrl;});
+          if(_pRvs.length===0)return;
+          // shop review = oldest (rv with smallest at), customer = newest 1-2
+          _pRvs.sort(function(a,b){return (a.at||0)-(b.at||0);});
+          var _shopRv=_pRvs[0];
+          _pRvs.sort(function(a,b){return (b.at||0)-(a.at||0);});
+          var _custRvs=_pRvs.filter(function(rv){return rv.id!==_shopRv.id;}).slice(0,2);
+          if(_shopRv)_gridItems.push({type:"review",data:_shopRv,prod:p});
+          _custRvs.forEach(function(rv){_gridItems.push({type:"review",data:rv,prod:p});});
+        });
+        var _gridDiv=el("div",{className:"grid",style:{padding:"0 14px 20px"}});
+        _gridItems.forEach(function(item){
+          if(item.type==="prod"){_gridDiv.appendChild(buildCard(item.data,PM));return;}
+          // ── Review Card ──
+          var rv=item.data;
+          var rCard=el("div",{style:{borderRadius:"14px",overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.07)",background:"#111",cursor:"pointer",position:"relative"},
+            onclick:function(){_feedProdFilter=item.prod.id;_feedScrollToId=rv.id;_feedBackProd=item.prod;view="feed";render();}});
+          // media box
+          var mBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",position:"relative",background:"#111"}});
+          if(rv.mediaType==="video"&&rv.mediaUrl){
+            var vid=document.createElement("video");
+            vid.src=rv.mediaUrl;vid.muted=true;vid.loop=true;vid.playsInline=true;vid.setAttribute("playsinline","");
+            vid.style.cssText="width:100%;height:100%;object-fit:cover;display:block;";
+            // Intersection Observer — play when visible, pause when not
+            var obs=new IntersectionObserver(function(entries){
+              entries.forEach(function(e){if(e.isIntersecting){vid.play().catch(function(){});}else{vid.pause();}});
+            },{threshold:0.5});
+            obs.observe(vid);
+            mBox.appendChild(vid);
+            mBox.appendChild(el("div",{style:{position:"absolute",top:"6px",left:"6px",background:"rgba(0,0,0,.55)",color:"#fff",fontSize:".58rem",padding:"2px 7px",borderRadius:"8px",fontWeight:"700",pointerEvents:"none"}},"▶ VDO"));
+          } else {
+            mBox.appendChild(el("img",{src:rv.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"},loading:"lazy",alt:""}));
+          }
+          // stars overlay
+          mBox.appendChild(el("div",{style:{position:"absolute",bottom:"6px",left:"6px",background:"rgba(0,0,0,.55)",color:"#FFD700",fontSize:".62rem",padding:"2px 7px",borderRadius:"8px",fontWeight:"700",pointerEvents:"none"}},"★".repeat(rv.stars||5)));
+          rCard.appendChild(mBox);
+          // info bar
+          var infoBar=el("div",{style:{padding:"7px 9px",background:"#fff"}});
+          infoBar.appendChild(el("div",{style:{fontSize:".65rem",fontWeight:"700",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},rv.userName||"ລູກຄ້າ"));
+          if(rv.caption)infoBar.appendChild(el("div",{style:{fontSize:".6rem",color:"#6B8F75",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:"1px"}},rv.caption));
+          rCard.appendChild(infoBar);
+          _gridDiv.appendChild(rCard);
+        });
+        return _gridDiv;
+      }());
 
   // followBtn overlay
   if(followBtn||true){

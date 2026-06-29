@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v332 -->
+<!-- LaoH Marketplace v334 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2085,7 +2085,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.3.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.3.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4024,7 +4024,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.3.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.3.4")
   );
 
   // Icon style helper
@@ -5102,28 +5102,50 @@ function buildShop(){
     fil.length===0
       ? el("div",{style:{textAlign:"center",padding:"32px",color:"#6B8F75",background:"#fff",borderRadius:"14px",margin:"0 14px"}},t("noProds"))
       : el("div",{id:"prod-grid",className:"grid",style:{padding:"0 14px 16px"}},(function(){
-          var _allRvs=getReviews().filter(function(rv){return rv&&rv.mediaUrl&&!rv.hidden;});
-          var _rvByProd={};
-          _allRvs.forEach(function(rv){if(rv.prodId){var k=Number(rv.prodId);if(!_rvByProd[k])_rvByProd[k]=[];_rvByProd[k].push(rv);}});
+          var _allRvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.mediaUrl;});
+          var _allPosts=getShopPosts().filter(function(p2){return p2&&p2.id&&!p2.hidden&&p2.pinnedProdId&&(p2.mediaUrl||p2.imgs);});
           var _nodes=[];
           fil.forEach(function(p){
             _nodes.push(buildCard(p,PM));
-            var _pRvs=_rvByProd[Number(p.id)]||[];
-            if(_pRvs.length===0)return;
-            _pRvs.sort(function(a,b){return (a.at||0)-(b.at||0);});
-            var _shopRv=_pRvs[0];
-            _pRvs.sort(function(a,b){return (b.at||0)-(a.at||0);});
-            var _custRvs=_pRvs.filter(function(rv){return rv.id!==_shopRv.id;}).slice(0,2);
+            // หา shop post ล่าสุด 1 อัน
+            var _posts=_allPosts.filter(function(p2){return Number(p2.pinnedProdId)===Number(p.id);}).sort(function(a,b){return (b.at||0)-(a.at||0);});
+            var _shopPost=_posts[0]||null;
+            // หา review ล่าสุด
+            var _rvs=_allRvs.filter(function(rv){return Number(rv.prodId)===Number(p.id);}).sort(function(a,b){return (b.at||0)-(a.at||0);});
             var _toShow=[];
-            if(_shopRv)_toShow.push(_shopRv);
-            _custRvs.forEach(function(rv){_toShow.push(rv);});
-            _toShow.forEach(function(rv){
+            if(_shopPost&&_rvs.length>0){
+              // มีทั้งสอง → shop post 1 + review 1
+              _toShow.push({type:"post",data:_shopPost});
+              _toShow.push({type:"review",data:_rvs[0]});
+            } else if(_shopPost){
+              // มีแค่ shop post → 1 card
+              _toShow.push({type:"post",data:_shopPost});
+            } else if(_rvs.length>0){
+              // มีแค่ review → 2 card
+              _toShow.push({type:"review",data:_rvs[0]});
+              if(_rvs[1])_toShow.push({type:"review",data:_rvs[1]});
+            }
+            _toShow.forEach(function(item){
+              var mediaUrl=item.type==="post"?(item.data.mediaUrl||(item.data.imgs&&item.data.imgs[0])||null):item.data.mediaUrl;
+              var mediaType=item.type==="post"?(item.data.mediaType||"image"):item.data.mediaType;
+              var userName=item.type==="post"?(item.data.shopName||"ຮ້ານຄ້າ"):(item.data.userName||"ລູກຄ້າ");
+              var caption=item.type==="post"?(item.data.caption||item.data.text||""):(item.data.caption||"");
+              var stars=item.type==="review"?(item.data.stars||5):null;
               var rCard=el("div",{style:{borderRadius:"14px",overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.07)",background:"#111",cursor:"pointer",position:"relative"},
-                onclick:function(){_feedProdFilter=p.id;_feedScrollToId=rv.id;_feedBackProd=p;view="feed";render();}});
+                onclick:function(){
+                  if(item.type==="post"){
+                    // เปิด feed กรอง shop นั้น
+                    _feedProdFilter=null;_feedScrollToId=item.data.id;
+                    view="feed";render();
+                  } else {
+                    _feedProdFilter=p.id;_feedScrollToId=item.data.id;_feedBackProd=p;
+                    view="feed";render();
+                  }
+                }});
               var mBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",position:"relative",background:"#111"}});
-              if(rv.mediaType==="video"){
+              if(mediaType==="video"&&mediaUrl){
                 var vid=document.createElement("video");
-                vid.src=rv.mediaUrl;vid.muted=true;vid.loop=true;vid.playsInline=true;vid.setAttribute("playsinline","");
+                vid.src=mediaUrl;vid.muted=true;vid.loop=true;vid.playsInline=true;vid.setAttribute("playsinline","");
                 vid.style.cssText="width:100%;height:100%;object-fit:cover;display:block;";
                 var obs=new IntersectionObserver(function(entries){
                   entries.forEach(function(e){if(e.isIntersecting){vid.play().catch(function(){});}else{vid.pause();}});
@@ -5131,14 +5153,19 @@ function buildShop(){
                 obs.observe(vid);
                 mBox.appendChild(vid);
                 mBox.appendChild(el("div",{style:{position:"absolute",top:"6px",left:"6px",background:"rgba(0,0,0,.55)",color:"#fff",fontSize:".58rem",padding:"2px 7px",borderRadius:"8px",fontWeight:"700",pointerEvents:"none"}},"▶ VDO"));
+              } else if(mediaUrl){
+                mBox.appendChild(el("img",{src:mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"},loading:"lazy",alt:""}));
               } else {
-                mBox.appendChild(el("img",{src:rv.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"},loading:"lazy",alt:""}));
+                mBox.style.background="#E8F5EE";
+                mBox.appendChild(el("div",{style:{position:"absolute",inset:"0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem"}},"📸"));
               }
-              mBox.appendChild(el("div",{style:{position:"absolute",bottom:"6px",left:"6px",background:"rgba(0,0,0,.55)",color:"#FFD700",fontSize:".62rem",padding:"2px 7px",borderRadius:"8px",fontWeight:"700",pointerEvents:"none"}},"★".repeat(rv.stars||5)));
+              // badge
+              mBox.appendChild(el("div",{style:{position:"absolute",top:"6px",right:"6px",background:item.type==="post"?"rgba(26,43,95,.75)":"rgba(0,0,0,.55)",color:"#fff",fontSize:".58rem",padding:"2px 7px",borderRadius:"8px",fontWeight:"700",pointerEvents:"none"}},item.type==="post"?"🏪":"⭐"));
+              if(stars)mBox.appendChild(el("div",{style:{position:"absolute",bottom:"6px",left:"6px",background:"rgba(0,0,0,.55)",color:"#FFD700",fontSize:".62rem",padding:"2px 7px",borderRadius:"8px",fontWeight:"700",pointerEvents:"none"}},"★".repeat(stars)));
               rCard.appendChild(mBox);
               var infoBar=el("div",{style:{padding:"7px 9px",background:"#fff"}});
-              infoBar.appendChild(el("div",{style:{fontSize:".65rem",fontWeight:"700",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},rv.userName||"ລູກຄ້າ"));
-              if(rv.caption)infoBar.appendChild(el("div",{style:{fontSize:".6rem",color:"#6B8F75",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:"1px"}},rv.caption));
+              infoBar.appendChild(el("div",{style:{fontSize:".65rem",fontWeight:"700",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},userName));
+              if(caption)infoBar.appendChild(el("div",{style:{fontSize:".6rem",color:"#6B8F75",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:"1px"}},caption));
               rCard.appendChild(infoBar);
               _nodes.push(rCard);
             });
@@ -5579,41 +5606,48 @@ function showProduct(p){
       // ── ຣີວິວສິນຄ້ານີ້ ──────────────────────────────────────────────
       (function(){
         const rvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.prodId===p.id;});
-        if(rvs.length===0)return null;
-        const show3=rvs.slice(0,3);
+        const posts=getShopPosts().filter(function(pt){return pt&&pt.id&&!pt.hidden&&Number(pt.pinnedProdId)===Number(p.id)&&(pt.mediaUrl||pt.imgs);});
+        // รวมกัน: posts ก่อน reviews
+        const combined=posts.map(function(pt){return {type:"post",data:pt};}).concat(rvs.map(function(rv){return {type:"review",data:rv};}));
+        if(combined.length===0)return null;
+        const show3=combined.slice(0,3);
+        const totalCount=combined.length;
         const box2=el("div",{style:{marginTop:"12px",borderTop:"1px solid #E8F5EE",paddingTop:"12px"}});
         box2.appendChild(el("div",{style:{fontWeight:"800",fontSize:".78rem",color:"#1A2B5F",marginBottom:"8px",display:"flex",alignItems:"center",justifyContent:"space-between"}},
-          el("span",null,"📸 "+(_lang==="lo"?"ຣີວິວສິນຄ້ານີ້":"Reviews")+" ("+rvs.length+")"),
-          rvs.length>3?el("button",{type:"button",onclick:function(){
+          el("span",null,"📸 "+(_lang==="lo"?"ຣີວິວສິນຄ້ານີ້":"Reviews")+" ("+totalCount+")"),
+          totalCount>3?el("button",{type:"button",onclick:function(){
             _feedProdFilter=p.id;_feedScrollToId=null;_feedBackProd=p;
             closeOv();view="feed";render();
           },style:{background:"none",border:"none",color:"#1B6B3A",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},"▶ "+(_lang==="lo"?"ເບິ່ງທັງໝົດ":"See all")):null
         ));
         const row2=el("div",{style:{display:"flex",gap:"8px"}});
-        show3.forEach(function(rv){
+        show3.forEach(function(item){
+          var mediaUrl=item.type==="post"?(item.data.mediaUrl||(item.data.imgs&&item.data.imgs[0])||null):item.data.mediaUrl;
+          var mediaType=item.type==="post"?(item.data.mediaType||"image"):item.data.mediaType;
+          var userName=item.type==="post"?(item.data.shopName||"ຮ້ານຄ້າ"):(item.data.userName||"ລູກຄ້າ");
+          var caption=item.type==="post"?(item.data.caption||item.data.text||""):(item.data.caption||"");
           const card2=el("div",{style:{flex:"1",minWidth:"0",borderRadius:"10px",overflow:"hidden",background:"#111",cursor:"pointer",boxShadow:"0 1px 4px rgba(0,0,0,.15)",position:"relative"},onclick:function(){
-            _feedProdFilter=p.id;_feedScrollToId=rv.id;_feedBackProd=p;
-            closeOv();view="feed";render();
+            if(item.type==="post"){_feedScrollToId=item.data.id;view="feed";closeOv();render();}
+            else{_feedProdFilter=p.id;_feedScrollToId=item.data.id;_feedBackProd=p;closeOv();view="feed";render();}
           }});
-          // ── Thumbnail ──
           const imgDiv2=el("div",{style:{height:"70px",background:"#222",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}});
-          if(rv.mediaUrl){
-            if(rv.mediaType==="video"){
-              // Video thumbnail: show poster or play icon overlay
-              const vid2=el("video",{src:rv.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"},muted:true,preload:"metadata"});
+          if(mediaUrl){
+            if(mediaType==="video"){
+              const vid2=el("video",{src:mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"},muted:true,preload:"metadata"});
               imgDiv2.appendChild(vid2);
               imgDiv2.appendChild(el("div",{style:{position:"absolute",inset:"0",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.3)",fontSize:"1.2rem"}},"▶"));
             } else {
-              imgDiv2.appendChild(el("img",{src:rv.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"},alt:"",loading:"lazy"}));
+              imgDiv2.appendChild(el("img",{src:mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"},alt:"",loading:"lazy"}));
             }
           } else {
             imgDiv2.appendChild(el("div",{style:{color:"#fff",fontSize:"1.5rem"}},"📸"));
           }
+          // badge
+          imgDiv2.appendChild(el("div",{style:{position:"absolute",top:"3px",right:"3px",background:item.type==="post"?"rgba(26,43,95,.75)":"rgba(0,0,0,.55)",color:"#fff",fontSize:".5rem",padding:"1px 5px",borderRadius:"6px",fontWeight:"700"}},item.type==="post"?"🏪":"⭐"));
           card2.appendChild(imgDiv2);
-          // ── Info ──
           const info2=el("div",{style:{padding:"5px 6px",background:"#fff"}});
-          info2.appendChild(el("div",{style:{fontSize:".62rem",color:"#1A2B5F",fontWeight:"700",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},rv.userName||"ລູກຄ້າ"));
-          if(rv.caption)info2.appendChild(el("div",{style:{fontSize:".58rem",color:"#6B8F75",lineHeight:"1.3",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:"1px"}},rv.caption));
+          info2.appendChild(el("div",{style:{fontSize:".62rem",color:"#1A2B5F",fontWeight:"700",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},userName));
+          if(caption)info2.appendChild(el("div",{style:{fontSize:".58rem",color:"#6B8F75",lineHeight:"1.3",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:"1px"}},caption));
           card2.appendChild(info2);
           row2.appendChild(card2);
         });

@@ -16,13 +16,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v361 -->
+<!-- LaoH Marketplace v364 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
 .nav{position:fixed;top:0;width:100%;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#1B6B3A;border-bottom:none;gap:8px;box-shadow:0 4px 12px rgba(27,107,58,.3);transform:translateY(0);transition:transform .25s ease}
 .nav-hidden{transform:translateY(-100%)}
 .bnav{position:fixed;bottom:calc(10px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:420px;z-index:100;display:flex;align-items:center;justify-content:space-around;padding:5px 10px;background:rgba(27,107,58,.15);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:32px;border:1px solid rgba(27,107,58,.25);box-shadow:0 4px 20px rgba(0,0,0,.18)}
+.bnav-feed{background:rgba(27,107,58,.55);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 .bnav img{filter:drop-shadow(0 1px 3px rgba(0,0,0,.35))}
 .logo{font-size:.9rem;font-weight:700;color:#1B6B3A;background:none;border:none;cursor:pointer;font-family:"Noto Sans Lao","DM Sans",sans-serif}
 .ibt{background:none;border:none;font-size:1.2rem;cursor:pointer;padding:5px;border-radius:50%;position:relative;font-family:"Noto Sans Lao","DM Sans",sans-serif;color:#fff}
@@ -2090,7 +2091,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.6.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.6.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2367,7 +2368,7 @@ function buildFeedPage(){
 
   // Empty state
   if(!hasLive&&reviews.length===0){
-    return el("div",{className:"feed-page"+((user&&user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff")?" feed-page-bnav":""),style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"16px",padding:"30px"}},
+    return el("div",{className:"feed-page"+((!user||(user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff"))?" feed-page-bnav":""),style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"16px",padding:"30px"}},
       el("div",{style:{fontSize:"4rem"}},"📺"),
       el("div",{style:{fontWeight:"800",fontSize:"1.1rem",color:"rgba(255,255,255,.9)",textAlign:"center"}},
         _lang==="lo"?"ຍັງບໍ່ມີໃຜ Live ຢູ່ຕອນນີ້":"No one is Live right now"
@@ -2400,28 +2401,6 @@ function buildFeedPage(){
     item.className="feed-item";
     item.style.cssText="position:relative;height:100%;background:#0a0a0a;display:flex;flex-direction:column;";
     item.dataset.rvId=String(rv.id);
-
-    // ── Back button — ຖ້າ filter ສິນຄ້ານຶ່ງ → ກັບໄປໜ້າສິນຄ້ານັ້ນ, ຖ້າບໍ່ → ກັບໄປໜ້າຫຼັກ ──
-    const rvNavBack=el("div",{className:"feed-nav"},
-      el("button",{
-        className:"feed-nav-btn",
-        style:{display:"flex",alignItems:"center",gap:"5px",padding:"6px 12px"},
-        onclick:function(){
-          if(_feedProdFilter){
-            const bp=_feedBackProd;
-            _feedProdFilter=null;_feedScrollToId=null;_feedBackProd=null;
-            view="shop";render();
-            if(bp)setTimeout(function(){showProduct(bp);},60);
-          } else {
-            view="shop";render();
-          }
-        }
-      },
-        el("span",null,"←"),
-        el("span",null,(_feedProdFilter&&_feedBackProd)?_feedBackProd.name.slice(0,16):"LaoH")
-      )
-    );
-    item.appendChild(rvNavBack);
 
     // media (image or video)
     const media=document.createElement("div");
@@ -2557,7 +2536,7 @@ function buildFeedPage(){
     // product pill — ใหญ่ขึ้น + cart icon
     if(p.id){
       const pill=document.createElement("div");
-      pill.style.cssText="display:flex;align-items:center;gap:8px;background:#1B6B3A;border-radius:12px;padding:7px 12px;cursor:pointer;";
+      pill.style.cssText="display:flex;align-items:center;gap:8px;background:#1B6B3A;border-radius:32px;padding:7px 14px;cursor:pointer;";
       if(p.imgs&&p.imgs[0]&&isUrl(p.imgs[0])){const pi=document.createElement("img");pi.src=p.imgs[0];pi.style.cssText="width:28px;height:28px;border-radius:8px;object-fit:cover;flex-shrink:0;";pill.appendChild(pi);}
       const ptInfo=document.createElement("div");ptInfo.style.cssText="flex:1;min-width:0;";
       const ptName=document.createElement("div");ptName.style.cssText="font-size:.78rem;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";ptName.textContent=p.name;
@@ -2622,29 +2601,22 @@ function buildFeedPage(){
     const sh=shops.find(function(s){return s.id===post.shopId;})||{};
     const pp=post.pinnedProdId?prods.find(function(p){return p.id===post.pinnedProdId;}):null;
     // ── ໝູນຫໍ່ດ້ວຍ .feed-item ໃຫ້ສູງເຕັມຈໍ ເພື່ອໃຫ້ scroll-snap ເຮັດວຽກຖືກຕ້ອງ (ຄືກັນກັບ Live/Review) ──
-    // ── ກ່ອນໜ້ານີ້ shop post ບໍ່ມີ .feed-item ເຮັດໃຫ້ scroll snap ບໍ່ສຸດ, ເຫັນແຄ່ເຄິ່ງໜຶ່ງແລ້ວເດ້ງກັບ ──
     const item=document.createElement("div");
     item.className="feed-item";
-    item.style.cssText="position:relative;height:100%;background:#fff;display:flex;flex-direction:column;overflow:hidden;";
+    item.style.cssText="position:relative;height:100%;background:#0a0a0a;display:flex;flex-direction:column;overflow:hidden;";
     item.dataset.postId=String(post.id);
-    const card=el("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}});
 
-    // Shop header
-    const hdr=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px 8px",cursor:"pointer",flexShrink:"0"},
-      onclick:function(){prevView="feed";fShop=post.shopId;view="shopProfile";render();}});
-    hdr.appendChild(el("div",{style:{width:"38px",height:"38px",borderRadius:"50%",background:"#E8F5EE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",flexShrink:"0",overflow:"hidden"}},
-      sh.logo&&isUrl(sh.logo)
-        ? el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}})
-        : el("span",null,sh.emoji||"🏪")
-    ));
-    hdr.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
-      el("div",{style:{fontWeight:"800",fontSize:".85rem",color:"#1A2B5F"}},(sh.emoji?"":"")+sh.name),
-      el("div",{style:{fontSize:".65rem",color:"#6B8F75"}},new Date(post.at||Date.now()).toLocaleDateString("lo-LA",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))
-    ));
-    hdr.appendChild(el("span",{style:{background:"#E8F5EE",color:"#1B6B3A",fontSize:".6rem",fontWeight:"700",padding:"2px 8px",borderRadius:"12px"}},"📸 ໂພສ"));
-    card.appendChild(hdr);
+    // ── Back nav (ตามแบบ review card) ──
+    const postNavBack=el("div",{className:"feed-nav"},
+      el("button",{
+        className:"feed-nav-btn",
+        style:{display:"flex",alignItems:"center",gap:"5px",padding:"6px 12px"},
+        onclick:function(){view="shop";render();}
+      },el("span",null,"←"),el("span",null,"LaoH"))
+    );
+    item.appendChild(postNavBack);
 
-    // Media — fills remaining space (flex:1) so the whole card naturally reaches 100% height
+    // Media — fills remaining space
     const mediaWrap=el("div",{style:{flex:"1",minHeight:"0",position:"relative",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}});
     if(post.mediaUrl){
       if(post.mediaType==="video"){
@@ -2659,72 +2631,122 @@ function buildFeedPage(){
         mediaWrap.appendChild(img);
       }
     }
-    card.appendChild(mediaWrap);
+    item.appendChild(mediaWrap);
+
+    // ── Bottom info bar (ตามแบบ review card) ──
+    const info=document.createElement("div");
+    info.style.cssText="padding:10px 12px;background:rgba(0,0,0,.85);color:#fff;";
 
     // Caption
     if(post.caption){
-      card.appendChild(el("div",{style:{padding:"10px 14px 6px",fontSize:".82rem",color:"#1A1020",lineHeight:"1.5",flexShrink:"0",maxHeight:"60px",overflowY:"auto"}},post.caption));
+      info.appendChild(el("div",{style:{fontSize:".8rem",color:"rgba(255,255,255,.9)",lineHeight:"1.4",marginBottom:"8px",maxHeight:"54px",overflowY:"auto"}},post.caption));
     }
 
-    // Pinned product
+    // Pinned product — capsule shape with shop logo+date on top
     if(pp){
-      const prodRow=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 12px 10px",background:"#F0F7F2",margin:"6px 10px 10px",borderRadius:"12px",cursor:"pointer",flexShrink:"0"},
+      const prodCapsule=el("div",{style:{borderRadius:"32px",background:"rgba(255,255,255,.1)",overflow:"hidden",cursor:"pointer"},
         onclick:function(){const _sp=prods.find(function(x){return String(x.id)===String(pp.id)||x.id===pp.id;});if(_sp)showProduct(_sp);}});
-      const pThumb=el("div",{style:{width:"44px",height:"44px",borderRadius:"8px",background:"#C8E6D4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:"0"}});
+      // ── ส่วนหัว: โลโก้ร้าน + วันที่ (ย้ายมาจาก header เดิม) ──
+      const capsuleHdr=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"8px 12px 4px",cursor:"pointer"},
+        onclick:function(e){e.stopPropagation();prevView="feed";fShop=post.shopId;view="shopProfile";render();}});
+      capsuleHdr.appendChild(el("div",{style:{width:"24px",height:"24px",borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".75rem",flexShrink:"0",overflow:"hidden"}},
+        sh.logo&&isUrl(sh.logo)
+          ? el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}})
+          : el("span",null,sh.emoji||"🏪")
+      ));
+      capsuleHdr.appendChild(el("span",{style:{fontSize:".75rem",fontWeight:"700",color:"#fff"}},sh.name||""));
+      capsuleHdr.appendChild(el("span",{style:{fontSize:".62rem",color:"rgba(255,255,255,.55)"}},new Date(post.at||Date.now()).toLocaleDateString("lo-LA",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+      prodCapsule.appendChild(capsuleHdr);
+      // ── ส่วนสินค้า ──
+      const prodRow=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"6px 12px 10px"}});
+      const pThumb=el("div",{style:{width:"40px",height:"40px",borderRadius:"50%",background:"#C8E6D4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1rem",flexShrink:"0"}});
       const psrc=(pp.imgs&&pp.imgs[0]&&isUrl(pp.imgs[0]))?pp.imgs[0]:isUrl(pp.img)?pp.img:null;
       if(psrc){const pi=document.createElement("img");pi.src=psrc;pi.style.cssText="width:100%;height:100%;object-fit:cover;";pThumb.appendChild(pi);}
       else pThumb.textContent=pp.img||"🛍";
       prodRow.appendChild(pThumb);
       prodRow.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
-        el("div",{style:{fontWeight:"700",fontSize:".8rem",color:"#1A2B5F",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},pp.name),
-        el("div",{style:{fontSize:".78rem",fontWeight:"800",color:"#1B6B3A"}},"₭"+fmt(pp.price))
+        el("div",{style:{fontWeight:"700",fontSize:".8rem",color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},pp.name),
+        el("div",{style:{fontSize:".78rem",fontWeight:"800",color:"#C8F5D0"}},"₭"+fmt(pp.price))
       ));
       prodRow.appendChild(el("button",{
-        style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"8px",padding:"6px 12px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
+        style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"20px",padding:"6px 14px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
         onclick:function(e){e.stopPropagation();
-          // ── ເປີດໜ້າ card ສິນຄ້າໃຫ້ລູກຄ້າເລືອກສີ/ຂະໜາດເອງ ກ່ອນເພີ່ມລົງກະຕ່າ (ຄືແບບ review card ຂອງລູກຄ້າ) ──
           const _sp2=prods.find(function(x){return String(x.id)===String(pp.id)||x.id===pp.id;});
           if(_sp2)showProduct(_sp2);
         }
       },"🛒 ຊື້"));
-      card.appendChild(prodRow);
+      prodCapsule.appendChild(prodRow);
+      info.appendChild(prodCapsule);
+    } else {
+      // ไม่มีสินค้าผูก — แสดงแค่ชื่อร้าน+วันที่แบบเรียบง่าย
+      const shopRow=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer"},
+        onclick:function(){prevView="feed";fShop=post.shopId;view="shopProfile";render();}});
+      shopRow.appendChild(el("div",{style:{width:"24px",height:"24px",borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".75rem",flexShrink:"0",overflow:"hidden"}},
+        sh.logo&&isUrl(sh.logo)
+          ? el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}})
+          : el("span",null,sh.emoji||"🏪")
+      ));
+      shopRow.appendChild(el("span",{style:{fontSize:".75rem",fontWeight:"700",color:"#fff"}},sh.name||""));
+      shopRow.appendChild(el("span",{style:{fontSize:".62rem",color:"rgba(255,255,255,.55)"}},new Date(post.at||Date.now()).toLocaleDateString("lo-LA",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+      info.appendChild(shopRow);
     }
+    item.appendChild(info);
 
-    // Like/Share row
-    const actRow=el("div",{style:{display:"flex",gap:"12px",padding:"6px 14px 12px",borderTop:"1px solid #F0F0F0",flexShrink:"0"}});
+    // ── Sidebar: ไลก์ + ส่งต่อ + ลิงก์ (ตามแบบ review card) ──
+    const sidebar=document.createElement("div");
+    sidebar.className="feed-sidebar";
+
+    // Like
     const likeKey="like_"+post.id;
     let liked=false;try{liked=!!localStorage.getItem(likeKey);}catch(e){}
-    const likeCnt=el("span",{style:{fontSize:".78rem",fontWeight:"700",color:liked?"#e74c3c":"#6B8F75"}},
-      (liked?"❤️ ":"🤍 ")+(post.likes||0));
-    actRow.appendChild(el("button",{
-      style:{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",padding:"4px 0",fontFamily:"inherit"},
-      onclick:function(){
-        try{if(liked){localStorage.removeItem(likeKey);post.likes=Math.max(0,(post.likes||0)-1);}
+    const saLike=document.createElement("div"); saLike.className="feed-action";
+    const sbLike=document.createElement("button"); sbLike.className="feed-action-btn";
+    sbLike.textContent=liked?"❤️":"🤍";
+    sbLike.onclick=function(){
+      try{
+        if(liked){localStorage.removeItem(likeKey);post.likes=Math.max(0,(post.likes||0)-1);}
         else{localStorage.setItem(likeKey,"1");post.likes=(post.likes||0)+1;}
         saveToCloud("shopPosts",post.id,post);liked=!liked;
-        likeCnt.style.color=liked?"#e74c3c":"#6B8F75";
-        likeCnt.textContent=(liked?"❤️ ":"🤍 ")+(post.likes||0);}catch(e){}
-      }
-    },likeCnt));
-    // Share button for shop post
-    actRow.appendChild(el("button",{
-      style:{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",padding:"4px 0",fontFamily:"inherit",marginLeft:"auto"},
-      onclick:function(){
-        const postUrl=location.origin+location.pathname+"?post="+post.id;
-        if(navigator.share){navigator.share({title:(sh.name||"LaoH")+" Post",text:post.caption||"",url:postUrl}).catch(function(){});}
-        else{try{navigator.clipboard.writeText(postUrl);}catch(e){}toast("📋 ຄັດລອກລິ້ງໂພສ ✓");}
-      }
-    },el("span",{style:{fontSize:".78rem",color:"#6B8F75"}},"📤 ສົ່ງຕໍ່")));
-    actRow.appendChild(el("button",{
-      style:{display:"flex",alignItems:"center",gap:"4px",background:"none",border:"none",cursor:"pointer",padding:"4px 0",fontFamily:"inherit",marginLeft:"8px"},
-      onclick:function(){
-        const postUrl=location.origin+location.pathname+"?post="+post.id;
-        if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(postUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
-        else{try{const ta=document.createElement("textarea");ta.value=postUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
-      }
-    },el("span",{style:{fontSize:".78rem",color:"#6B8F75"}},"🔗 ລິ້ງ")));
-    card.appendChild(actRow);
-    item.appendChild(card);
+        sbLike.textContent=liked?"❤️":"🤍";
+        slLikeCount.textContent=String(post.likes||0);
+      }catch(e){}
+    };
+    saLike.appendChild(sbLike);
+    const slLikeCount=document.createElement("div"); slLikeCount.className="feed-action-label"; slLikeCount.textContent=String(post.likes||0);
+    saLike.appendChild(slLikeCount); sidebar.appendChild(saLike);
+
+    // Share
+    const saShare=document.createElement("div"); saShare.className="feed-action";
+    const sbShare=document.createElement("button"); sbShare.className="feed-action-btn";
+    const svgShare2=document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svgShare2.setAttribute("viewBox","0 0 24 24");svgShare2.setAttribute("width","22");svgShare2.setAttribute("height","22");
+    svgShare2.setAttribute("fill","none");svgShare2.setAttribute("stroke","#fff");svgShare2.setAttribute("stroke-width","2.2");
+    svgShare2.setAttribute("stroke-linecap","round");svgShare2.setAttribute("stroke-linejoin","round");
+    svgShare2.innerHTML='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>';
+    sbShare.appendChild(svgShare2);
+    sbShare.onclick=function(){
+      const postUrl=location.origin+location.pathname+"?post="+post.id;
+      if(navigator.share){navigator.share({title:(sh.name||"LaoH")+" Post",text:post.caption||"",url:postUrl}).catch(function(){});}
+      else{try{navigator.clipboard.writeText(postUrl);}catch(e){}toast("📋 ຄັດລອກລິ້ງໂພສ ✓");}
+    };
+    saShare.appendChild(sbShare);
+    const slShare=document.createElement("div"); slShare.className="feed-action-label"; slShare.textContent="ສົ່ງຕໍ່";
+    saShare.appendChild(slShare); sidebar.appendChild(saShare);
+
+    // Copy Link
+    const saLink=document.createElement("div"); saLink.className="feed-action";
+    const sbLink=document.createElement("button"); sbLink.className="feed-action-btn";
+    sbLink.textContent="🔗";
+    sbLink.onclick=function(){
+      const postUrl=location.origin+location.pathname+"?post="+post.id;
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(postUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+      else{try{const ta=document.createElement("textarea");ta.value=postUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+    };
+    saLink.appendChild(sbLink);
+    const slLink=document.createElement("div"); slLink.className="feed-action-label"; slLink.textContent="ລິ້ງ";
+    saLink.appendChild(slLink); sidebar.appendChild(saLink);
+
+    item.appendChild(sidebar);
     scroll.appendChild(item);
   }
 
@@ -3155,7 +3177,7 @@ function buildFeedPage(){
     scroll.appendChild(item);
   }); // end feedItems forEach
 
-  const page = el("div",{className:"feed-page"+((user&&user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff")?" feed-page-bnav":"")}, scroll);
+  const page = el("div",{className:"feed-page"+((!user||(user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff"))?" feed-page-bnav":"")}, scroll);
 
   // ── ໃຫ້ມີແຕ່ວິດີໂອທີ່ເຫັນຢູ່ໃນຈໍຫຼີ້ນ, ວິດີໂອອື່ນທີ່ເລື່ອນຜ່ານໄປ pause ອັດຕະໂນມັດ ──
   // ── ໃຊ້ໄດ້ກັບ video tag ເທົ່ານັ້ນ (ຣີວິວ/ໂພສຮ້ານ); ຫ້ອງ Live ໃຊ້ iframe ບໍ່ມີ video ຈິ່ງບໍ່ຖືກກະທົບ ──
@@ -4061,7 +4083,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.6.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.6.4")
   );
 
   // Icon style helper
@@ -4140,8 +4162,8 @@ function buildNav(){
     profileBtn, cartBtn
   );
 
-  // ── Customer-only: ແຖບເທິງເຫຼືອແຕ່ໂລໂກ້ + ຊ່ອງຄົ້ນຫາ(ຫຼັງ login)/login(ກ່ອນ login) ──────────
-  const isCustNav=user&&user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff";
+  // ── Customer-only (ທັງກ່ອນ ແລະ ຫຼັງ login): ແຖບເທິງເຫຼືອແຕ່ໂລໂກ້ + ຊ່ອງຄົ້ນຫາ(ຫຼັງ login)/lang+login(ກ່ອນ login) ──────────
+  const isCustNav=!user||(user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff");
   if(isCustNav){
     // ຊ່ອງຄົ້ນຫາສິນຄ້າ/ຮ້ານຄ້າ (ໃຊ້ fSearch ຄືກັນກັບ search bar ໃນໜ້າຫຼັກ)
     const navSearchWrap=el("div",{style:{flex:"1",position:"relative",display:"flex",alignItems:"center",maxWidth:"260px"}},
@@ -4173,8 +4195,7 @@ function buildNav(){
 
 // ── BOTTOM NAV (customer-only): Home, Feed, Profile, Cart ───────────
 function buildBottomNav(){
-  if(!user)return null;
-  if(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")return null;
+  if(user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"))return null;
   function makeIconBtn2(iconSrc, onClick){
     return el("button",{
       style:{background:"none",border:"none",cursor:"pointer",padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"},
@@ -4188,7 +4209,7 @@ function buildBottomNav(){
   const isProfileActive=view==="profile";
   const homeBtn2=makeIconBtn2(isHomeActive?_ICON_HOME:_ICON_HOME_INACTIVE, ()=>{view="shop";render();});
   const feedBtn2=makeIconBtn2(isFeedActive?_ICON_FEED:_ICON_FEED_INACTIVE, ()=>{view="feed";render();});
-  const goProfile2=()=>{view="profile";render();};
+  const goProfile2=()=>{ if(!user){showAuth();return;} view="profile";render();};
   const profileBtn2=el("button",{className:"ibt",style:{position:"relative",padding:"2px"},onclick:goProfile2},
     el("img",{src:isProfileActive?_ICON_PROFILE_ACTIVE:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTQiIGZpbGw9IndoaXRlIi8+CiAgPHBhdGggZD0iTTE4IDg4IEMxOCA2NSAyOCA1OCA1MCA1OCBDNzIgNTggODIgNjUgODIgODggWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",style:{width:isProfileActive?"42px":"33px",height:isProfileActive?"42px":"33px",objectFit:"contain",verticalAlign:"middle"}}),
     _notifUnread>0?el("span",{style:{display:"flex",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},_notifUnread>99?"99+":String(_notifUnread)):null
@@ -4198,7 +4219,7 @@ function buildBottomNav(){
     el("img",{src:"data:image/png;base64,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",style:{width:"33px",height:"33px",objectFit:"contain",verticalAlign:"middle"}}),
     cN2>0?el("span",{style:{position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",width:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center"}},(cN2>9?"9+":String(cN2))):null
   );
-  return el("nav",{className:"bnav"},homeBtn2,feedBtn2,profileBtn2,cartBtn2);
+  return el("nav",{className:"bnav"+(view==="feed"?" bnav-feed":"")},homeBtn2,feedBtn2,profileBtn2,cartBtn2);
 }
 
 // ── SHOP ───────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v364 -->
+<!-- LaoH Marketplace v365 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -136,8 +136,10 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 .feed-no-video{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgba(255,255,255,.5);}
 /* Right sidebar */
 .feed-sidebar{position:absolute;right:12px;bottom:140px;display:flex;flex-direction:column;gap:16px;align-items:center;z-index:10;}
+.feed-sidebar-compact{position:absolute;right:12px;bottom:165px;display:flex;flex-direction:column;gap:14px;align-items:center;z-index:10;}
 .feed-action{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
 .feed-action-btn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;backdrop-filter:blur(4px);}
+.feed-action-btn-sm{width:37px;height:37px;border-radius:50%;background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;font-size:1.02rem;cursor:pointer;backdrop-filter:blur(4px);}
 .feed-action-label{font-size:.6rem;color:rgba(255,255,255,.8);font-weight:600;}
 .feed-shop-avatar{width:48px;height:48px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;overflow:hidden;}
 /* Bottom info */
@@ -2091,7 +2093,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.6.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.6.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2561,11 +2563,11 @@ function buildFeedPage(){
 
     // sidebar: share only (no shop logo on right)
     const sidebar=document.createElement("div");
-    sidebar.className="feed-sidebar";
+    sidebar.className="feed-sidebar-compact";
     const sa=document.createElement("div"); sa.className="feed-action";
-    const sbEl=document.createElement("button"); sbEl.className="feed-action-btn";
+    const sbEl=document.createElement("button"); sbEl.className="feed-action-btn-sm";
     const svgShare=document.createElementNS("http://www.w3.org/2000/svg","svg");
-    svgShare.setAttribute("viewBox","0 0 24 24");svgShare.setAttribute("width","22");svgShare.setAttribute("height","22");
+    svgShare.setAttribute("viewBox","0 0 24 24");svgShare.setAttribute("width","19");svgShare.setAttribute("height","19");
     svgShare.setAttribute("fill","none");svgShare.setAttribute("stroke","#fff");svgShare.setAttribute("stroke-width","2.2");
     svgShare.setAttribute("stroke-linecap","round");svgShare.setAttribute("stroke-linejoin","round");
     svgShare.innerHTML='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>';
@@ -2580,7 +2582,7 @@ function buildFeedPage(){
     sa.appendChild(sl); sidebar.appendChild(sa);
     // ── Copy Link button ──
     const saCopy=document.createElement("div"); saCopy.className="feed-action";
-    const sbCopy=document.createElement("button"); sbCopy.className="feed-action-btn";
+    const sbCopy=document.createElement("button"); sbCopy.className="feed-action-btn-sm";
     sbCopy.textContent="🔗";
     sbCopy.onclick=function(){
       const rvUrl=location.origin+location.pathname+"?rv="+rv.id;
@@ -2605,16 +2607,6 @@ function buildFeedPage(){
     item.className="feed-item";
     item.style.cssText="position:relative;height:100%;background:#0a0a0a;display:flex;flex-direction:column;overflow:hidden;";
     item.dataset.postId=String(post.id);
-
-    // ── Back nav (ตามแบบ review card) ──
-    const postNavBack=el("div",{className:"feed-nav"},
-      el("button",{
-        className:"feed-nav-btn",
-        style:{display:"flex",alignItems:"center",gap:"5px",padding:"6px 12px"},
-        onclick:function(){view="shop";render();}
-      },el("span",null,"←"),el("span",null,"LaoH"))
-    );
-    item.appendChild(postNavBack);
 
     // Media — fills remaining space
     const mediaWrap=el("div",{style:{flex:"1",minHeight:"0",position:"relative",background:"#000",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}});
@@ -2694,13 +2686,13 @@ function buildFeedPage(){
 
     // ── Sidebar: ไลก์ + ส่งต่อ + ลิงก์ (ตามแบบ review card) ──
     const sidebar=document.createElement("div");
-    sidebar.className="feed-sidebar";
+    sidebar.className="feed-sidebar-compact";
 
     // Like
     const likeKey="like_"+post.id;
     let liked=false;try{liked=!!localStorage.getItem(likeKey);}catch(e){}
     const saLike=document.createElement("div"); saLike.className="feed-action";
-    const sbLike=document.createElement("button"); sbLike.className="feed-action-btn";
+    const sbLike=document.createElement("button"); sbLike.className="feed-action-btn-sm";
     sbLike.textContent=liked?"❤️":"🤍";
     sbLike.onclick=function(){
       try{
@@ -2717,7 +2709,7 @@ function buildFeedPage(){
 
     // Share
     const saShare=document.createElement("div"); saShare.className="feed-action";
-    const sbShare=document.createElement("button"); sbShare.className="feed-action-btn";
+    const sbShare=document.createElement("button"); sbShare.className="feed-action-btn-sm";
     const svgShare2=document.createElementNS("http://www.w3.org/2000/svg","svg");
     svgShare2.setAttribute("viewBox","0 0 24 24");svgShare2.setAttribute("width","22");svgShare2.setAttribute("height","22");
     svgShare2.setAttribute("fill","none");svgShare2.setAttribute("stroke","#fff");svgShare2.setAttribute("stroke-width","2.2");
@@ -2735,7 +2727,7 @@ function buildFeedPage(){
 
     // Copy Link
     const saLink=document.createElement("div"); saLink.className="feed-action";
-    const sbLink=document.createElement("button"); sbLink.className="feed-action-btn";
+    const sbLink=document.createElement("button"); sbLink.className="feed-action-btn-sm";
     sbLink.textContent="🔗";
     sbLink.onclick=function(){
       const postUrl=location.origin+location.pathname+"?post="+post.id;
@@ -4083,7 +4075,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.6.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.6.5")
   );
 
   // Icon style helper

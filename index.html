@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v379 -->
+<!-- LaoH Marketplace v383 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2128,7 +2128,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.8.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2526,7 +2526,9 @@ function goToCommenterProfile(uid){
   if(shopMatch){
     prevView=view;fShop=shopMatch.id;view="shopProfile";render();
   } else {
-    prevView=view;window._fUserId=uid;view="userProfile";render();
+    // ── ຄອມເມນເກັບ uid ເປັນ string ສະເໝີ ແຕ່ users[].id ອາດເປັນໂຕເລກ (Date.now()) — ປຽບທຽບແບບຍືດຫຍຸ່ນ ແລ້ວໃຊ້ id ແທ້ຂອງ user ເພື່ອບໍ່ໃຫ້ buildUserProfile ຫາບໍ່ພົບ ──
+    const userMatch=users.find(function(u){return String(u.id)===String(uid);});
+    prevView=view;window._fUserId=userMatch?userMatch.id:uid;view="userProfile";render();
   }
 }
 
@@ -4183,6 +4185,26 @@ function showEditProfile(){
     el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"14px"}},
       "✏️ "+(_lang==="lo"?"ແກ້ໄຂໂປຣໄຟລ໌":"Edit Profile")
     ),
+    // ── Avatar + Banner upload (ย้ายมาจากหน้าโปรไฟล์สาธารณะ) ──
+    (function(){
+      const wrap=el("div",{style:{marginBottom:"14px"}});
+      const bannerPrev=el("div",{style:{height:"70px",borderRadius:"10px",background:user.banner||"linear-gradient(135deg,#1A2B5F,#2C4A8C)",backgroundSize:"cover",backgroundPosition:"center",marginBottom:"8px"}});
+      if(user.banner&&isUrl(user.banner))bannerPrev.style.backgroundImage="url('"+user.banner+"')";
+      wrap.appendChild(bannerPrev);
+      const btnRow=el("div",{style:{display:"flex",gap:"8px",alignItems:"center"}});
+      const avatarPrev=el("div",{style:{width:"46px",height:"46px",borderRadius:"50%",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",overflow:"hidden",flexShrink:"0"}});
+      if(user.avatar&&isUrl(user.avatar))avatarPrev.appendChild(el("img",{src:user.avatar,style:{width:"100%",height:"100%",objectFit:"cover"}}));
+      else avatarPrev.textContent="👤";
+      btnRow.appendChild(avatarPrev);
+      const fiB=document.createElement("input");fiB.type="file";fiB.accept="image/*";fiB.style.display="none";
+      fiB.onchange=function(e){const f=e.target.files[0];if(!f)return;resizeImage(f,800,300,0.85,function(resized){uploadImage(resized,"laoh/avatars").then(function(url){user.banner=url;const u2=users.find(function(x){return x.id===user.id;});if(u2)u2.banner=url;saveToCloud("users",user.id,user);try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e2){}bannerPrev.style.backgroundImage="url('"+url+"')";render();});});};
+      const fiA=document.createElement("input");fiA.type="file";fiA.accept="image/*";fiA.style.display="none";
+      fiA.onchange=function(e){const f=e.target.files[0];if(!f)return;resizeImage(f,200,200,0.9,function(resized){uploadImage(resized,"laoh/avatars").then(function(url){user.avatar=url;const u2=users.find(function(x){return x.id===user.id;});if(u2)u2.avatar=url;saveToCloud("users",user.id,user);try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e2){}avatarPrev.innerHTML="";avatarPrev.appendChild(el("img",{src:url,style:{width:"100%",height:"100%",objectFit:"cover"}}));render();});});};
+      btnRow.appendChild(el("label",{style:{flex:"1",padding:"7px",borderRadius:"8px",background:"#F0F7F2",color:"#1B6B3A",fontSize:".72rem",fontWeight:"700",textAlign:"center",cursor:"pointer",border:"1px solid #C8E6D4"}},(_lang==="lo"?"📷 ປ່ຽນ Avatar":"📷 Change Avatar"),fiA));
+      btnRow.appendChild(el("label",{style:{flex:"1",padding:"7px",borderRadius:"8px",background:"#F0F4FF",color:"#1A2B5F",fontSize:".72rem",fontWeight:"700",textAlign:"center",cursor:"pointer",border:"1px solid #C8D8F5"}},(_lang==="lo"?"🖼 ປ່ຽນ Banner":"🖼 Change Banner"),fiB));
+      wrap.appendChild(btnRow);
+      return wrap;
+    })(),
     el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"4px"}},
       _lang==="lo"?"ຊື່ຜູ້ໃຊ້ (ປ່ຽນບໍ່ໄດ້):":"Username (cannot change):"
     ),
@@ -4301,7 +4323,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.8.3")
   );
 
   // Icon style helper
@@ -4348,7 +4370,7 @@ function buildNav(){
   const profileBtn = user ? (function(){
     const goProfile=()=>{
       if(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"){view="admin";render();}
-      else{view="profile";render();}
+      else{prevView=view;window._fUserId=user.id;view="userProfile";render();}
     };
     const isCust=user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff";
     return el("button",{className:"ibt",style:{position:"relative"},onclick:goProfile},
@@ -4468,13 +4490,13 @@ function buildBottomNav(){
   }
   const isHomeActive=view==="shop";
   const isFeedActive=view==="feed";
-  const isProfileActive=view==="profile";
+  const isProfileActive=view==="profile"||(view==="userProfile"&&user&&window._fUserId===user.id);
   const homeBtn2=makeIconBtn2(isHomeActive?_ICON_HOME:_ICON_HOME_INACTIVE, ()=>{view="shop";render();});
   const feedBtn2=makeIconBtn2(isFeedActive?_ICON_FEED:_ICON_FEED_INACTIVE, ()=>{view="feed";render();});
   const goProfile2=()=>{
     if(!user){showAuth();return;}
     if(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"){view="admin";render();return;}
-    view="profile";render();
+    prevView=view;window._fUserId=user.id;view="userProfile";render();
   };
   const profileBtn2=el("button",{className:"ibt",style:{position:"relative",padding:"2px"},onclick:goProfile2},
     el("img",{src:isProfileActive?_ICON_PROFILE_ACTIVE:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTQiIGZpbGw9IndoaXRlIi8+CiAgPHBhdGggZD0iTTE4IDg4IEMxOCA2NSAyOCA1OCA1MCA1OCBDNzIgNTggODIgNjUgODIgODggWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",style:{width:isProfileActive?"42px":"33px",height:isProfileActive?"42px":"33px",objectFit:"contain",verticalAlign:"middle"}}),
@@ -5183,19 +5205,505 @@ function buildUserProfile(uid){
     el("div",{style:{cursor:"pointer"},onclick:function(){showUserList((_lang==="lo"?"👥 ຜູ້ຕິດຕາມ":"👥 Followers"),followerUserIds,[]);}},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},followerCount),el("div",{style:{fontSize:".65rem",color:"#1B6B3A",fontWeight:"600"}},(_lang==="lo"?"ຜູ້ຕິດຕາມ ›":"Followers ›"))),
     el("div",{style:{cursor:"pointer"},onclick:function(){showUserList((_lang==="lo"?"🔔 ກຳລັງຕິດຕາມ":"🔔 Following"),followingUserIds,followingShopIds);}},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},followingCount+(pu.following||[]).length),el("div",{style:{fontSize:".65rem",color:"#1B6B3A",fontWeight:"600"}},(_lang==="lo"?"ຕິດຕາມ ›":"Following ›")))
   );
-  // Edit profile section (me only) — banner + avatar upload
-  const editBannerSection=isMe?el("div",{style:{padding:"0 16px 10px",display:"flex",gap:"8px"}},
+  const myO=user?orders.filter(function(o){return o.uid===user.id;}):[];
+  // ── Settings / Notifications / Coupons / My Orders (ย้ายมาจากหน้าโปรไฟล์ของฉัน — เห็นเฉพาะเจ้าของบัญชี) ──
+  const myAccountSection=isMe?(function(){
+  // Settings menu items
+  const settingItems = [
+    {
+      icon:"🌐",
+      label:_lang==="lo"?"ພາສາ / Language":"ພາສາ / Language",
+      value:_lang==="lo"?"ລາວ":"EN",
+      action:()=>{_lang=_lang==="lo"?"en":"lo";try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();}
+    },
+    {
+      icon:"🗣️",
+      label:_lang==="lo"?"ແປພາສາ (Google Translate)":"Translate (Google Translate)",
+      value:"",
+      action:()=>{laohTranslateShow();}
+    },
+    {
+      icon:"📦",
+      label:_lang==="lo"?(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders"):"My Orders",
+      value:myO.length>0?String(myO.length):"",
+      action:()=>{
+        if(myO.length===0){
+          showOv(el("div",{className:"mod",onclick:e=>e.stopPropagation()},
+            el("button",{className:"mcl",onclick:closeOv},"✕"),
+            el("div",{style:{textAlign:"center",padding:"30px",color:"#6B8F75"}},
+              el("div",{style:{fontSize:"2.5rem",marginBottom:"8px"}},"📦"),
+              el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":"No orders yet")
+            )
+          ));
+          return;
+        }
+        const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},
+          style:{maxHeight:"80vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch"}});
+        modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+        modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},
+          "📦 "+(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders")+" ("+myO.length+")"
+        ));
+        const listWrap2=el("div",null);
+        function drawOrderList(){
+          listWrap2.innerHTML="";
+          myO.forEach(function(o){listWrap2.appendChild(buildMyOrderCard(o,drawOrderList));});
+        }
+        drawOrderList();
+        modal.appendChild(listWrap2);
+        showOv(modal);
+      }
+    },
+    {
+      icon:"👤",
+      label:_lang==="lo"?"ແກ້ໄຂໂປຣໄຟລ໌":"Edit Profile",
+      value:"",
+      action:()=>showEditProfile()
+    },
+    {
+      icon:"📍",
+      label:_lang==="lo"?"ທີ່ຢູ່ຈັດສົ່ງ":"Delivery Addresses",
+      value:(function(){const n=getSavedAddresses().length;return n>0?String(n):"";})(),
+      action:function(){
+        function buildAddrModal(){
+          const addrs=getSavedAddresses();
+          const cfg=getHomeDeliveryConfig();
+          // ── new address form state ──
+          var newType="carrier"; var newLbl=""; var newCarrier=getCustomCarriers()[0]||"";
+          var newBranch=""; var newHouse=""; var newVill=""; var newDist="";
+          var newLat=null; var newLng=null; var newFee=0;
+
+          const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
+          modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+          modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")));
+
+          // ── list existing addresses ──────────────────────────────
+          const listWrap=el("div",{style:{marginBottom:"12px"}});
+          function refreshList(){
+            listWrap.innerHTML="";
+            const arr=getSavedAddresses();
+            if(arr.length===0){
+              listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",fontSize:".78rem",padding:"8px 0"}},(_lang==="lo"?"ຍັງບໍ່ມີທີ່ຢູ່":"No address yet")));
+            } else {
+              arr.forEach(function(a){
+                const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",background:"#F0F7F2",borderRadius:"10px",padding:"9px 12px",marginBottom:"6px"}});
+                const badge=el("span",{style:{fontSize:".6rem",fontWeight:"700",borderRadius:"5px",padding:"2px 6px",background:a.type==="home"?"#1B6B3A":"#2980b9",color:"#fff",flexShrink:"0"}},
+                  a.type==="home"?"🛵":"🚚");
+                const info=el("div",{style:{flex:"1",minWidth:"0"}},
+                  el("div",{style:{fontWeight:"700",fontSize:".8rem",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},a.label||"ທີ່ຢູ່"),
+                  el("div",{style:{fontSize:".71rem",color:"#3B5C40",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
+                    a.type==="home"?(a.house||"")+(_lang==="lo"?" ບ້ານ":" Village")+(a.village||"")+(_lang==="lo"?" ເມືອງ":" District")+(a.district||"")
+                      :(a.carrier||"")+(a.branch?" ສາຂາ "+a.branch:""))
+                );
+                const del=el("button",{type:"button",style:{background:"none",border:"none",cursor:"pointer",color:"#c00",fontSize:".9rem",padding:"2px 6px",flexShrink:"0"},
+                  onclick:function(){deleteAddress(a.id);refreshList();render();}
+                },"✕");
+                row.appendChild(badge); row.appendChild(info); row.appendChild(del);
+                listWrap.appendChild(row);
+              });
+            }
+          }
+          refreshList();
+          modal.appendChild(listWrap);
+
+          // ── add form ─────────────────────────────────────────────
+          modal.appendChild(el("div",{style:{borderTop:"1px solid #E8F5EE",paddingTop:"12px",marginBottom:"6px",fontWeight:"700",fontSize:".82rem",color:"#1A2B5F"}},(_lang==="lo"?"➕ ເພີ່ມທີ່ຢູ່ໃໝ່":"➕ Add New Address")));
+          // label input
+          const lblInp=document.createElement("input");
+          lblInp.className="inp"; lblInp.placeholder=(_lang==="lo"?"ຊື່ທີ່ຢູ່ (ເຊັ່ນ: ບ້ານ, ຫ້ອງການ)":"Address name (e.g. Home, Office)");
+          lblInp.oninput=function(){newLbl=this.value;};
+          modal.appendChild(lblInp);
+
+          // type buttons
+          const typeRow=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",margin:"8px 0"}});
+          const btnC=el("button",{type:"button",style:{padding:"9px",borderRadius:"9px",border:"1.5px solid #2980b9",background:"#2980b9",color:"#fff",fontWeight:"600",fontSize:".73rem",cursor:"pointer",fontFamily:"inherit"}},(_lang==="lo"?"ເລືອກບໍລິສັດຂົນສົ່ງ\nສາຂາໃກ້ບ້ານ":"Choose Carrier\nNearest Branch"));
+          const btnH=el("button",{type:"button",style:{padding:"9px",borderRadius:"9px",border:"1.5px solid #C8E6D4",background:"#fff",color:"#1A2B5F",fontWeight:"600",fontSize:".73rem",cursor:"pointer",fontFamily:"inherit"}},(_lang==="lo"?"ເຂດຕົວເມືອງນະຄອນຫລວງ\n(ຈັດສົ່ງຮອດບ້ານ)":"City Area (Vientiane)\n(Home Delivery)"));
+          const carrierSec=el("div",null);
+          const homeSec=el("div",{style:{display:"none"}});
+          function setT(t){
+            newType=t;
+            btnC.style.background=t==="carrier"?"#2980b9":"#fff"; btnC.style.color=t==="carrier"?"#fff":"#1A2B5F"; btnC.style.border="1.5px solid "+(t==="carrier"?"#2980b9":"#C8E6D4");
+            btnH.style.background=t==="home"?"#1B6B3A":"#fff"; btnH.style.color=t==="home"?"#fff":"#1A2B5F"; btnH.style.border="1.5px solid "+(t==="home"?"#1B6B3A":"#C8E6D4");
+            carrierSec.style.display=t==="carrier"?"block":"none";
+            homeSec.style.display=t==="home"?"block":"none";
+          }
+          btnC.onclick=function(){setT("carrier");}; btnH.onclick=function(){setT("home");};
+          typeRow.appendChild(btnC); typeRow.appendChild(btnH);
+          modal.appendChild(typeRow);
+
+          // carrier section
+          const cfgs=getCustomCarriers();
+          const cBtnRow=el("div",{style:{display:"flex",gap:"5px",flexWrap:"wrap",marginBottom:"6px"}});
+          cfgs.forEach(function(c){
+            const active=newCarrier===c;
+            const b=el("button",{type:"button",style:{padding:"5px 10px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(active?"#2980b9":"#C8E6D4"),background:active?"#2980b9":"#fff",color:active?"#fff":"#1A2B5F"},
+              onclick:function(){newCarrier=c;cBtnRow.querySelectorAll("button").forEach(function(x){x.style.background="#fff";x.style.color="#1A2B5F";x.style.border="1.5px solid #C8E6D4";});this.style.background="#2980b9";this.style.color="#fff";this.style.border="1.5px solid #2980b9";}
+            },c);
+            cBtnRow.appendChild(b);
+          });
+          const brInp=document.createElement("input"); brInp.className="inp"; brInp.placeholder=(_lang==="lo"?"ສາຂາ *":"Branch *"); brInp.oninput=function(){newBranch=this.value;};
+          carrierSec.appendChild(cBtnRow); carrierSec.appendChild(brInp);
+          modal.appendChild(carrierSec);
+
+          // home section — ເມືອງ, ບ້ານ, ທີ່ຢູ່ + GPS
+          const cityInp=document.createElement("input"); cityInp.className="inp"; cityInp.placeholder=(_lang==="lo"?"1. ຊື່ເມືອງ *":"1. District *"); cityInp.oninput=function(){newDist=this.value;};
+          const villInp=document.createElement("input"); villInp.className="inp"; villInp.placeholder=(_lang==="lo"?"2. ຊື່ບ້ານ *":"2. Village *"); villInp.oninput=function(){newVill=this.value;};
+          const addrTxtInp=document.createElement("input"); addrTxtInp.className="inp"; addrTxtInp.placeholder=(_lang==="lo"?"3. ທີ່ຢູ່ລະອຽດ (ເລກທີ່ / ຖະໜົນ)":"3. Detail (house no. / street)"); addrTxtInp.oninput=function(){newHouse=this.value;};
+          const mapFB2=el("div",null);
+          // ── ปุ่มเปิด Maps + วาง link ────────────────────────────────
+          const mapStatus=el("div",{style:{fontSize:".74rem",color:"#6B8F75",margin:"6px 0 5px"}},(_lang==="lo"?"📍 ລະບຸທີ່ຕັ້ງ (ສຳລັບບ້ານທີ່ໃສ່ເອງ):":"📍 Set Location (for home delivery):"));
+          mapFB2.appendChild(mapStatus);
+          function applyCoords(la,lo){
+            const km=haversineKm(hubLat(),hubLng(),la,lo);
+            if(km>cfg.maxKm){(function(){
+      const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{textAlign:"center",maxWidth:"320px"}});
+      m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+      m.appendChild(el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"⚠️"));
+      m.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#c00",marginBottom:"10px",lineHeight:"1.5"}},
+        "ສະຖານທີ່ຂອງທ່ານ\nໄກເກີນ "+cfg.maxKm+"km\nທີ່ຮັບສົ່ງເຖິງບ້ານ"
+      ));
+      m.appendChild(el("div",{style:{fontSize:".82rem",color:"#1A2B5F",marginBottom:"14px",lineHeight:"1.6"}},
+        (_lang==="lo"?"ກະລຸນາເລືອກ 🚚 ນອກເຂດ\nແລ້ວເລືອກສາຂາຂົນສົ່ງ\nທີ່ໃກ້ບ້ານຂອງທ່ານ":"Please select 🚚 Outside City\nthen choose a carrier branch\nnear your home")
+      ));
+      m.appendChild(el("button",{type:"button",className:"btn btn-p",style:{width:"100%"},onclick:closeOv},(_lang==="lo"?"ຮັບຊາບ":"OK")));
+      showOv(m,null);
+    })();return false;}
+            newLat=la; newLng=lo; newFee=calcHomeFee(km);
+            openMapsBtn2.textContent="✅ "+km.toFixed(1)+"km · ₭"+fmt(newFee)+" — ກົດເປີດ Maps ໃໝ່";
+            openMapsBtn2.style.border="1.5px solid #1B6B3A"; openMapsBtn2.style.color="#1B6B3A"; openMapsBtn2.style.background="#F0FFF4";
+            mapStatus.textContent="📍 ຫ່າງ ສູນ LaoH "+km.toFixed(1)+"km · ₭"+fmt(newFee);
+            mapStatus.style.color="#1B6B3A"; return true;
+          }
+          // ── GPS อัตโนมัติ ──────────────────────────────────────────
+          const gpsAutoBtn2=el("button",{type:"button",style:{width:"100%",padding:"11px",borderRadius:"11px",border:"2px solid #e74c3c",background:"#FFF5F5",color:"#c00",fontWeight:"700",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"6px"},
+            onclick:function(){
+              const self=this;
+              if(!navigator.geolocation){toast((_lang==="lo"?"GPS ບໍ່ຮອງຮັບ — ໃຊ້ Google Maps ແທນ":"GPS not supported — use Google Maps instead"));return;}
+              self.textContent=(_lang==="lo"?"⌛ ກຳລັງຫາ GPS...":"⌛ Finding GPS...");
+              navigator.geolocation.getCurrentPosition(function(p){
+                if(!applyCoords(p.coords.latitude,p.coords.longitude)){self.textContent=(_lang==="lo"?"📍 ກົດ GPS":"📍 GPS");}
+                else{self.textContent="✅ GPS ສຳເລັດ";}
+              },function(){
+                self.textContent=(_lang==="lo"?"📍 ກົດ GPS":"📍 GPS");
+                toast((_lang==="lo"?"GPS ບໍ່ໄດ້ — ໃຊ້ 🗺 Google Maps ດ້ານລຸ່ມ":"GPS failed — use 🗺 Google Maps below"));
+              },{enableHighAccuracy:true,timeout:8000});
+            }},(_lang==="lo"?"📍 ກົດ GPS (ອັດຕະໂນມັດ)":"📍 Use GPS (Auto)"));
+          const openMapsBtn2=el("button",{type:"button",style:{width:"100%",padding:"12px",borderRadius:"11px",border:"2px solid #4285F4",background:"#EEF4FF",color:"#4285F4",fontWeight:"700",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"8px"},
+            onclick:function(){
+              const self=this;
+              self.textContent="⌛ ກຳລັງຫາຕຳແໜ່ງ...";
+              function openWithCoords(lat,lng){
+                const mapsUrl="https://maps.google.com/?q="+lat+","+lng+"&ll="+lat+","+lng+"&z=16";
+                window.open(mapsUrl,"_blank");
+                const shareLink="https://maps.google.com/?q="+lat+","+lng;
+                if(navigator.clipboard&&navigator.clipboard.writeText){
+                  navigator.clipboard.writeText(shareLink).then(function(){
+                    toast((_lang==="lo"?"✅ ກ໋ອບປີ Link ໃສ່ Clipboard ແລ້ວ — ວາງໃນຊ່ອງດ້ານລຸ່ມ":"✅ Link copied — paste below"));
+                    gmLinkInp.value=shareLink;
+                  }).catch(function(){});
+                }
+                applyCoords(lat,lng);
+                self.textContent=(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below");
+              }
+              if(navigator.geolocation){
+                navigator.geolocation.getCurrentPosition(
+                  function(p){openWithCoords(p.coords.latitude,p.coords.longitude);},
+                  function(){
+                    self.textContent=(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below");
+                    window.open("https://maps.google.com/?q="+hubLat()+","+hubLng()+"&z=13","_blank");
+                    toast((_lang==="lo"?"GPS ບໍ່ໄດ້ — ຊອກຫາບ້ານໃນ Maps ແລ້ວ Copy link ມາວາງດ້ານລຸ່ມ":"GPS failed — find location in Maps and paste link below"));
+                  },
+                  {enableHighAccuracy:true,timeout:8000}
+                );
+              } else {
+                self.textContent=(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below");
+                window.open("https://maps.google.com","_blank");
+              }
+            }},(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below"));
+          const gmapRow=el("div",{style:{display:"flex",gap:"6px",marginBottom:"4px"}});
+          const gmLinkInp=document.createElement("input");
+          gmLinkInp.className="inp"; gmLinkInp.placeholder=(_lang==="lo"?"ວາງ Google Maps link ທີ່ນີ້...":"Paste Google Maps link here..."); gmLinkInp.style.margin="0"; gmLinkInp.style.flex="1";
+          const gmConfBtn=el("button",{type:"button",style:{padding:"8px 14px",borderRadius:"9px",border:"1.5px solid #1B6B3A",background:"#1B6B3A",color:"#fff",fontWeight:"700",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
+            onclick:function(){
+              const url=gmLinkInp.value.trim(); var la=null,lo=null;
+              var pats=[/@(-?\d+\.?\d*),(-?\d+\.?\d*)/,/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,/\/(-?\d+\.?\d*),(-?\d+\.?\d*)/];
+              for(var i=0;i<pats.length;i++){var m=url.match(pats[i]);if(m){la=parseFloat(m[1]);lo=parseFloat(m[2]);break;}}
+              if(!la||!lo){toast((_lang==="lo"?"ບໍ່ພົບ Coordinates — ລອງ Copy link ຈາກ Maps ໃໝ່":"Coordinates not found — try copying Maps link again"));return;}
+              if(applyCoords(la,lo))toast((_lang==="lo"?"✅ ຢືນຢັນທີ່ຕັ້ງ":"✅ Confirm Location"));
+            }},"✅");
+          gmapRow.appendChild(gmLinkInp); gmapRow.appendChild(gmConfBtn);
+          mapFB2.appendChild(gpsAutoBtn2); mapFB2.appendChild(openMapsBtn2); mapFB2.appendChild(gmapRow);
+          homeSec.appendChild(cityInp); homeSec.appendChild(villInp); homeSec.appendChild(addrTxtInp); homeSec.appendChild(mapFB2);
+          modal.appendChild(homeSec);
+
+          // save button
+          modal.appendChild(el("button",{type:"button",className:"btn btn-p",style:{marginTop:"10px"},
+            onclick:function(){
+              const lbl=newLbl||"ທີ່ຢູ່";
+              if(newType==="carrier"){
+                if(!newBranch){toast((_lang==="lo"?"ກະລຸນາໃສ່ສາຂາ":"Please enter branch"));return;}
+                addAddress({type:"carrier",label:lbl,carrier:newCarrier,branch:newBranch});
+              } else {
+                if(!newVill||!newDist){toast("ກະລຸນາໃສ່ຊື່ເມືອງ ແລະ ຊື່ບ້ານ");return;}
+                addAddress({type:"home",label:newLbl||newVill+" "+newDist,house:newHouse||"",village:newVill,district:newDist,lat:newLat,lng:newLng,homeFee:newFee});
+              }
+              toast("ບັນທຶກ ✓"); closeOv(); render();
+            }
+          },(_lang==="lo"?"💾 ບັນທຶກທີ່ຢູ່":"💾 Save Address")));
+          showOv(modal,null);
+        }
+        buildAddrModal();
+      }
+    },
+    {
+      icon:"🔔",
+      label:_lang==="lo"?"ການແຈ້ງເຕືອນ":"Notifications",
+      value:_lang==="lo"?"ເປີດ":"On",
+      action:()=>toast(_lang==="lo"?"ໃນໄວໆນີ້":"Coming soon")
+    },
+    {
+      icon:"❓",
+      label:_lang==="lo"?"ຊ່ວຍເຫຼືອ":"Help & Support",
+      value:"",
+      action:()=>window.open("https://wa.me/"+_adminWaNumber,"_blank")
+    },
+    // Super Admin only: Save All to Firebase
+    ...(user&&user.role==="admin" ? [{
+      icon:"💾",
+      label:_lang==="lo"?"ບັນທຶກທຸກຂໍ້ມູນ (Save All)":"Save All Data to Firebase",
+      value:_lang==="lo"?"Super Admin":"Super Admin",
+      action:function(){
+        if(!db){toast(_lang==="lo"?"ບໍ່ໄດ້ເຊື່ອມ Firebase":"Not connected to Firebase");return;}
+        try{
+          saveAll();
+          // Also explicitly save liveRooms
+          liveRooms.forEach(function(r){saveToCloud("liveRooms",r.id,r);});
+          shops.forEach(function(s){saveToCloud("shops",s.id,s);});
+          toast(_lang==="lo"?"✅ ບັນທຶກທຸກຂໍ້ມູນສຳເລັດ! ອຸປະກອນໃໝ່ຈະໄດ້ຂໍ້ມູນລ່າສຸດ":"✅ All data saved! New devices will load latest data.");
+        }catch(e){toast("Error: "+e.message);}
+      }
+    },{
+      icon:"🔄",
+      label:_lang==="lo"?"ໂຫຼດຂໍ້ມູນໃໝ່ (Reload)":"Reload from Firebase",
+      value:"",
+      action:function(){
+        if(!db){toast(_lang==="lo"?"ບໍ່ໄດ້ເຊື່ອມ Firebase":"Not connected to Firebase");return;}
+        loadFromCloud().then(function(){toast(_lang==="lo"?"✅ ໂຫຼດຂໍ້ມູນໃໝ່ສຳເລັດ":"✅ Data reloaded from Firebase");});
+      }
+    }] : []),
+    {
+      icon:"🔔",
+      label:_lang==="lo"?"ຮ້ານທີ່ຕິດຕາມ":"Following Shops",
+      value:String((user.following||[]).length),
+      action:()=>{
+        const following=user.following||[];
+        const followedShops=shops.filter(function(s){return following.includes(s.id);});
+        const listEl=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto"}},
+          el("button",{className:"mcl",onclick:closeOv},"✕"),
+          el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"🔔 "+(_lang==="lo"?"ຮ້ານທີ່ຕິດຕາມ":"Following")+" ("+followedShops.length+")"),
+          followedShops.length===0
+            ?el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px 0"}},"ຍັງບໍ່ໄດ້ຕິດຕາມຮ້ານໃດ")
+            :el("div",null,...followedShops.map(function(sh){
+              return el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 0",borderBottom:"1px solid #E8F5EE"}},
+                sh.logo?el("img",{src:sh.logo,style:{width:"40px",height:"40px",borderRadius:"50%",objectFit:"cover",flexShrink:"0"}}):el("div",{style:{width:"40px",height:"40px",borderRadius:"50%",background:sh.color||"#1B6B3A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",flexShrink:"0"}},sh.emoji||"🏪"),
+                el("div",{style:{flex:"1"}},
+                  el("div",{style:{fontWeight:"700",fontSize:".85rem"}},sh.name),
+                  el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},getFollowers(sh.id).length+" "+(_lang==="lo"?"ຜູ້ຕິດຕາມ":"followers"))
+                ),
+                el("button",{style:{background:"none",border:"1.5px solid #c00",borderRadius:"20px",padding:"5px 12px",color:"#c00",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
+                  onclick:function(){toggleFollow(sh.id);closeOv();render();}
+                },_lang==="lo"?"ຍົກເລີກ":"Unfollow")
+              );
+            }))
+        );
+        showOv(listEl);
+      }
+    },
+    {
+      icon:"🚪",
+      label:_lang==="lo"?"ອອກຈາກລະບົບ":"Logout",
+      value:"",
+      action:function(){
+        try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+        if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
+        cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+        user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
+        toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();
+      }
+    },
+  ];
+    const wrap=document.createDocumentFragment();
+    wrap.appendChild(
+    el("div",{style:{background:"#fff",borderRadius:"14px",padding:"0",marginTop:"10px",overflow:"hidden"}},
+      el("button",{
+        style:{width:"100%",padding:"14px 16px",background:"none",border:"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},
+        onclick:function(){
+          const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+          mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+          mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"⚙️ "+(_lang==="lo"?"ຕັ້ງຄ່າ":"Settings")));
+          const list=el("div",{style:{display:"flex",flexDirection:"column",gap:"0"}});
+          settingItems.forEach(function(item,i){
+            const btn=el("button",{style:{width:"100%",padding:"14px 4px",background:"none",border:"none",borderBottom:i<settingItems.length-1?"1px solid #F0F7F2":"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},onclick:function(){closeOv();item.action();}});
+            btn.appendChild(el("span",{style:{fontSize:"1.1rem",flexShrink:"0"}},item.icon));
+            btn.appendChild(el("span",{style:{flex:"1",fontSize:".82rem",fontWeight:"600",color:"#1A2B5F"}},item.label));
+            if(item.value)btn.appendChild(el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 8px",borderRadius:"8px"}},item.value));
+            btn.appendChild(el("span",{style:{color:"#C8E6D4",fontSize:".9rem"}},"›"));
+            list.appendChild(btn);
+          });
+          mod.appendChild(list);
+          showOv(mod,null);
+        }
+      },
+        el("span",{style:{fontSize:"1.2rem"}},"⚙️"),
+        el("span",{style:{flex:"1",fontSize:".85rem",fontWeight:"700",color:"#1A2B5F"}},_lang==="lo"?"ຕັ້ງຄ່າ":"Settings"),
+        el("span",{style:{color:"#aaa",fontSize:".9rem"}},"›")
+      )
+    )
+    );
+    wrap.appendChild(
+    // ── Notifications Tab (customer only) ─────────────────────────
+    el("div",{style:{background:"#fff",borderRadius:"14px",padding:"0",marginTop:"10px",overflow:"hidden"}},
+      el("button",{
+        style:{width:"100%",padding:"14px 16px",background:"none",border:"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},
+        onclick:function(){showNotifModal();}
+      },
+        el("span",{style:{fontSize:"1.2rem"}},"🔔"),
+        el("span",{style:{flex:"1",fontSize:".85rem",fontWeight:"700",color:"#1A2B5F"}},_lang==="lo"?"ການແຈ້ງເຕືອນ":"Notifications"),
+        _notifUnread>0?el("span",{style:{background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"20px",height:"20px",fontSize:".68rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}},_notifUnread>99?"99+":String(_notifUnread)):null,
+        el("span",{style:{color:"#aaa",fontSize:".9rem"}},"›")
+      )
+    )
+    );
+    wrap.appendChild(
+    // ── Coupon Wallet (collapsed row, tap to see all + delete) ─────
     (function(){
-      const fi=document.createElement("input");fi.type="file";fi.accept="image/*";fi.style.display="none";
-      fi.onchange=function(e){const f=e.target.files[0];if(!f)return;resizeImage(f,800,300,0.85,function(resized){uploadImage(resized,"laoh/avatars").then(function(url){user.banner=url;const u2=users.find(function(x){return x.id===user.id;});if(u2)u2.banner=url;saveToCloud("users",user.id,user);try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e2){}render();});});};
-      return el("label",{style:{flex:"1",padding:"7px",borderRadius:"8px",background:"#F0F4FF",color:"#1A2B5F",fontSize:".72rem",fontWeight:"700",textAlign:"center",cursor:"pointer",border:"1px solid #C8D8F5"}},(_lang==="lo"?"🖼 ປ່ຽນ Banner":"🖼 Change Banner"),fi);
-    })(),
-    (function(){
-      const fi2=document.createElement("input");fi2.type="file";fi2.accept="image/*";fi2.style.display="none";
-      fi2.onchange=function(e){const f=e.target.files[0];if(!f)return;resizeImage(f,200,200,0.9,function(resized){uploadImage(resized,"laoh/avatars").then(function(url){user.avatar=url;const u2=users.find(function(x){return x.id===user.id;});if(u2)u2.avatar=url;saveToCloud("users",user.id,user);try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e2){}render();});});};
-      return el("label",{style:{flex:"1",padding:"7px",borderRadius:"8px",background:"#F0F7F2",color:"#1B6B3A",fontSize:".72rem",fontWeight:"700",textAlign:"center",cursor:"pointer",border:"1px solid #C8E6D4"}},(_lang==="lo"?"📷 ປ່ຽນ Avatar":"📷 Change Avatar"),fi2);
+      const userCouponCount=((user&&user.coupons)||[]).length;
+      return el("button",{
+        style:{width:"100%",padding:"13px 16px",background:"#fff",border:"none",borderRadius:"16px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left",boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginTop:"10px"},
+        onclick:function(){
+          const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},
+            style:{maxHeight:"80vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch"}});
+          modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+          const titleEl=el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}});
+          modal.appendChild(titleEl);
+          const listWrap=el("div",{style:{display:"flex",flexDirection:"column",gap:"7px"}});
+          modal.appendChild(listWrap);
+          function drawCouponList(){
+            const now=Date.now();
+            const codes=(user&&user.coupons)||[];
+            const objs=codes.map(function(code){return coupons.find(function(c){return c.code===code;});}).filter(Boolean);
+            titleEl.textContent="🎟️ "+(_lang==="lo"?"ໂຄ້ດຂອງຂ້ອຍ":"My Coupons")+" ("+objs.length+")";
+            listWrap.innerHTML="";
+            if(objs.length===0){
+              listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px 0"}},_lang==="lo"?"ຍັງບໍ່ມີໂຄ້ດ":"No coupons yet"));
+              return;
+            }
+            objs.forEach(function(c){
+              const expired=c.expiresAt&&now>c.expiresAt;
+              const myWalletUsage=user&&user.id?orders.filter(function(o){return o.uid===user.id&&(o.coupon===c.code||o.shipCoupon===c.code);}).length:0;
+              const perUserReachedW=c.perUserLimit&&myWalletUsage>=c.perUserLimit;
+              const usedUp=(c.limit&&c.used>=c.limit)||perUserReachedW;
+              const isDisabled=expired||usedUp||!c.active;
+              const row=el("div",{style:{
+                display:"flex",alignItems:"center",gap:"10px",
+                background:isDisabled?"#f5f5f5":"linear-gradient(135deg,#fff8e1,#fff3cd)",
+                border:"1.5px dashed "+(isDisabled?"#ccc":c.type==="shipping"?"#2980b9":"#f39c12"),
+                borderRadius:"12px",padding:"10px 12px",opacity:isDisabled?"0.55":"1"
+              }});
+              const info=el("div",{style:{flex:"1"}});
+              info.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"5px",marginBottom:"2px"}},
+                el("span",{style:{fontWeight:"800",fontSize:".9rem",color:isDisabled?"#aaa":c.type==="shipping"?"#2980b9":"#856404",letterSpacing:"1px"}},c.code),
+                el("span",{style:{background:c.type==="shipping"?"#2980b9":"#27ae60",color:"#fff",fontSize:".55rem",padding:"1px 5px",borderRadius:"5px"}},c.type==="shipping"?"🚚":"🛍"),
+                c.liveOnly?el("span",{style:{background:"#e74c3c",color:"#fff",fontSize:".55rem",padding:"1px 5px",borderRadius:"5px"}},"🔴 LIVE"):null
+              ));
+              info.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75"}},
+                c.type==="shipping"?"ຫຼຸດຄ່າຈັດສົ່ງ "+c.pct+"%":"ຫຼຸດ "+c.pct+"%",
+                c.allProds?"":" · ສະເພາະສິນຄ້າທີ່ຮ່ວມ"
+              ));
+              if(c.expiresAt){
+                const expDate=new Date(c.expiresAt).toLocaleDateString("lo-LA",{day:"2-digit",month:"2-digit",year:"numeric"});
+                info.appendChild(el("div",{style:{fontSize:".63rem",color:expired?"#e74c3c":"#856404",fontWeight:"600",marginTop:"2px"}},
+                  expired?"❌ ໝົດກຳນົດ "+expDate:"📅 ໝົດ "+expDate
+                ));
+              }
+              if(!expired&&c.limit){
+                info.appendChild(el("div",{style:{fontSize:".63rem",color:"#1B6B3A",marginTop:"1px"}},
+                  "ເຫຼືອ "+(c.limit-c.used)+" / "+c.limit+" ສິດ"+
+                    (c.perUserLimit?" · 👤 ໃຊ້ໄດ້ "+(c.perUserLimit-myWalletUsage)+"/"+c.perUserLimit+"x":"")
+                ));
+              }
+              row.appendChild(info);
+              const statusWrap=el("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px"}});
+              if(!isDisabled){
+                statusWrap.appendChild(el("span",{style:{fontSize:".7rem",color:"#856404",fontWeight:"700",background:"#fff",borderRadius:"8px",padding:"3px 8px",border:"1px solid #f39c12"}},"ໃຊ້ໄດ້"));
+              } else {
+                statusWrap.appendChild(el("span",{style:{fontSize:".7rem",color:"#aaa",fontWeight:"700"}},expired?"ໝົດ":"ຄົບ"));
+              }
+              statusWrap.appendChild(el("button",{style:{background:"none",border:"none",color:"#c00",fontSize:"1rem",cursor:"pointer",padding:"2px 4px",fontFamily:"inherit"},
+                onclick:function(e){
+                  e.stopPropagation();
+                  if(!confirm((_lang==="lo"?"ລຶບໂຄ້ດ ":"Remove coupon ")+c.code+"?"))return;
+                  user=Object.assign({},user,{coupons:(user.coupons||[]).filter(function(cc){return cc!==c.code;})});
+                  const uiIdx=users.findIndex(function(u){return u.id===user.id;});
+                  if(uiIdx>=0){users[uiIdx]=Object.assign({},users[uiIdx],{coupons:(users[uiIdx].coupons||[]).filter(function(cc){return cc!==c.code;})});}
+                  saveToCloud("users",user.id,user);
+                  try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e2){}
+                  toast("🗑️ ລຶບ "+c.code+" ແລ້ວ");
+                  drawCouponList();
+                }
+              },"🗑️"));
+              row.appendChild(statusWrap);
+              listWrap.appendChild(row);
+            });
+          }
+          drawCouponList();
+          showOv(modal);
+        }
+      },
+        el("span",{style:{fontSize:"1.3rem"}},"🎟️"),
+        el("span",{style:{flex:"1",fontSize:".85rem",fontWeight:"700",color:"#1A2B5F"}},_lang==="lo"?"ໂຄ້ດຂອງຂ້ອຍ":"My Coupons"),
+        userCouponCount>0?el("span",{style:{fontSize:".72rem",color:"#856404",fontWeight:"700",background:"#FFF3CD",padding:"2px 8px",borderRadius:"8px"}},String(userCouponCount)):null,
+        el("span",{style:{color:"#aaa",fontSize:".9rem"}},"›")
+      );
     })()
-  ):null;
+    );
+    wrap.appendChild(
+    el("button",{
+      style:{width:"100%",padding:"13px 16px",background:"#fff",border:"none",borderRadius:"16px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left",boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:"0"},
+      onclick:function(){
+        const orderList=myO.length===0
+          ?el("div",{className:"mod",onclick:function(e){e.stopPropagation();}},
+              el("button",{className:"mcl",onclick:closeOv},"✕"),
+              el("div",{style:{textAlign:"center",padding:"30px",color:"#6B8F75"}},
+                el("div",{style:{fontSize:"2.5rem",marginBottom:"8px"}},"📦"),
+                el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":"No orders yet")
+              )
+            )
+          :(function(){
+            const modal2=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch"}});
+            modal2.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+            modal2.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},
+              "📦 "+(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders")+" ("+myO.length+")"
+            ));
+            const listWrap3=el("div",null);
+            function drawOrderList2(){
+              listWrap3.innerHTML="";
+              myO.forEach(function(o){listWrap3.appendChild(buildMyOrderCard(o,drawOrderList2));});
+            }
+            drawOrderList2();
+            modal2.appendChild(listWrap3);
+            return modal2;
+          })();
+        showOv(orderList);
+      }
+    },
+      el("span",{style:{fontSize:"1.2rem"}},"📦"),
+      el("span",{style:{flex:"1",fontSize:".85rem",fontWeight:"700",color:"#1A2B5F"}},_lang==="lo"?(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders"):"My Orders"),
+      myO.length>0?el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 10px",borderRadius:"20px"}},String(myO.length)):null,
+      el("span",{style:{color:"#C8E6D4",fontSize:".9rem"}},"›")
+    )
+    );
+    return wrap;
+  })():null;
   // Reviews grid
   const rvTitle=el("div",{style:{padding:"0 16px",fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?"📸 ຮີວິວ ("+uRvs.length+")":"📸 Reviews ("+uRvs.length+")"));
   const rvGrid=el("div",{style:{padding:"0 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",paddingBottom:"20px"}});
@@ -5250,7 +5758,7 @@ function buildUserProfile(uid){
   }
   const page=el("div",{style:{background:"#F8FCF8",minHeight:"100vh"}});
   page.appendChild(topBar);page.appendChild(banner);page.appendChild(avatarWrap);page.appendChild(infoRow);
-  if(editBannerSection)page.appendChild(editBannerSection);
+  if(myAccountSection)page.appendChild(myAccountSection);
   page.appendChild(stats);page.appendChild(rvTitle);page.appendChild(rvGrid);
   return page;
 }
@@ -15519,340 +16027,16 @@ function buildProfile(){
   if(!user){view="shop";render();return el("div",null);}
   const myO = orders.filter(o=>o.uid===(user&&user.id));
 
-  // Settings menu items
-  const settingItems = [
-    {
-      icon:"🌐",
-      label:_lang==="lo"?"ພາສາ / Language":"ພາສາ / Language",
-      value:_lang==="lo"?"ລາວ":"EN",
-      action:()=>{_lang=_lang==="lo"?"en":"lo";try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();}
-    },
-    {
-      icon:"🗣️",
-      label:_lang==="lo"?"ແປພາສາ (Google Translate)":"Translate (Google Translate)",
-      value:"",
-      action:()=>{laohTranslateShow();}
-    },
-    {
-      icon:"📦",
-      label:_lang==="lo"?(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders"):"My Orders",
-      value:myO.length>0?String(myO.length):"",
-      action:()=>{
-        if(myO.length===0){
-          showOv(el("div",{className:"mod",onclick:e=>e.stopPropagation()},
-            el("button",{className:"mcl",onclick:closeOv},"✕"),
-            el("div",{style:{textAlign:"center",padding:"30px",color:"#6B8F75"}},
-              el("div",{style:{fontSize:"2.5rem",marginBottom:"8px"}},"📦"),
-              el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":"No orders yet")
-            )
-          ));
-          return;
-        }
-        const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},
-          style:{maxHeight:"80vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch"}});
-        modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-        modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},
-          "📦 "+(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders")+" ("+myO.length+")"
-        ));
-        const listWrap2=el("div",null);
-        function drawOrderList(){
-          listWrap2.innerHTML="";
-          myO.forEach(function(o){listWrap2.appendChild(buildMyOrderCard(o,drawOrderList));});
-        }
-        drawOrderList();
-        modal.appendChild(listWrap2);
-        showOv(modal);
-      }
-    },
-    {
-      icon:"👤",
-      label:_lang==="lo"?"ແກ້ໄຂໂປຣໄຟລ໌":"Edit Profile",
-      value:"",
-      action:()=>showEditProfile()
-    },
-    {
-      icon:"📍",
-      label:_lang==="lo"?"ທີ່ຢູ່ຈັດສົ່ງ":"Delivery Addresses",
-      value:(function(){const n=getSavedAddresses().length;return n>0?String(n):"";})(),
-      action:function(){
-        function buildAddrModal(){
-          const addrs=getSavedAddresses();
-          const cfg=getHomeDeliveryConfig();
-          // ── new address form state ──
-          var newType="carrier"; var newLbl=""; var newCarrier=getCustomCarriers()[0]||"";
-          var newBranch=""; var newHouse=""; var newVill=""; var newDist="";
-          var newLat=null; var newLng=null; var newFee=0;
-
-          const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
-          modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-          modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")));
-
-          // ── list existing addresses ──────────────────────────────
-          const listWrap=el("div",{style:{marginBottom:"12px"}});
-          function refreshList(){
-            listWrap.innerHTML="";
-            const arr=getSavedAddresses();
-            if(arr.length===0){
-              listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",fontSize:".78rem",padding:"8px 0"}},(_lang==="lo"?"ຍັງບໍ່ມີທີ່ຢູ່":"No address yet")));
-            } else {
-              arr.forEach(function(a){
-                const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",background:"#F0F7F2",borderRadius:"10px",padding:"9px 12px",marginBottom:"6px"}});
-                const badge=el("span",{style:{fontSize:".6rem",fontWeight:"700",borderRadius:"5px",padding:"2px 6px",background:a.type==="home"?"#1B6B3A":"#2980b9",color:"#fff",flexShrink:"0"}},
-                  a.type==="home"?"🛵":"🚚");
-                const info=el("div",{style:{flex:"1",minWidth:"0"}},
-                  el("div",{style:{fontWeight:"700",fontSize:".8rem",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},a.label||"ທີ່ຢູ່"),
-                  el("div",{style:{fontSize:".71rem",color:"#3B5C40",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
-                    a.type==="home"?(a.house||"")+(_lang==="lo"?" ບ້ານ":" Village")+(a.village||"")+(_lang==="lo"?" ເມືອງ":" District")+(a.district||"")
-                      :(a.carrier||"")+(a.branch?" ສາຂາ "+a.branch:""))
-                );
-                const del=el("button",{type:"button",style:{background:"none",border:"none",cursor:"pointer",color:"#c00",fontSize:".9rem",padding:"2px 6px",flexShrink:"0"},
-                  onclick:function(){deleteAddress(a.id);refreshList();render();}
-                },"✕");
-                row.appendChild(badge); row.appendChild(info); row.appendChild(del);
-                listWrap.appendChild(row);
-              });
-            }
-          }
-          refreshList();
-          modal.appendChild(listWrap);
-
-          // ── add form ─────────────────────────────────────────────
-          modal.appendChild(el("div",{style:{borderTop:"1px solid #E8F5EE",paddingTop:"12px",marginBottom:"6px",fontWeight:"700",fontSize:".82rem",color:"#1A2B5F"}},(_lang==="lo"?"➕ ເພີ່ມທີ່ຢູ່ໃໝ່":"➕ Add New Address")));
-          // label input
-          const lblInp=document.createElement("input");
-          lblInp.className="inp"; lblInp.placeholder=(_lang==="lo"?"ຊື່ທີ່ຢູ່ (ເຊັ່ນ: ບ້ານ, ຫ້ອງການ)":"Address name (e.g. Home, Office)");
-          lblInp.oninput=function(){newLbl=this.value;};
-          modal.appendChild(lblInp);
-
-          // type buttons
-          const typeRow=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",margin:"8px 0"}});
-          const btnC=el("button",{type:"button",style:{padding:"9px",borderRadius:"9px",border:"1.5px solid #2980b9",background:"#2980b9",color:"#fff",fontWeight:"600",fontSize:".73rem",cursor:"pointer",fontFamily:"inherit"}},(_lang==="lo"?"ເລືອກບໍລິສັດຂົນສົ່ງ\nສາຂາໃກ້ບ້ານ":"Choose Carrier\nNearest Branch"));
-          const btnH=el("button",{type:"button",style:{padding:"9px",borderRadius:"9px",border:"1.5px solid #C8E6D4",background:"#fff",color:"#1A2B5F",fontWeight:"600",fontSize:".73rem",cursor:"pointer",fontFamily:"inherit"}},(_lang==="lo"?"ເຂດຕົວເມືອງນະຄອນຫລວງ\n(ຈັດສົ່ງຮອດບ້ານ)":"City Area (Vientiane)\n(Home Delivery)"));
-          const carrierSec=el("div",null);
-          const homeSec=el("div",{style:{display:"none"}});
-          function setT(t){
-            newType=t;
-            btnC.style.background=t==="carrier"?"#2980b9":"#fff"; btnC.style.color=t==="carrier"?"#fff":"#1A2B5F"; btnC.style.border="1.5px solid "+(t==="carrier"?"#2980b9":"#C8E6D4");
-            btnH.style.background=t==="home"?"#1B6B3A":"#fff"; btnH.style.color=t==="home"?"#fff":"#1A2B5F"; btnH.style.border="1.5px solid "+(t==="home"?"#1B6B3A":"#C8E6D4");
-            carrierSec.style.display=t==="carrier"?"block":"none";
-            homeSec.style.display=t==="home"?"block":"none";
-          }
-          btnC.onclick=function(){setT("carrier");}; btnH.onclick=function(){setT("home");};
-          typeRow.appendChild(btnC); typeRow.appendChild(btnH);
-          modal.appendChild(typeRow);
-
-          // carrier section
-          const cfgs=getCustomCarriers();
-          const cBtnRow=el("div",{style:{display:"flex",gap:"5px",flexWrap:"wrap",marginBottom:"6px"}});
-          cfgs.forEach(function(c){
-            const active=newCarrier===c;
-            const b=el("button",{type:"button",style:{padding:"5px 10px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit",border:"1.5px solid "+(active?"#2980b9":"#C8E6D4"),background:active?"#2980b9":"#fff",color:active?"#fff":"#1A2B5F"},
-              onclick:function(){newCarrier=c;cBtnRow.querySelectorAll("button").forEach(function(x){x.style.background="#fff";x.style.color="#1A2B5F";x.style.border="1.5px solid #C8E6D4";});this.style.background="#2980b9";this.style.color="#fff";this.style.border="1.5px solid #2980b9";}
-            },c);
-            cBtnRow.appendChild(b);
-          });
-          const brInp=document.createElement("input"); brInp.className="inp"; brInp.placeholder=(_lang==="lo"?"ສາຂາ *":"Branch *"); brInp.oninput=function(){newBranch=this.value;};
-          carrierSec.appendChild(cBtnRow); carrierSec.appendChild(brInp);
-          modal.appendChild(carrierSec);
-
-          // home section — ເມືອງ, ບ້ານ, ທີ່ຢູ່ + GPS
-          const cityInp=document.createElement("input"); cityInp.className="inp"; cityInp.placeholder=(_lang==="lo"?"1. ຊື່ເມືອງ *":"1. District *"); cityInp.oninput=function(){newDist=this.value;};
-          const villInp=document.createElement("input"); villInp.className="inp"; villInp.placeholder=(_lang==="lo"?"2. ຊື່ບ້ານ *":"2. Village *"); villInp.oninput=function(){newVill=this.value;};
-          const addrTxtInp=document.createElement("input"); addrTxtInp.className="inp"; addrTxtInp.placeholder=(_lang==="lo"?"3. ທີ່ຢູ່ລະອຽດ (ເລກທີ່ / ຖະໜົນ)":"3. Detail (house no. / street)"); addrTxtInp.oninput=function(){newHouse=this.value;};
-          const mapFB2=el("div",null);
-          // ── ปุ่มเปิด Maps + วาง link ────────────────────────────────
-          const mapStatus=el("div",{style:{fontSize:".74rem",color:"#6B8F75",margin:"6px 0 5px"}},(_lang==="lo"?"📍 ລະບຸທີ່ຕັ້ງ (ສຳລັບບ້ານທີ່ໃສ່ເອງ):":"📍 Set Location (for home delivery):"));
-          mapFB2.appendChild(mapStatus);
-          function applyCoords(la,lo){
-            const km=haversineKm(hubLat(),hubLng(),la,lo);
-            if(km>cfg.maxKm){(function(){
-      const m=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{textAlign:"center",maxWidth:"320px"}});
-      m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-      m.appendChild(el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"⚠️"));
-      m.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#c00",marginBottom:"10px",lineHeight:"1.5"}},
-        "ສະຖານທີ່ຂອງທ່ານ\nໄກເກີນ "+cfg.maxKm+"km\nທີ່ຮັບສົ່ງເຖິງບ້ານ"
-      ));
-      m.appendChild(el("div",{style:{fontSize:".82rem",color:"#1A2B5F",marginBottom:"14px",lineHeight:"1.6"}},
-        (_lang==="lo"?"ກະລຸນາເລືອກ 🚚 ນອກເຂດ\nແລ້ວເລືອກສາຂາຂົນສົ່ງ\nທີ່ໃກ້ບ້ານຂອງທ່ານ":"Please select 🚚 Outside City\nthen choose a carrier branch\nnear your home")
-      ));
-      m.appendChild(el("button",{type:"button",className:"btn btn-p",style:{width:"100%"},onclick:closeOv},(_lang==="lo"?"ຮັບຊາບ":"OK")));
-      showOv(m,null);
-    })();return false;}
-            newLat=la; newLng=lo; newFee=calcHomeFee(km);
-            openMapsBtn2.textContent="✅ "+km.toFixed(1)+"km · ₭"+fmt(newFee)+" — ກົດເປີດ Maps ໃໝ່";
-            openMapsBtn2.style.border="1.5px solid #1B6B3A"; openMapsBtn2.style.color="#1B6B3A"; openMapsBtn2.style.background="#F0FFF4";
-            mapStatus.textContent="📍 ຫ່າງ ສູນ LaoH "+km.toFixed(1)+"km · ₭"+fmt(newFee);
-            mapStatus.style.color="#1B6B3A"; return true;
-          }
-          // ── GPS อัตโนมัติ ──────────────────────────────────────────
-          const gpsAutoBtn2=el("button",{type:"button",style:{width:"100%",padding:"11px",borderRadius:"11px",border:"2px solid #e74c3c",background:"#FFF5F5",color:"#c00",fontWeight:"700",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"6px"},
-            onclick:function(){
-              const self=this;
-              if(!navigator.geolocation){toast((_lang==="lo"?"GPS ບໍ່ຮອງຮັບ — ໃຊ້ Google Maps ແທນ":"GPS not supported — use Google Maps instead"));return;}
-              self.textContent=(_lang==="lo"?"⌛ ກຳລັງຫາ GPS...":"⌛ Finding GPS...");
-              navigator.geolocation.getCurrentPosition(function(p){
-                if(!applyCoords(p.coords.latitude,p.coords.longitude)){self.textContent=(_lang==="lo"?"📍 ກົດ GPS":"📍 GPS");}
-                else{self.textContent="✅ GPS ສຳເລັດ";}
-              },function(){
-                self.textContent=(_lang==="lo"?"📍 ກົດ GPS":"📍 GPS");
-                toast((_lang==="lo"?"GPS ບໍ່ໄດ້ — ໃຊ້ 🗺 Google Maps ດ້ານລຸ່ມ":"GPS failed — use 🗺 Google Maps below"));
-              },{enableHighAccuracy:true,timeout:8000});
-            }},(_lang==="lo"?"📍 ກົດ GPS (ອັດຕະໂນມັດ)":"📍 Use GPS (Auto)"));
-          const openMapsBtn2=el("button",{type:"button",style:{width:"100%",padding:"12px",borderRadius:"11px",border:"2px solid #4285F4",background:"#EEF4FF",color:"#4285F4",fontWeight:"700",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"8px"},
-            onclick:function(){
-              const self=this;
-              self.textContent="⌛ ກຳລັງຫາຕຳແໜ່ງ...";
-              function openWithCoords(lat,lng){
-                const mapsUrl="https://maps.google.com/?q="+lat+","+lng+"&ll="+lat+","+lng+"&z=16";
-                window.open(mapsUrl,"_blank");
-                const shareLink="https://maps.google.com/?q="+lat+","+lng;
-                if(navigator.clipboard&&navigator.clipboard.writeText){
-                  navigator.clipboard.writeText(shareLink).then(function(){
-                    toast((_lang==="lo"?"✅ ກ໋ອບປີ Link ໃສ່ Clipboard ແລ້ວ — ວາງໃນຊ່ອງດ້ານລຸ່ມ":"✅ Link copied — paste below"));
-                    gmLinkInp.value=shareLink;
-                  }).catch(function(){});
-                }
-                applyCoords(lat,lng);
-                self.textContent=(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below");
-              }
-              if(navigator.geolocation){
-                navigator.geolocation.getCurrentPosition(
-                  function(p){openWithCoords(p.coords.latitude,p.coords.longitude);},
-                  function(){
-                    self.textContent=(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below");
-                    window.open("https://maps.google.com/?q="+hubLat()+","+hubLng()+"&z=13","_blank");
-                    toast((_lang==="lo"?"GPS ບໍ່ໄດ້ — ຊອກຫາບ້ານໃນ Maps ແລ້ວ Copy link ມາວາງດ້ານລຸ່ມ":"GPS failed — find location in Maps and paste link below"));
-                  },
-                  {enableHighAccuracy:true,timeout:8000}
-                );
-              } else {
-                self.textContent=(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below");
-                window.open("https://maps.google.com","_blank");
-              }
-            }},(_lang==="lo"?"🗺 ກົດເຂົ້າ Google Maps ເພື່ອກ໋ອບປີ້ທີ່ຢູ່ຂອງທ່ານ ແລ້ວວາງ Link ໃນຊ່ອງລຸ່ມ":"🗺 Open Google Maps, copy your location link, paste below"));
-          const gmapRow=el("div",{style:{display:"flex",gap:"6px",marginBottom:"4px"}});
-          const gmLinkInp=document.createElement("input");
-          gmLinkInp.className="inp"; gmLinkInp.placeholder=(_lang==="lo"?"ວາງ Google Maps link ທີ່ນີ້...":"Paste Google Maps link here..."); gmLinkInp.style.margin="0"; gmLinkInp.style.flex="1";
-          const gmConfBtn=el("button",{type:"button",style:{padding:"8px 14px",borderRadius:"9px",border:"1.5px solid #1B6B3A",background:"#1B6B3A",color:"#fff",fontWeight:"700",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
-            onclick:function(){
-              const url=gmLinkInp.value.trim(); var la=null,lo=null;
-              var pats=[/@(-?\d+\.?\d*),(-?\d+\.?\d*)/,/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,/\/(-?\d+\.?\d*),(-?\d+\.?\d*)/];
-              for(var i=0;i<pats.length;i++){var m=url.match(pats[i]);if(m){la=parseFloat(m[1]);lo=parseFloat(m[2]);break;}}
-              if(!la||!lo){toast((_lang==="lo"?"ບໍ່ພົບ Coordinates — ລອງ Copy link ຈາກ Maps ໃໝ່":"Coordinates not found — try copying Maps link again"));return;}
-              if(applyCoords(la,lo))toast((_lang==="lo"?"✅ ຢືນຢັນທີ່ຕັ້ງ":"✅ Confirm Location"));
-            }},"✅");
-          gmapRow.appendChild(gmLinkInp); gmapRow.appendChild(gmConfBtn);
-          mapFB2.appendChild(gpsAutoBtn2); mapFB2.appendChild(openMapsBtn2); mapFB2.appendChild(gmapRow);
-          homeSec.appendChild(cityInp); homeSec.appendChild(villInp); homeSec.appendChild(addrTxtInp); homeSec.appendChild(mapFB2);
-          modal.appendChild(homeSec);
-
-          // save button
-          modal.appendChild(el("button",{type:"button",className:"btn btn-p",style:{marginTop:"10px"},
-            onclick:function(){
-              const lbl=newLbl||"ທີ່ຢູ່";
-              if(newType==="carrier"){
-                if(!newBranch){toast((_lang==="lo"?"ກະລຸນາໃສ່ສາຂາ":"Please enter branch"));return;}
-                addAddress({type:"carrier",label:lbl,carrier:newCarrier,branch:newBranch});
-              } else {
-                if(!newVill||!newDist){toast("ກະລຸນາໃສ່ຊື່ເມືອງ ແລະ ຊື່ບ້ານ");return;}
-                addAddress({type:"home",label:newLbl||newVill+" "+newDist,house:newHouse||"",village:newVill,district:newDist,lat:newLat,lng:newLng,homeFee:newFee});
-              }
-              toast("ບັນທຶກ ✓"); closeOv(); render();
-            }
-          },(_lang==="lo"?"💾 ບັນທຶກທີ່ຢູ່":"💾 Save Address")));
-          showOv(modal,null);
-        }
-        buildAddrModal();
-      }
-    },
-    {
-      icon:"🔔",
-      label:_lang==="lo"?"ການແຈ້ງເຕືອນ":"Notifications",
-      value:_lang==="lo"?"ເປີດ":"On",
-      action:()=>toast(_lang==="lo"?"ໃນໄວໆນີ້":"Coming soon")
-    },
-    {
-      icon:"❓",
-      label:_lang==="lo"?"ຊ່ວຍເຫຼືອ":"Help & Support",
-      value:"",
-      action:()=>window.open("https://wa.me/"+_adminWaNumber,"_blank")
-    },
-    // Super Admin only: Save All to Firebase
-    ...(user&&user.role==="admin" ? [{
-      icon:"💾",
-      label:_lang==="lo"?"ບັນທຶກທຸກຂໍ້ມູນ (Save All)":"Save All Data to Firebase",
-      value:_lang==="lo"?"Super Admin":"Super Admin",
-      action:function(){
-        if(!db){toast(_lang==="lo"?"ບໍ່ໄດ້ເຊື່ອມ Firebase":"Not connected to Firebase");return;}
-        try{
-          saveAll();
-          // Also explicitly save liveRooms
-          liveRooms.forEach(function(r){saveToCloud("liveRooms",r.id,r);});
-          shops.forEach(function(s){saveToCloud("shops",s.id,s);});
-          toast(_lang==="lo"?"✅ ບັນທຶກທຸກຂໍ້ມູນສຳເລັດ! ອຸປະກອນໃໝ່ຈະໄດ້ຂໍ້ມູນລ່າສຸດ":"✅ All data saved! New devices will load latest data.");
-        }catch(e){toast("Error: "+e.message);}
-      }
-    },{
-      icon:"🔄",
-      label:_lang==="lo"?"ໂຫຼດຂໍ້ມູນໃໝ່ (Reload)":"Reload from Firebase",
-      value:"",
-      action:function(){
-        if(!db){toast(_lang==="lo"?"ບໍ່ໄດ້ເຊື່ອມ Firebase":"Not connected to Firebase");return;}
-        loadFromCloud().then(function(){toast(_lang==="lo"?"✅ ໂຫຼດຂໍ້ມູນໃໝ່ສຳເລັດ":"✅ Data reloaded from Firebase");});
-      }
-    }] : []),
-    {
-      icon:"🔔",
-      label:_lang==="lo"?"ຮ້ານທີ່ຕິດຕາມ":"Following Shops",
-      value:String((user.following||[]).length),
-      action:()=>{
-        const following=user.following||[];
-        const followedShops=shops.filter(function(s){return following.includes(s.id);});
-        const listEl=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto"}},
-          el("button",{className:"mcl",onclick:closeOv},"✕"),
-          el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"🔔 "+(_lang==="lo"?"ຮ້ານທີ່ຕິດຕາມ":"Following")+" ("+followedShops.length+")"),
-          followedShops.length===0
-            ?el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px 0"}},"ຍັງບໍ່ໄດ້ຕິດຕາມຮ້ານໃດ")
-            :el("div",null,...followedShops.map(function(sh){
-              return el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 0",borderBottom:"1px solid #E8F5EE"}},
-                sh.logo?el("img",{src:sh.logo,style:{width:"40px",height:"40px",borderRadius:"50%",objectFit:"cover",flexShrink:"0"}}):el("div",{style:{width:"40px",height:"40px",borderRadius:"50%",background:sh.color||"#1B6B3A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",flexShrink:"0"}},sh.emoji||"🏪"),
-                el("div",{style:{flex:"1"}},
-                  el("div",{style:{fontWeight:"700",fontSize:".85rem"}},sh.name),
-                  el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},getFollowers(sh.id).length+" "+(_lang==="lo"?"ຜູ້ຕິດຕາມ":"followers"))
-                ),
-                el("button",{style:{background:"none",border:"1.5px solid #c00",borderRadius:"20px",padding:"5px 12px",color:"#c00",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
-                  onclick:function(){toggleFollow(sh.id);closeOv();render();}
-                },_lang==="lo"?"ຍົກເລີກ":"Unfollow")
-              );
-            }))
-        );
-        showOv(listEl);
-      }
-    },
-  ];
 
   const myReviews=getReviews().filter(function(rv){return rv.uid===user.id;});
 
   return el("div",{style:{padding:"14px 14px 60px",maxWidth:"460px",margin:"0 auto"}},
 
-    // Profile card — logout icon top-right + settings inside
+    // Profile card — settings inside
     el("div",{style:{background:"#fff",borderRadius:"16px",padding:"20px 16px",marginBottom:"12px",boxShadow:"0 2px 8px rgba(0,0,0,.06)",position:"relative"}},
-      // logout icon มุมบนขวา
-      el("div",{style:{position:"absolute",top:"10px",right:"10px",display:"flex",flexDirection:"column",alignItems:"center",gap:"1px",cursor:"pointer"},
-        onclick:function(){
-          try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
-          if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
-          cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-          user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
-          toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();
-        }
-      },
-        el("div",{style:{background:"#FFF0F0",borderRadius:"50%",width:"30px",height:"30px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".9rem"}},"🚪"),
-        el("div",{style:{fontSize:".52rem",color:"#C0392B",fontWeight:"700",lineHeight:"1"}},_lang==="lo"?"ອອກ":"Out")
-      ),
       el("div",{style:{display:"flex",alignItems:"center",gap:"14px",marginBottom:"12px"}},
         el("div",{style:{width:"60px",height:"60px",borderRadius:"50%",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.6rem",flexShrink:"0"}},"💪"),
-        el("div",{style:{flex:"1",paddingRight:"36px"}},
+        el("div",{style:{flex:"1"}},
           el("div",{style:{fontSize:"1rem",fontWeight:"800",color:"#1A2B5F",marginBottom:"3px"}},user.name),
           el("div",{style:{fontSize:".72rem",color:"#6B8F75"}},
             user.phone?"📞 "+user.phone:"",
@@ -15863,30 +16047,6 @@ function buildProfile(){
           )
         )
       ),
-      // Settings button ใน card
-      el("button",{
-        style:{width:"100%",padding:"10px 14px",background:"#F0F7F2",borderRadius:"10px",border:"none",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},
-        onclick:function(){
-          const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
-          mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-          mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"⚙️ "+(_lang==="lo"?"ຕັ້ງຄ່າ":"Settings")));
-          const list=el("div",{style:{display:"flex",flexDirection:"column",gap:"0"}});
-          settingItems.forEach(function(item,i){
-            const btn=el("button",{style:{width:"100%",padding:"14px 4px",background:"none",border:"none",borderBottom:i<settingItems.length-1?"1px solid #F0F7F2":"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},onclick:function(){closeOv();item.action();}});
-            btn.appendChild(el("span",{style:{fontSize:"1.1rem",flexShrink:"0"}},item.icon));
-            btn.appendChild(el("span",{style:{flex:"1",fontSize:".82rem",fontWeight:"600",color:"#1A2B5F"}},item.label));
-            if(item.value)btn.appendChild(el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 8px",borderRadius:"8px"}},item.value));
-            btn.appendChild(el("span",{style:{color:"#C8E6D4",fontSize:".9rem"}},"›"));
-            list.appendChild(btn);
-          });
-          mod.appendChild(list);
-          showOv(mod,null);
-        }
-      },
-        el("span",{style:{fontSize:"1rem"}},"⚙️"),
-        el("span",{style:{flex:"1",fontSize:".8rem",fontWeight:"600",color:"#1A2B5F"}},_lang==="lo"?"ຕັ້ງຄ່າ":"Settings"),
-        el("span",{style:{color:"#aaa",fontSize:".9rem"}},"›")
-      )
     ),
 
     // ── My Public Profile Card ─────────────────────────────────────
@@ -15901,108 +16061,7 @@ function buildProfile(){
       )
     ),
 
-    // ── Notifications Tab (customer only) ─────────────────────────
-    el("div",{style:{background:"#fff",borderRadius:"14px",padding:"0",marginTop:"10px",overflow:"hidden"}},
-      el("button",{
-        style:{width:"100%",padding:"14px 16px",background:"none",border:"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},
-        onclick:function(){showNotifModal();}
-      },
-        el("span",{style:{fontSize:"1.2rem"}},"🔔"),
-        el("span",{style:{flex:"1",fontSize:".85rem",fontWeight:"700",color:"#1A2B5F"}},_lang==="lo"?"ການແຈ້ງເຕືອນ":"Notifications"),
-        _notifUnread>0?el("span",{style:{background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"20px",height:"20px",fontSize:".68rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}},_notifUnread>99?"99+":String(_notifUnread)):null,
-        el("span",{style:{color:"#aaa",fontSize:".9rem"}},"›")
-      )
-    ),
 
-    // ── Coupon Wallet ─────────────────────────────────────────────
-    (function(){
-      const now=Date.now();
-      const userCouponCodes=(user&&user.coupons)||[];
-      if(userCouponCodes.length===0)return document.createDocumentFragment();
-      const userCouponObjects=userCouponCodes.map(function(code){return coupons.find(function(c){return c.code===code;});}).filter(Boolean);
-      if(userCouponObjects.length===0)return document.createDocumentFragment();
-      const sec=el("div",{style:{background:"#fff",borderRadius:"14px",padding:"14px",marginTop:"10px"}});
-      sec.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#856404",marginBottom:"10px"}},"🎟️ ໂຄ້ດຂອງຂ້ອຍ ("+userCouponObjects.length+")"));
-      const list=el("div",{style:{display:"flex",flexDirection:"column",gap:"7px"}});
-      userCouponObjects.forEach(function(c){
-        const expired=c.expiresAt&&now>c.expiresAt;
-        const myWalletUsage=user&&user.id?orders.filter(function(o){return o.uid===user.id&&(o.coupon===c.code||o.shipCoupon===c.code);}).length:0;
-        const perUserReachedW=c.perUserLimit&&myWalletUsage>=c.perUserLimit;
-        const usedUp=(c.limit&&c.used>=c.limit)||perUserReachedW;
-        const isDisabled=expired||usedUp||!c.active;
-        const row=el("div",{style:{
-          display:"flex",alignItems:"center",gap:"10px",
-          background:isDisabled?"#f5f5f5":"linear-gradient(135deg,#fff8e1,#fff3cd)",
-          border:"1.5px dashed "+(isDisabled?"#ccc":c.type==="shipping"?"#2980b9":"#f39c12"),
-          borderRadius:"12px",padding:"10px 12px",opacity:isDisabled?"0.55":"1"
-        }});
-        const info=el("div",{style:{flex:"1"}});
-        info.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"5px",marginBottom:"2px"}},
-          el("span",{style:{fontWeight:"800",fontSize:".9rem",color:isDisabled?"#aaa":c.type==="shipping"?"#2980b9":"#856404",letterSpacing:"1px"}},c.code),
-          el("span",{style:{background:c.type==="shipping"?"#2980b9":"#27ae60",color:"#fff",fontSize:".55rem",padding:"1px 5px",borderRadius:"5px"}},c.type==="shipping"?"🚚":"🛍"),
-          c.liveOnly?el("span",{style:{background:"#e74c3c",color:"#fff",fontSize:".55rem",padding:"1px 5px",borderRadius:"5px"}},"🔴 LIVE"):null
-        ));
-        info.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75"}},
-          c.type==="shipping"?"ຫຼຸດຄ່າຈັດສົ່ງ "+c.pct+"%":"ຫຼຸດ "+c.pct+"%",
-          c.allProds?"":" · ສະເພາະສິນຄ້າທີ່ຮ່ວມ"
-        ));
-        if(c.expiresAt){
-          const expDate=new Date(c.expiresAt).toLocaleDateString("lo-LA",{day:"2-digit",month:"2-digit",year:"numeric"});
-          info.appendChild(el("div",{style:{fontSize:".63rem",color:expired?"#e74c3c":"#856404",fontWeight:"600",marginTop:"2px"}},
-            expired?"❌ ໝົດກຳນົດ "+expDate:"📅 ໝົດ "+expDate
-          ));
-        }
-        if(!expired&&c.limit){
-          info.appendChild(el("div",{style:{fontSize:".63rem",color:"#1B6B3A",marginTop:"1px"}},
-            "ເຫຼືອ "+(c.limit-c.used)+" / "+c.limit+" ສິດ"+
-              (c.perUserLimit?" · 👤 ໃຊ້ໄດ້ "+(c.perUserLimit-myWalletUsage)+"/"+c.perUserLimit+"x":"")
-          ));
-        }
-        row.appendChild(info);
-        if(!isDisabled){
-          row.appendChild(el("span",{style:{fontSize:".7rem",color:"#856404",fontWeight:"700",background:"#fff",borderRadius:"8px",padding:"3px 8px",border:"1px solid #f39c12"}},"ໃຊ້ໄດ້"));
-        } else {
-          row.appendChild(el("span",{style:{fontSize:".7rem",color:"#aaa",fontWeight:"700"}},expired?"ໝົດ":"ຄົບ"));
-        }
-        list.appendChild(row);
-      });
-      sec.appendChild(list);
-      return sec;
-    })(),
-    el("button",{
-      style:{width:"100%",padding:"13px 16px",background:"#fff",border:"none",borderRadius:"16px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left",boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:"0"},
-      onclick:function(){
-        const orderList=myO.length===0
-          ?el("div",{className:"mod",onclick:function(e){e.stopPropagation();}},
-              el("button",{className:"mcl",onclick:closeOv},"✕"),
-              el("div",{style:{textAlign:"center",padding:"30px",color:"#6B8F75"}},
-                el("div",{style:{fontSize:"2.5rem",marginBottom:"8px"}},"📦"),
-                el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":"No orders yet")
-              )
-            )
-          :(function(){
-            const modal2=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch"}});
-            modal2.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-            modal2.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},
-              "📦 "+(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders")+" ("+myO.length+")"
-            ));
-            const listWrap3=el("div",null);
-            function drawOrderList2(){
-              listWrap3.innerHTML="";
-              myO.forEach(function(o){listWrap3.appendChild(buildMyOrderCard(o,drawOrderList2));});
-            }
-            drawOrderList2();
-            modal2.appendChild(listWrap3);
-            return modal2;
-          })();
-        showOv(orderList);
-      }
-    },
-      el("span",{style:{fontSize:"1.2rem"}},"📦"),
-      el("span",{style:{flex:"1",fontSize:".85rem",fontWeight:"700",color:"#1A2B5F"}},_lang==="lo"?(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders"):"My Orders"),
-      myO.length>0?el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 10px",borderRadius:"20px"}},String(myO.length)):null,
-      el("span",{style:{color:"#C8E6D4",fontSize:".9rem"}},"›")
-    ),
 
     // ── ຮີວິວສິນຄ້າ ──────────────────────────────────────────────
     (function(){

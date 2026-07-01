@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v367 -->
+<!-- LaoH Marketplace v371 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -140,6 +140,18 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 .feed-action{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
 .feed-action-btn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;backdrop-filter:blur(4px);}
 .feed-action-btn-sm{width:37px;height:37px;border-radius:50%;background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;font-size:1.02rem;cursor:pointer;backdrop-filter:blur(4px);}
+/* Comments overlay */
+.rv-cmts{position:absolute;left:10px;right:60px;bottom:115px;display:flex;flex-direction:column;gap:4px;z-index:5;pointer-events:none;max-height:160px;overflow:hidden;}
+.rv-cmt-row{display:flex;align-items:flex-start;gap:5px;animation:fadeInUp .2s ease;pointer-events:auto;}
+.rv-cmt-bubble{background:rgba(0,0,0,.5);border-radius:10px;padding:3px 8px;backdrop-filter:blur(4px);max-width:100%;}
+.rv-cmt-name{font-size:.55rem;font-weight:800;color:rgba(255,255,255,.75);}
+.rv-cmt-text{font-size:.63rem;color:#fff;line-height:1.3;word-break:break-word;}
+.rv-cmt-reply{font-size:.52rem;color:rgba(255,255,255,.5);cursor:pointer;padding-top:1px;}
+/* Comment input bar */
+.rv-cmt-input-bar{position:absolute;bottom:0;left:0;right:0;z-index:11;display:flex;align-items:center;gap:6px;padding:7px 12px;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);}
+.rv-cmt-inp{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:6px 12px;color:#fff;font-size:.75rem;outline:none;font-family:inherit;}
+.rv-cmt-send{background:#1B6B3A;border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .feed-action-label{font-size:.6rem;color:rgba(255,255,255,.8);font-weight:600;}
 .feed-shop-avatar{width:48px;height:48px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;overflow:hidden;}
 /* Bottom info */
@@ -2093,7 +2105,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.6.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2370,7 +2382,7 @@ function buildFeedPage(){
 
   // Empty state
   if(!hasLive&&reviews.length===0){
-    return el("div",{className:"feed-page"+((!user||(user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff"))?" feed-page-bnav":""),style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"16px",padding:"30px"}},
+    return el("div",{className:"feed-page"+((!user||!(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")||view!=="admin")?" feed-page-bnav":""),style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"16px",padding:"30px"}},
       el("div",{style:{fontSize:"4rem"}},"📺"),
       el("div",{style:{fontWeight:"800",fontSize:"1.1rem",color:"rgba(255,255,255,.9)",textAlign:"center"}},
         _lang==="lo"?"ຍັງບໍ່ມີໃຜ Live ຢູ່ຕອນນີ້":"No one is Live right now"
@@ -2592,6 +2604,8 @@ function buildFeedPage(){
     saCopy.appendChild(sbCopy);
     const slCopy=document.createElement("div"); slCopy.className="feed-action-label"; slCopy.textContent="ລິ້ງ";
     saCopy.appendChild(slCopy); sidebar.appendChild(saCopy);
+    // Comment button
+    sidebar.appendChild(buildCommentSidebarBtn(rv.id,"review",rv.uid,rv.userName||"Review",item,true));
     item.appendChild(sidebar);
 
     scroll.appendChild(item);
@@ -2599,6 +2613,167 @@ function buildFeedPage(){
 
   // render feed items (live first, then reviews interleaved)
   // ── Shop Post card builder ──────────────────────────────────────
+  // ── Comment system helpers (shared by review & post cards) ──────────
+
+  // Load comments from Firestore for a target
+  function loadComments(targetId, targetType, cb){
+    if(!db){cb([]);return;}
+    db.collection("comments").where("targetId","==",String(targetId)).where("targetType","==",targetType)
+      .orderBy("at","desc").limit(50).get()
+      .then(function(snap){cb(snap.docs.map(function(d){return d.data();}).reverse());})
+      .catch(function(){cb([]);});
+  }
+
+  // Save a comment to Firestore and push notification
+  function saveComment(cmt,targetOwnerUid,targetTitle){
+    if(!db)return;
+    db.collection("comments").doc(cmt.id).set(cmt).catch(function(){});
+    // Notify post/review owner (if not self)
+    if(targetOwnerUid&&targetOwnerUid!==cmt.uid){
+      pushNotif(targetOwnerUid,null,"comment","💬 ມີຄອມເມັນໃໝ່",(cmt.userName||"ລູກຄ້າ")+": "+cmt.text.slice(0,40),null);
+    }
+    // Notify reply target
+    if(cmt.replyToUid&&cmt.replyToUid!==cmt.uid){
+      pushNotif(cmt.replyToUid,null,"comment","↩️ ມີການຕອບກັບ",(cmt.userName||"ລູກຄ້າ")+" ຕອບ: "+cmt.text.slice(0,40),null);
+    }
+  }
+
+  // Build comment overlay for a feed item
+  function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item){
+    const cmtArea=document.createElement("div");
+    cmtArea.className="rv-cmts";
+    const inputBar=document.createElement("div");
+    inputBar.className="rv-cmt-input-bar";
+    inputBar.style.display="none";
+    let replyTo=null;
+    let replyToUid=null;
+    let cmtList=[];
+
+    function renderCmts(){
+      cmtArea.innerHTML="";
+      const show=cmtList.slice(-4); // show last 4
+      show.forEach(function(c){
+        const row=document.createElement("div");
+        row.className="rv-cmt-row";
+        const av=document.createElement("div");
+        av.style.cssText="width:18px;height:18px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:800;color:#fff;flex-shrink:0;";
+        av.textContent=(c.userName||"?")[0].toUpperCase();
+        const bub=document.createElement("div");
+        bub.className="rv-cmt-bubble";
+        bub.innerHTML='<span class="rv-cmt-name">'+escHtml(c.userName||"ລູກຄ້າ")+'</span> <span class="rv-cmt-text">'+escHtml(c.text)+'</span>';
+        if(c.replyToName){
+          const re=document.createElement("div");
+          re.className="rv-cmt-text";
+          re.style.cssText="font-size:.55rem;color:rgba(255,255,255,.5);";
+          re.textContent="↩ "+c.replyToName;
+          bub.prepend(re);
+        }
+        const repBtn=document.createElement("div");
+        repBtn.className="rv-cmt-reply";
+        repBtn.textContent="ຕອບກັບ";
+        repBtn.onclick=function(e){
+          e.stopPropagation();
+          replyTo=c.id;replyToUid=c.uid;
+          const inp=inputBar.querySelector(".rv-cmt-inp");
+          if(inp){inp.placeholder="ຕອບ "+c.userName+"...";inp.focus();}
+          inputBar.style.display="flex";
+        };
+        bub.appendChild(repBtn);
+        row.appendChild(av);row.appendChild(bub);
+        cmtArea.appendChild(row);
+      });
+      if(cmtList.length>4){
+        const more=document.createElement("div");
+        more.style.cssText="font-size:.58rem;color:rgba(255,255,255,.7);cursor:pointer;padding:2px 6px;background:rgba(0,0,0,.4);border-radius:8px;display:inline-block;pointer-events:auto;";
+        more.textContent="ເບິ່ງທັງໝົດ ("+cmtList.length+")";
+        more.onclick=function(e){e.stopPropagation();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);};
+        const mrow=document.createElement("div");mrow.className="rv-cmt-row";mrow.appendChild(more);
+        cmtArea.prepend(mrow);
+      }
+    }
+
+    // Load initial comments
+    loadComments(targetId,targetType,function(list){
+      cmtList=list;renderCmts();
+    });
+
+    // Input bar
+    const inp=document.createElement("input");
+    inp.className="rv-cmt-inp";
+    inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+    inp.onclick=function(e){e.stopPropagation();};
+    const sendBtn=document.createElement("button");
+    sendBtn.className="rv-cmt-send";
+    sendBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+    sendBtn.onclick=function(e){
+      e.stopPropagation();
+      const txt=(inp.value||"").trim();if(!txt)return;
+      const cmt={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(targetId),targetType:targetType,uid:user?String(user.id):"anon",userName:user?(user.name||user.username||"ລູກຄ້າ"):"ແຂກ",text:txt,replyTo:replyTo||null,replyToUid:replyToUid||null,replyToName:replyTo?(cmtList.find(function(c){return c.id===replyTo;})||{}).userName||null:null,at:Date.now()};
+      cmtList.push(cmt);
+      saveComment(cmt,targetOwnerUid,targetTitle);
+      inp.value="";replyTo=null;replyToUid=null;inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+      renderCmts();
+    };
+    inputBar.appendChild(inp);inputBar.appendChild(sendBtn);
+
+    item.appendChild(cmtArea);
+    item.appendChild(inputBar);
+    return {cmtArea,inputBar};
+  }
+
+  // Show all comments in a modal
+  function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle){
+    const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto",padding:"16px"}});
+    mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+    mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"💬 ຄອມເມັນທັງໝົດ ("+cmtList.length+")"));
+    const list=document.createElement("div");list.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;";
+    cmtList.slice().reverse().forEach(function(c){
+      const row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:flex-start;";
+      const av=document.createElement("div");av.style.cssText="width:28px;height:28px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#fff;flex-shrink:0;";
+      av.textContent=(c.userName||"?")[0].toUpperCase();
+      const bub=document.createElement("div");bub.style.cssText="flex:1;background:#F0F7F2;border-radius:10px;padding:7px 10px;";
+      if(c.replyToName)bub.innerHTML='<div style="font-size:.58rem;color:#6B8F75;margin-bottom:2px">↩ '+escHtml(c.replyToName)+'</div>';
+      bub.innerHTML+='<span style="font-size:.7rem;font-weight:800;color:#1A2B5F;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span><br><span style="font-size:.72rem;color:#333;">'+escHtml(c.text)+'</span>';
+      row.appendChild(av);row.appendChild(bub);list.appendChild(row);
+    });
+    mod.appendChild(list);
+    // Reply input inside modal
+    if(user){
+      const replyRow=document.createElement("div");replyRow.style.cssText="display:flex;gap:6px;align-items:center;border-top:1px solid #E8F5EE;padding-top:10px;";
+      const replyInp=document.createElement("input");replyInp.className="inp";replyInp.style.cssText="flex:1;margin-bottom:0;";replyInp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+      const replyBtn=el("button",{className:"btn btn-p",style:{padding:"7px 14px",fontSize:".74rem",width:"auto"}},_lang==="lo"?"ສົ່ງ":"Send");
+      replyBtn.onclick=function(){
+        const txt=(replyInp.value||"").trim();if(!txt)return;
+        const cmt={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(targetId),targetType:targetType,uid:String(user.id),userName:user.name||user.username||"ລູກຄ້າ",text:txt,replyTo:null,replyToUid:null,replyToName:null,at:Date.now()};
+        cmtList.unshift(cmt);
+        saveComment(cmt,targetOwnerUid,targetTitle);
+        replyInp.value="";
+        closeOv();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);
+      };
+      replyRow.appendChild(replyInp);replyRow.appendChild(replyBtn);
+      mod.appendChild(replyRow);
+    }
+    showOv(mod,null);
+  }
+
+  function escHtml(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+  function buildCommentSidebarBtn(targetId,targetType,targetOwnerUid,targetTitle,item,useSmall){
+    const saC=document.createElement("div");saC.className="feed-action";
+    const sbC=document.createElement("button");sbC.className=useSmall?"feed-action-btn-sm":"feed-action-btn";
+    sbC.textContent="💬";
+    const {inputBar}=buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item);
+    sbC.onclick=function(e){
+      e.stopPropagation();
+      inputBar.style.display=inputBar.style.display==="none"?"flex":"none";
+      if(inputBar.style.display==="flex"){const inp=inputBar.querySelector(".rv-cmt-inp");if(inp)inp.focus();}
+    };
+    saC.appendChild(sbC);
+    const slC=document.createElement("div");slC.className="feed-action-label";slC.textContent="ຄອມ";
+    saC.appendChild(slC);
+    return saC;
+  }
+
   function buildShopPostCard(post){
     const sh=shops.find(function(s){return s.id===post.shopId;})||{};
     const pp=post.pinnedProdId?prods.find(function(p){return p.id===post.pinnedProdId;}):null;
@@ -2737,6 +2912,10 @@ function buildFeedPage(){
     saLink.appendChild(sbLink);
     const slLink=document.createElement("div"); slLink.className="feed-action-label"; slLink.textContent="ລິ້ງ";
     saLink.appendChild(slLink); sidebar.appendChild(saLink);
+
+    // Comment button
+    const sh2=shops.find(function(s){return s.id===post.shopId;})||{};
+    sidebar.appendChild(buildCommentSidebarBtn(post.id,"post",post.shopId,sh2.name||"Post",item,true));
 
     item.appendChild(sidebar);
     scroll.appendChild(item);
@@ -3169,7 +3348,7 @@ function buildFeedPage(){
     scroll.appendChild(item);
   }); // end feedItems forEach
 
-  const page = el("div",{className:"feed-page"+((!user||(user.role!=="admin"&&user.role!=="shop"&&user.role!=="narrator"&&user.role!=="rider"&&user.role!=="staff"))?" feed-page-bnav":"")}, scroll);
+  const page = el("div",{className:"feed-page"+((!user||!(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")||view!=="admin")?" feed-page-bnav":"")}, scroll);
 
   // ── ໃຫ້ມີແຕ່ວິດີໂອທີ່ເຫັນຢູ່ໃນຈໍຫຼີ້ນ, ວິດີໂອອື່ນທີ່ເລື່ອນຜ່ານໄປ pause ອັດຕະໂນມັດ ──
   // ── ໃຊ້ໄດ້ກັບ video tag ເທົ່ານັ້ນ (ຣີວິວ/ໂພສຮ້ານ); ຫ້ອງ Live ໃຊ້ iframe ບໍ່ມີ video ຈິ່ງບໍ່ຖືກກະທົບ ──
@@ -4031,8 +4210,7 @@ function render(){
   // ── Hide/show top navbar on scroll — customer home page only ──
   setupNavScrollHide();
   // AI Chat — super admin only
-  if(user&&user.role==="admin") setTimeout(renderChatBubble, 50);
-  else { const old=document.getElementById("chat-widget"); if(old) old.remove(); }
+  const old=document.getElementById("chat-widget"); if(old) old.remove();
   const _bnav=buildBottomNav();
   const page=el("div",{className:"page"+(_bnav?" page-bnav":"")});
   if(view==="shop")page.appendChild(buildShop());
@@ -4075,7 +4253,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.6.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.1")
   );
 
   // Icon style helper
@@ -4182,12 +4360,56 @@ function buildNav(){
     );
   }
 
+  // ── Non-customer: ເມື່ອຢູ່ໜ້າ admin (view==="admin") ສະແດງແຕ່ logo + bell + lang ──
+  // ── ເມື່ອຢູ່ໜ້າຫຼັກ (view!=="admin") ສະແດງ navbar ເຕັມເໝືອນເດີມ ──
+  if(view==="admin"){
+    const homeBtn3=el("button",{className:"ibt",style:{padding:"2px"},onclick:function(){view="shop";render();}},
+      el("img",{src:_ICON_HOME,style:{width:"33px",height:"33px",objectFit:"contain",borderRadius:"8px"},alt:""})
+    );
+    return el("nav",{className:"nav",style:{justifyContent:"space-between"}},
+      textLogo,
+      el("div",{style:{display:"flex",gap:"5px",alignItems:"center"}},
+        homeBtn3,
+        translateIconBtn,
+        el("button",{className:"ibt",style:{position:"relative"},onclick:function(){showNotifModal();}},
+          "🔔",
+          el("span",{id:"notif-badge",style:{display:_notifUnread>0?"flex":"none",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},
+            _notifUnread>99?"99+":String(_notifUnread||""))
+        )
+      )
+    );
+  }
+
+  // ── Non-customer ຫຼັງ login ຢູ່ໜ້າຫຼັກ (view!="admin"): ສະແດງ logo + search bar ──
+  if(user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")){
+    const navSearchWrap2=el("div",{style:{flex:"1",position:"relative",display:"flex",alignItems:"center",maxWidth:"260px"}},
+      el("span",{style:{position:"absolute",left:"12px",fontSize:".85rem",color:"rgba(255,255,255,.7)",pointerEvents:"none"}},"🔍"),
+      (function(){
+        const inp=el("input",{
+          id:"nav-search-inp",type:"text",
+          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":"Search products or shops...",
+          value:fSearch,
+          style:{width:"100%",padding:"7px 12px 7px 32px",border:"1px solid rgba(255,255,255,.35)",borderRadius:"30px",fontSize:".78rem",color:"#fff",background:"rgba(255,255,255,.12)",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}
+        });
+        inp.oninput=function(e){
+          fSearch=e.target.value;fCat=0;
+          if(view!=="shop"){view="shop";}
+          clearTimeout(window._navSearchTimer);
+          window._navSearchTimer=setTimeout(()=>{render();const ni=document.getElementById("nav-search-inp");if(ni){ni.focus();ni.setSelectionRange(ni.value.length,ni.value.length);}},250);
+        };
+        return inp;
+      })()
+    );
+    return el("nav",{className:"nav",style:{justifyContent:"space-between"}},textLogo,navSearchWrap2);
+  }
+
   return el("nav",{className:"nav"},leftBtn,center,rightDiv);
 }
 
-// ── BOTTOM NAV (customer-only): Home, Feed, Profile, Cart ───────────
+// ── BOTTOM NAV: Home, Feed, Profile, Cart ───────────────────────────
 function buildBottomNav(){
-  if(user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"))return null;
+  // Shop/Admin/etc ที่อยู่ใน view="admin" (หน้าตั้งค่า/โปรไฟล์) ไม่แสดง bottom nav
+  if(user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")&&view==="admin")return null;
   function makeIconBtn2(iconSrc, onClick){
     return el("button",{
       style:{background:"none",border:"none",cursor:"pointer",padding:"2px",display:"flex",alignItems:"center",justifyContent:"center"},
@@ -4201,7 +4423,11 @@ function buildBottomNav(){
   const isProfileActive=view==="profile";
   const homeBtn2=makeIconBtn2(isHomeActive?_ICON_HOME:_ICON_HOME_INACTIVE, ()=>{view="shop";render();});
   const feedBtn2=makeIconBtn2(isFeedActive?_ICON_FEED:_ICON_FEED_INACTIVE, ()=>{view="feed";render();});
-  const goProfile2=()=>{ if(!user){showAuth();return;} view="profile";render();};
+  const goProfile2=()=>{
+    if(!user){showAuth();return;}
+    if(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"){view="admin";render();return;}
+    view="profile";render();
+  };
   const profileBtn2=el("button",{className:"ibt",style:{position:"relative",padding:"2px"},onclick:goProfile2},
     el("img",{src:isProfileActive?_ICON_PROFILE_ACTIVE:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTQiIGZpbGw9IndoaXRlIi8+CiAgPHBhdGggZD0iTTE4IDg4IEMxOCA2NSAyOCA1OCA1MCA1OCBDNzIgNTggODIgNjUgODIgODggWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",style:{width:isProfileActive?"42px":"33px",height:isProfileActive?"42px":"33px",objectFit:"contain",verticalAlign:"middle"}}),
     _notifUnread>0?el("span",{style:{display:"flex",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},_notifUnread>99?"99+":String(_notifUnread)):null
@@ -5534,6 +5760,70 @@ function showReviewDetail(itemType,itemData){
     infoBox.appendChild(prodCard);
   }
   mod.appendChild(infoBox);
+
+  // ── Comment section in modal ──
+  const ownerUid=isPost?itemData.shopId:(itemData.uid||null);
+  const title=isPost?(sh.name||"Post"):(itemData.userName||"Review");
+  const cmtSection=el("div",{style:{padding:"0 16px 14px",borderTop:"1px solid #E8F5EE",paddingTop:"12px"}});
+  cmtSection.appendChild(el("div",{style:{fontWeight:"800",fontSize:".78rem",color:"#1A2B5F",marginBottom:"8px"}},"💬 ຄອມເມັນ"));
+  const cmtListDiv=document.createElement("div");
+  cmtListDiv.style.cssText="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;";
+  cmtSection.appendChild(cmtListDiv);
+  const loadingDiv=el("div",{style:{fontSize:".68rem",color:"#aaa",padding:"6px 0"}},"ກຳລັງໂຫຼດ...");
+  cmtListDiv.appendChild(loadingDiv);
+
+  function renderModalCmts(cmtList){
+    cmtListDiv.innerHTML="";
+    if(cmtList.length===0){
+      cmtListDiv.appendChild(el("div",{style:{fontSize:".68rem",color:"#aaa"}},"ຍັງບໍ່ມີຄອມເມັນ"));
+      return;
+    }
+    const show=cmtList.slice(-4);
+    if(cmtList.length>4){
+      const more=el("button",{type:"button",style:{background:"none",border:"none",color:"#1B6B3A",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",padding:"0",marginBottom:"6px"}},
+        "ເບິ່ງທັງໝົດ ("+cmtList.length+")");
+      more.onclick=function(){showAllComments(cmtList,itemData.id,isPost?"post":"review",ownerUid,title);};
+      cmtListDiv.appendChild(more);
+    }
+    show.forEach(function(c){
+      const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;align-items:flex-start;";
+      const av=document.createElement("div");av.style.cssText="width:22px;height:22px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;color:#fff;flex-shrink:0;";
+      av.textContent=(c.userName||"?")[0].toUpperCase();
+      const bub=document.createElement("div");bub.style.cssText="flex:1;background:#F0F7F2;border-radius:8px;padding:5px 8px;";
+      bub.innerHTML='<span style="font-size:.65rem;font-weight:800;color:#1A2B5F;">'+c.userName+'</span><br><span style="font-size:.68rem;color:#333;">'+c.text+'</span>';
+      row.appendChild(av);row.appendChild(bub);
+      cmtListDiv.appendChild(row);
+    });
+  }
+
+  // load comments
+  if(db){
+    db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review")
+      .orderBy("at","desc").limit(50).get()
+      .then(function(snap){
+        const list=snap.docs.map(function(d){return d.data();}).reverse();
+        renderModalCmts(list);
+      }).catch(function(){cmtListDiv.innerHTML='<div style="font-size:.68rem;color:#aaa">ໂຫຼດຄອມເມັນບໍ່ສຳເລັດ</div>';});
+  } else { cmtListDiv.innerHTML=''; }
+
+  // Input
+  if(user){
+    const inputRow=el("div",{style:{display:"flex",gap:"6px",alignItems:"center"}});
+    const cinp=document.createElement("input");cinp.className="inp";cinp.style.cssText="flex:1;margin-bottom:0;font-size:.72rem;";
+    cinp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+    const csend=el("button",{className:"btn btn-p",style:{padding:"6px 12px",fontSize:".72rem",width:"auto"}},_lang==="lo"?"ສົ່ງ":"Send");
+    csend.onclick=function(){
+      const txt=(cinp.value||"").trim();if(!txt)return;
+      const nc={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(itemData.id),targetType:isPost?"post":"review",uid:String(user.id),userName:user.name||user.username||"ລູກຄ້າ",text:txt,replyTo:null,replyToUid:null,replyToName:null,at:Date.now()};
+      saveComment(nc,ownerUid,title);
+      cinp.value="";
+      // refresh
+      if(db)db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review").orderBy("at","desc").limit(50).get().then(function(snap){renderModalCmts(snap.docs.map(function(d){return d.data();}).reverse());}).catch(function(){});
+    };
+    inputRow.appendChild(cinp);inputRow.appendChild(csend);
+    cmtSection.appendChild(inputRow);
+  }
+  mod.appendChild(cmtSection);
 
   showOv(mod,null);
 }

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v375 -->
+<!-- LaoH Marketplace v379 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -141,7 +141,8 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 .feed-action-btn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;backdrop-filter:blur(4px);}
 .feed-action-btn-sm{width:37px;height:37px;border-radius:50%;background:rgba(0,0,0,.5);border:none;display:flex;align-items:center;justify-content:center;font-size:1.02rem;cursor:pointer;backdrop-filter:blur(4px);}
 /* Comments overlay */
-.rv-cmts{position:absolute;left:10px;right:60px;bottom:115px;display:flex;flex-direction:column;gap:4px;z-index:5;pointer-events:none;max-height:160px;overflow:hidden;}
+.rv-cmts{position:absolute;left:10px;right:60px;bottom:115px;display:flex;flex-direction:column;gap:4px;z-index:5;pointer-events:auto;max-height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none;}
+.rv-cmts::-webkit-scrollbar{display:none;}
 .rv-cmt-row{display:flex;align-items:flex-start;gap:5px;animation:fadeInUp .2s ease;pointer-events:auto;}
 .rv-cmt-bubble{background:rgba(0,0,0,.5);border-radius:10px;padding:3px 8px;backdrop-filter:blur(4px);max-width:100%;}
 .rv-cmt-name{font-size:.55rem;font-weight:800;color:rgba(255,255,255,.75);}
@@ -915,6 +916,10 @@ function startNotifListener(){
         } else if(newest){
           toast("🔔 "+newest.title);
         }
+      }
+      // ── ອັບເດດປ້າຍແຈ້ງເຕືອນອື່ນໆ (ໄອຄອນໂປຣໄຟລ໌ລູກຄ້າ, ແຖບແຈ້ງເຕືອນໃນໂປຣໄຟລ໌) ທີ່ບໍ່ມີ id="notif-badge" ໃຫ້ອັບເດດພ້ອມກັນ ──
+      if(_prevUnread!==_notifUnread&&typeof render==="function"){
+        try{render();}catch(e){}
       }
       _prevUnread=_notifUnread;
     },function(err){console.warn("notif listener err:",err);});
@@ -2123,7 +2128,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2400,16 +2405,19 @@ function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item
 
   function renderCmts(){
     cmtArea.innerHTML="";
-    const show=cmtList.slice(-4); // show last 4
+    const show=cmtList.slice().reverse(); // ໃໝ່ສຸດຢູ່ເທິງ, ເລື່ອນລົງເບິ່ງອັນເກົ່າກວ່າ
     show.forEach(function(c){
       const row=document.createElement("div");
       row.className="rv-cmt-row";
       const av=document.createElement("div");
-      av.style.cssText="width:18px;height:18px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:800;color:#fff;flex-shrink:0;";
+      av.style.cssText="width:18px;height:18px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:800;color:#fff;flex-shrink:0;cursor:pointer;";
       av.textContent=(c.userName||"?")[0].toUpperCase();
+      av.onclick=function(e){e.stopPropagation();goToCommenterProfile(c.uid);};
       const bub=document.createElement("div");
       bub.className="rv-cmt-bubble";
-      bub.innerHTML='<span class="rv-cmt-name">'+escHtml(c.userName||"ລູກຄ້າ")+'</span> <span class="rv-cmt-text">'+escHtml(c.text)+'</span>';
+      bub.innerHTML='<span class="rv-cmt-name" style="cursor:pointer;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span> <span class="rv-cmt-text">'+escHtml(c.text)+'</span>';
+      const nameEl=bub.querySelector(".rv-cmt-name");
+      if(nameEl)nameEl.onclick=function(e){e.stopPropagation();goToCommenterProfile(c.uid);};
       if(c.replyToName){
         const re=document.createElement("div");
         re.className="rv-cmt-text";
@@ -2433,11 +2441,11 @@ function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item
     });
     if(cmtList.length>4){
       const more=document.createElement("div");
-      more.style.cssText="font-size:.58rem;color:rgba(255,255,255,.7);cursor:pointer;padding:2px 6px;background:rgba(0,0,0,.4);border-radius:8px;display:inline-block;pointer-events:auto;";
-      more.textContent="ເບິ່ງທັງໝົດ ("+cmtList.length+")";
+      more.style.cssText="font-size:.58rem;color:rgba(255,255,255,.7);cursor:pointer;padding:2px 6px;background:rgba(0,0,0,.4);border-radius:8px;display:inline-block;pointer-events:auto;margin-top:2px;";
+      more.textContent="ເບິ່ງແບບເຕັມຈໍ ("+cmtList.length+")";
       more.onclick=function(e){e.stopPropagation();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);};
       const mrow=document.createElement("div");mrow.className="rv-cmt-row";mrow.appendChild(more);
-      cmtArea.prepend(mrow);
+      cmtArea.appendChild(mrow);
     }
   }
 
@@ -2478,11 +2486,14 @@ function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle)
   const list=document.createElement("div");list.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;";
   cmtList.slice().reverse().forEach(function(c){
     const row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:flex-start;";
-    const av=document.createElement("div");av.style.cssText="width:28px;height:28px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#fff;flex-shrink:0;";
+    const av=document.createElement("div");av.style.cssText="width:28px;height:28px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#fff;flex-shrink:0;cursor:pointer;";
     av.textContent=(c.userName||"?")[0].toUpperCase();
+    av.onclick=function(e){e.stopPropagation();goToCommenterProfile(c.uid);};
     const bub=document.createElement("div");bub.style.cssText="flex:1;background:#F0F7F2;border-radius:10px;padding:7px 10px;";
     if(c.replyToName)bub.innerHTML='<div style="font-size:.58rem;color:#6B8F75;margin-bottom:2px">↩ '+escHtml(c.replyToName)+'</div>';
-    bub.innerHTML+='<span style="font-size:.7rem;font-weight:800;color:#1A2B5F;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span><br><span style="font-size:.72rem;color:#333;">'+escHtml(c.text)+'</span>';
+    bub.innerHTML+='<span class="cmt-all-name" style="font-size:.7rem;font-weight:800;color:#1A2B5F;cursor:pointer;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span><br><span style="font-size:.72rem;color:#333;">'+escHtml(c.text)+'</span>';
+    const nameEl2=bub.querySelector(".cmt-all-name");
+    if(nameEl2)nameEl2.onclick=function(e){e.stopPropagation();goToCommenterProfile(c.uid);};
     row.appendChild(av);row.appendChild(bub);list.appendChild(row);
   });
   mod.appendChild(list);
@@ -2506,6 +2517,18 @@ function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle)
 }
 
 function escHtml(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ── ກົດຊື່/ຮູບຄົນຄອມເມັນ → ໄປໂປຣໄຟລ໌ຄົນນັ້ນ (ຫຼືຮ້ານຄ້າ ຖ້າຄົນຄອມເມັນເປັນບັນຊີຮ້ານຄ້າ) ──
+function goToCommenterProfile(uid){
+  if(!uid)return;
+  closeOv();
+  const shopMatch=shops.find(function(s){return String(s.id)===String(uid);});
+  if(shopMatch){
+    prevView=view;fShop=shopMatch.id;view="shopProfile";render();
+  } else {
+    prevView=view;window._fUserId=uid;view="userProfile";render();
+  }
+}
 
 function buildCommentSidebarBtn(targetId,targetType,targetOwnerUid,targetTitle,item,useSmall){
   const saC=document.createElement("div");saC.className="feed-action";
@@ -4278,7 +4301,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.9")
   );
 
   // Icon style helper
@@ -5875,6 +5898,9 @@ function showReviewDetail(itemType,itemData){
 
   // Comment (วางคอมเมนต์ทับวิดีโอมุมล่างซ้าย + ปุ่มเปิด/ปิดช่องพิมพ์ เหมือนกับ Feed ทุกอย่าง)
   rdSidebar.appendChild(buildCommentSidebarBtn(itemData.id,isPost?"post":"review",ownerUid,title,mediaBox,true));
+  // ปรับตำแหน่งคอมเมนต์ให้ลงมาใกล้ขอบล่างวิดีโอ เฉพาะ popup นี้เท่านั้น (mediaBox ไม่มีแถบข้อมูลด้านล่างซ้อนทับเหมือน Feed จึงมีช่องว่างเยอะเกินไปถ้าใช้ค่าเดิม)
+  const rdCmtsEl=mediaBox.querySelector(".rv-cmts");
+  if(rdCmtsEl)rdCmtsEl.style.bottom="50px";
 
   mediaBox.appendChild(rdSidebar);
   mod.appendChild(mediaBox);

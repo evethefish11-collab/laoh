@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v372 -->
+<!-- LaoH Marketplace v375 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -988,13 +988,21 @@ function showNotifModal(){
         closeOv();
         setTimeout(function(){
           if(n.type==="comment"&&n.targetId){
-            // ไปที่โพสต์/รีวิวที่มีคนคอมเมนต์
+            // ไปที่โพสต์/รีวิวที่มีคนคอมเมนต์ — สลับไปหน้าโปรไฟล์เจ้าของโพสต์/รีวิวก่อน ไม่ใช่ไป Feed/หน้าหลัก
             if(n.targetType==="post"){
               const pt=getShopPosts().find(function(p){return String(p.id)===String(n.targetId);});
-              if(pt){showReviewDetail("post",pt);return;}
+              if(pt&&pt.shopId){
+                prevView=view;fShop=pt.shopId;view="shopProfile";render();
+                setTimeout(function(){showReviewDetail("post",pt);},60);
+                return;
+              } else if(pt){showReviewDetail("post",pt);return;}
             } else {
               const rv=getReviews().find(function(r){return String(r.id)===String(n.targetId);});
-              if(rv){showReviewDetail("review",rv);return;}
+              if(rv&&rv.uid){
+                prevView=view;window._fUserId=rv.uid;view="userProfile";render();
+                setTimeout(function(){showReviewDetail("review",rv);},60);
+                return;
+              } else if(rv){showReviewDetail("review",rv);return;}
             }
             view="feed";render();
           } else if(n.type==="new_user"&&user&&user.role==="admin"){
@@ -2115,7 +2123,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4270,7 +4278,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.5")
   );
 
   // Icon style helper
@@ -4697,6 +4705,65 @@ function buildShopProfile(shopId){
             vmInfo.appendChild(pill);
           }
           itemEl.appendChild(vmInfo);
+
+          // ── Sidebar ขวามือ (แชร์/ลิงก์/คอมเมนต์ ทับวิดีโอ) เหมือนกับหน้า Feed/หน้าสินค้า ──
+          const isPostItem=shopVideoPosts.indexOf(vItem)>=0;
+          const rdOwnerUid=isPostItem?vItem.shopId:(vItem.uid||null);
+          const rdTitle=isPostItem?(sh.name||"Post"):(vItem.userName||"Review");
+          const rdSidebar2=document.createElement("div");
+          rdSidebar2.className="feed-sidebar-compact";
+          if(isPostItem){
+            const likeKey2="like_"+vItem.id;
+            let liked2=false;try{liked2=!!localStorage.getItem(likeKey2);}catch(e){}
+            const saLike2=document.createElement("div"); saLike2.className="feed-action";
+            const sbLike2=document.createElement("button"); sbLike2.className="feed-action-btn-sm";
+            sbLike2.textContent=liked2?"❤️":"🤍";
+            const slLikeCount2=document.createElement("div"); slLikeCount2.className="feed-action-label"; slLikeCount2.textContent=String(vItem.likes||0);
+            sbLike2.onclick=function(){
+              try{
+                if(liked2){localStorage.removeItem(likeKey2);vItem.likes=Math.max(0,(vItem.likes||0)-1);}
+                else{localStorage.setItem(likeKey2,"1");vItem.likes=(vItem.likes||0)+1;}
+                saveToCloud("shopPosts",vItem.id,vItem);liked2=!liked2;
+                sbLike2.textContent=liked2?"❤️":"🤍";
+                slLikeCount2.textContent=String(vItem.likes||0);
+              }catch(e){}
+            };
+            saLike2.appendChild(sbLike2);saLike2.appendChild(slLikeCount2);
+            rdSidebar2.appendChild(saLike2);
+          }
+          // Share
+          const rdShareA2=document.createElement("div"); rdShareA2.className="feed-action";
+          const rdShareBtn2=document.createElement("button"); rdShareBtn2.className="feed-action-btn-sm";
+          const rdShareSvg2=document.createElementNS("http://www.w3.org/2000/svg","svg");
+          rdShareSvg2.setAttribute("viewBox","0 0 24 24");rdShareSvg2.setAttribute("width",isPostItem?"22":"19");rdShareSvg2.setAttribute("height",isPostItem?"22":"19");
+          rdShareSvg2.setAttribute("fill","none");rdShareSvg2.setAttribute("stroke","#fff");rdShareSvg2.setAttribute("stroke-width","2.2");
+          rdShareSvg2.setAttribute("stroke-linecap","round");rdShareSvg2.setAttribute("stroke-linejoin","round");
+          rdShareSvg2.innerHTML='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>';
+          rdShareBtn2.appendChild(rdShareSvg2);
+          rdShareBtn2.onclick=function(){
+            const shareUrl2=location.origin+location.pathname+(isPostItem?"?post=":"?rv=")+vItem.id;
+            if(navigator.share){navigator.share({title:rdTitle+(isPostItem?" Post":" ຮີວິວ"),text:vItem.caption||"",url:shareUrl2}).catch(function(){});}
+            else{try{navigator.clipboard.writeText(shareUrl2);}catch(e){}toast(isPostItem?"📋 ຄັດລອກລິ້ງໂພສ ✓":"📋 ຄັດລອກລິ້ງຮີວິວ ✓");}
+          };
+          rdShareA2.appendChild(rdShareBtn2);
+          const rdShareL2=document.createElement("div"); rdShareL2.className="feed-action-label"; rdShareL2.textContent="ສົ່ງຕໍ່";
+          rdShareA2.appendChild(rdShareL2); rdSidebar2.appendChild(rdShareA2);
+          // Copy link
+          const rdLinkA2=document.createElement("div"); rdLinkA2.className="feed-action";
+          const rdLinkBtn2=document.createElement("button"); rdLinkBtn2.className="feed-action-btn-sm";
+          rdLinkBtn2.textContent="🔗";
+          rdLinkBtn2.onclick=function(){
+            const linkUrl2=location.origin+location.pathname+(isPostItem?"?post=":"?rv=")+vItem.id;
+            if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(linkUrl2).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+            else{try{const ta2=document.createElement("textarea");ta2.value=linkUrl2;ta2.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta2);ta2.select();document.execCommand("copy");document.body.removeChild(ta2);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+          };
+          rdLinkA2.appendChild(rdLinkBtn2);
+          const rdLinkL2=document.createElement("div"); rdLinkL2.className="feed-action-label"; rdLinkL2.textContent="ລິ້ງ";
+          rdLinkA2.appendChild(rdLinkL2); rdSidebar2.appendChild(rdLinkA2);
+          // Comment (วางคอมเมนต์ทับวิดีโอมุมล่างซ้าย เหมือนหน้าหลัก)
+          rdSidebar2.appendChild(buildCommentSidebarBtn(vItem.id,isPostItem?"post":"review",rdOwnerUid,rdTitle,itemEl,true));
+          itemEl.appendChild(rdSidebar2);
+
           scrollWrap.appendChild(itemEl);
         });
         vm.appendChild(scrollWrap);
@@ -5117,7 +5184,7 @@ function buildUserProfile(uid){
       const promo=p?PM[p.id]:null;
       const price=p?(promo?promo.price:p.price):null;
       const card=el("div",{style:{background:"#fff",borderRadius:"14px",overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.07)",cursor:"pointer"},
-        onclick:function(){if(p)showProduct(p);}
+        onclick:function(){showReviewDetail("review",rv);}
       });
       // Media
       const imgBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",background:"#E8F5EE",position:"relative"}});

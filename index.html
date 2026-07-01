@@ -5729,11 +5729,13 @@ function showReviewDetail(itemType,itemData){
   const userName=isPost?(sh.name||"ຮ້ານຄ້າ"):(itemData.userName||"ລູກຄ້າ");
   const caption=isPost?(itemData.caption||itemData.text||""):(itemData.caption||"");
   const stars=isPost?null:(itemData.stars||5);
+  const ownerUid=isPost?itemData.shopId:(itemData.uid||null);
+  const title=isPost?(sh.name||"Post"):(itemData.userName||"Review");
 
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",overflow:"hidden",maxWidth:"420px"}});
   mod.appendChild(el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"));
 
-  // ── Media (รูป/วิดีโอ) ──
+  // ── Media (รูป/วิดีโอ) — เป็น "item" แบบเดียวกับ feed เพื่อวางคอมเมนต์/ปุ่มทับวิดีโอ ──
   const mediaBox=el("div",{style:{width:"100%",aspectRatio:"3/4",background:"#000",position:"relative",overflow:"hidden"}});
   if(mediaUrl){
     if(mediaType==="video"){
@@ -5747,6 +5749,67 @@ function showReviewDetail(itemType,itemData){
   } else {
     mediaBox.appendChild(el("div",{style:{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",color:"#666"}},"📸"));
   }
+
+  // ── Sidebar ขวามือของวิดีโอ (ไลก์/แชร์/ลิงก์/คอมเมนต์) เหมือนกับใน Feed ──
+  const rdSidebar=document.createElement("div");
+  rdSidebar.className="feed-sidebar-compact";
+
+  if(isPost){
+    // Like (เฉพาะโพสต์ร้าน เหมือนใน feed)
+    const likeKey="like_"+itemData.id;
+    let liked=false;try{liked=!!localStorage.getItem(likeKey);}catch(e){}
+    const saLike=document.createElement("div"); saLike.className="feed-action";
+    const sbLike=document.createElement("button"); sbLike.className="feed-action-btn-sm";
+    sbLike.textContent=liked?"❤️":"🤍";
+    const slLikeCount=document.createElement("div"); slLikeCount.className="feed-action-label"; slLikeCount.textContent=String(itemData.likes||0);
+    sbLike.onclick=function(){
+      try{
+        if(liked){localStorage.removeItem(likeKey);itemData.likes=Math.max(0,(itemData.likes||0)-1);}
+        else{localStorage.setItem(likeKey,"1");itemData.likes=(itemData.likes||0)+1;}
+        saveToCloud("shopPosts",itemData.id,itemData);liked=!liked;
+        sbLike.textContent=liked?"❤️":"🤍";
+        slLikeCount.textContent=String(itemData.likes||0);
+      }catch(e){}
+    };
+    saLike.appendChild(sbLike);saLike.appendChild(slLikeCount);
+    rdSidebar.appendChild(saLike);
+  }
+
+  // Share
+  const rdShareA=document.createElement("div"); rdShareA.className="feed-action";
+  const rdShareBtn=document.createElement("button"); rdShareBtn.className="feed-action-btn-sm";
+  const rdShareSvg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  rdShareSvg.setAttribute("viewBox","0 0 24 24");rdShareSvg.setAttribute("width",isPost?"22":"19");rdShareSvg.setAttribute("height",isPost?"22":"19");
+  rdShareSvg.setAttribute("fill","none");rdShareSvg.setAttribute("stroke","#fff");rdShareSvg.setAttribute("stroke-width","2.2");
+  rdShareSvg.setAttribute("stroke-linecap","round");rdShareSvg.setAttribute("stroke-linejoin","round");
+  rdShareSvg.innerHTML='<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>';
+  rdShareBtn.appendChild(rdShareSvg);
+  rdShareBtn.onclick=function(){
+    const shareUrl=location.origin+location.pathname+(isPost?"?post=":"?rv=")+itemData.id;
+    if(navigator.share){navigator.share({title:title+(isPost?" Post":" ຮີວິວ"),text:caption||"",url:shareUrl}).catch(function(){});}
+    else{try{navigator.clipboard.writeText(shareUrl);}catch(e){}toast(isPost?"📋 ຄັດລອກລິ້ງໂພສ ✓":"📋 ຄັດລອກລິ້ງຮີວິວ ✓");}
+  };
+  rdShareA.appendChild(rdShareBtn);
+  const rdShareL=document.createElement("div"); rdShareL.className="feed-action-label"; rdShareL.textContent="ສົ່ງຕໍ່";
+  rdShareA.appendChild(rdShareL); rdSidebar.appendChild(rdShareA);
+
+  // Copy link
+  const rdLinkA=document.createElement("div"); rdLinkA.className="feed-action";
+  const rdLinkBtn=document.createElement("button"); rdLinkBtn.className="feed-action-btn-sm";
+  rdLinkBtn.textContent="🔗";
+  rdLinkBtn.onclick=function(){
+    const linkUrl=location.origin+location.pathname+(isPost?"?post=":"?rv=")+itemData.id;
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(linkUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+    else{try{const ta=document.createElement("textarea");ta.value=linkUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+  };
+  rdLinkA.appendChild(rdLinkBtn);
+  const rdLinkL=document.createElement("div"); rdLinkL.className="feed-action-label"; rdLinkL.textContent="ລິ້ງ";
+  rdLinkA.appendChild(rdLinkL); rdSidebar.appendChild(rdLinkA);
+
+  // Comment (วางคอมเมนต์ทับวิดีโอมุมล่างซ้าย + ปุ่มเปิด/ปิดช่องพิมพ์ เหมือนกับ Feed ทุกอย่าง)
+  rdSidebar.appendChild(buildCommentSidebarBtn(itemData.id,isPost?"post":"review",ownerUid,title,mediaBox,true));
+
+  mediaBox.appendChild(rdSidebar);
   mod.appendChild(mediaBox);
 
   // ── Info section ──
@@ -5777,71 +5840,6 @@ function showReviewDetail(itemType,itemData){
     infoBox.appendChild(prodCard);
   }
   mod.appendChild(infoBox);
-
-  // ── Comment section in modal ──
-  const ownerUid=isPost?itemData.shopId:(itemData.uid||null);
-  const title=isPost?(sh.name||"Post"):(itemData.userName||"Review");
-  const cmtSection=el("div",{style:{padding:"0 16px 14px",borderTop:"1px solid #E8F5EE",paddingTop:"12px"}});
-  cmtSection.appendChild(el("div",{style:{fontWeight:"800",fontSize:".78rem",color:"#1A2B5F",marginBottom:"8px"}},"💬 ຄອມເມັນ"));
-  const cmtListDiv=document.createElement("div");
-  cmtListDiv.style.cssText="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;";
-  cmtSection.appendChild(cmtListDiv);
-  const loadingDiv=el("div",{style:{fontSize:".68rem",color:"#aaa",padding:"6px 0"}},"ກຳລັງໂຫຼດ...");
-  cmtListDiv.appendChild(loadingDiv);
-
-  function renderModalCmts(cmtList){
-    cmtListDiv.innerHTML="";
-    if(cmtList.length===0){
-      cmtListDiv.appendChild(el("div",{style:{fontSize:".68rem",color:"#aaa"}},"ຍັງບໍ່ມີຄອມເມັນ"));
-      return;
-    }
-    const show=cmtList.slice(-4);
-    if(cmtList.length>4){
-      const more=el("button",{type:"button",style:{background:"none",border:"none",color:"#1B6B3A",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",padding:"0",marginBottom:"6px"}},
-        "ເບິ່ງທັງໝົດ ("+cmtList.length+")");
-      more.onclick=function(){showAllComments(cmtList,itemData.id,isPost?"post":"review",ownerUid,title);};
-      cmtListDiv.appendChild(more);
-    }
-    show.forEach(function(c){
-      const row=document.createElement("div");row.style.cssText="display:flex;gap:6px;align-items:flex-start;";
-      const av=document.createElement("div");av.style.cssText="width:22px;height:22px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;color:#fff;flex-shrink:0;";
-      av.textContent=(c.userName||"?")[0].toUpperCase();
-      const bub=document.createElement("div");bub.style.cssText="flex:1;background:#F0F7F2;border-radius:8px;padding:5px 8px;";
-      bub.innerHTML='<span style="font-size:.65rem;font-weight:800;color:#1A2B5F;">'+c.userName+'</span><br><span style="font-size:.68rem;color:#333;">'+c.text+'</span>';
-      row.appendChild(av);row.appendChild(bub);
-      cmtListDiv.appendChild(row);
-    });
-  }
-
-  // load comments
-  if(db){
-    db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review")
-      .limit(50).get()
-      .then(function(snap){
-        const list=snap.docs.map(function(d){return d.data();});
-        list.sort(function(a,b){return (a.at||0)-(b.at||0);});
-        renderModalCmts(list);
-      }).catch(function(){cmtListDiv.innerHTML='<div style="font-size:.68rem;color:#aaa">ໂຫຼດຄອມເມັນບໍ່ສຳເລັດ</div>';});
-  } else { cmtListDiv.innerHTML=''; }
-
-  // Input
-  if(user){
-    const inputRow=el("div",{style:{display:"flex",gap:"6px",alignItems:"center"}});
-    const cinp=document.createElement("input");cinp.className="inp";cinp.style.cssText="flex:1;margin-bottom:0;font-size:.72rem;";
-    cinp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
-    const csend=el("button",{className:"btn btn-p",style:{padding:"6px 12px",fontSize:".72rem",width:"auto"}},_lang==="lo"?"ສົ່ງ":"Send");
-    csend.onclick=function(){
-      const txt=(cinp.value||"").trim();if(!txt)return;
-      const nc={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(itemData.id),targetType:isPost?"post":"review",uid:String(user.id),userName:user.name||user.username||"ລູກຄ້າ",text:txt,replyTo:null,replyToUid:null,replyToName:null,at:Date.now()};
-      saveComment(nc,ownerUid,title);
-      cinp.value="";
-      // refresh
-      if(db)db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review").limit(50).get().then(function(snap){const l=snap.docs.map(function(d){return d.data();});l.sort(function(a,b){return (a.at||0)-(b.at||0);});renderModalCmts(l);}).catch(function(){});
-    };
-    inputRow.appendChild(cinp);inputRow.appendChild(csend);
-    cmtSection.appendChild(inputRow);
-  }
-  mod.appendChild(cmtSection);
 
   showOv(mod,null);
 }

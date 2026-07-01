@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v371 -->
+<!-- LaoH Marketplace v372 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -987,7 +987,17 @@ function showNotifModal(){
         if(!n.read){markNotifRead(n.id);}
         closeOv();
         setTimeout(function(){
-          if(n.type==="new_user"&&user&&user.role==="admin"){
+          if(n.type==="comment"&&n.targetId){
+            // ไปที่โพสต์/รีวิวที่มีคนคอมเมนต์
+            if(n.targetType==="post"){
+              const pt=getShopPosts().find(function(p){return String(p.id)===String(n.targetId);});
+              if(pt){showReviewDetail("post",pt);return;}
+            } else {
+              const rv=getReviews().find(function(r){return String(r.id)===String(n.targetId);});
+              if(rv){showReviewDetail("review",rv);return;}
+            }
+            view="feed";render();
+          } else if(n.type==="new_user"&&user&&user.role==="admin"){
             // ── ໄປໜ້າ Members (superAdminTabMap[5]=4) ──
             view="admin";aTab=5;render();
           } else if(n.orderId){
@@ -2105,7 +2115,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.7.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2336,6 +2346,174 @@ function renderChatBubble(){
 
 // ── LIVE FEED ──────────────────────────────────────────────────────
 let _feedMuted = true;
+
+
+// ── Comment system helpers (shared by review & post cards) ──────────
+
+// Load comments from Firestore for a target
+function loadComments(targetId, targetType, cb){
+  if(!db){cb([]);return;}
+  db.collection("comments").where("targetId","==",String(targetId)).where("targetType","==",targetType)
+    .limit(50).get()
+    .then(function(snap){
+      const list=snap.docs.map(function(d){return d.data();});
+      list.sort(function(a,b){return (a.at||0)-(b.at||0);});
+      cb(list);
+    })
+    .catch(function(){cb([]);});
+}
+
+// Save a comment to Firestore and push notification
+function saveComment(cmt,targetOwnerUid,targetTitle){
+  if(!db)return;
+  db.collection("comments").doc(cmt.id).set(cmt).catch(function(){});
+  // Notify post/review owner (if not self)
+  if(targetOwnerUid&&targetOwnerUid!==cmt.uid){
+    const n={id:Date.now()+"n1",toUid:String(targetOwnerUid),toRole:null,type:"comment",title:"💬 ມີຄອມເມັນໃໝ່",body:(cmt.userName||"ລູກຄ້າ")+": "+cmt.text.slice(0,40),orderId:null,targetId:String(cmt.targetId),targetType:cmt.targetType,at:new Date().toISOString(),read:false};
+    try{db.collection("notifications").doc(n.id).set(n);}catch(e){}
+  }
+  // Notify reply target
+  if(cmt.replyToUid&&cmt.replyToUid!==cmt.uid){
+    const n2={id:Date.now()+"n2",toUid:String(cmt.replyToUid),toRole:null,type:"comment",title:"↩️ ມີການຕອບກັບ",body:(cmt.userName||"ລູກຄ້າ")+" ຕອບ: "+cmt.text.slice(0,40),orderId:null,targetId:String(cmt.targetId),targetType:cmt.targetType,at:new Date().toISOString(),read:false};
+    try{db.collection("notifications").doc(n2.id).set(n2);}catch(e){}
+  }
+}
+
+// Build comment overlay for a feed item
+function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item){
+  const cmtArea=document.createElement("div");
+  cmtArea.className="rv-cmts";
+  const inputBar=document.createElement("div");
+  inputBar.className="rv-cmt-input-bar";
+  inputBar.style.display="none";
+  let replyTo=null;
+  let replyToUid=null;
+  let cmtList=[];
+
+  function renderCmts(){
+    cmtArea.innerHTML="";
+    const show=cmtList.slice(-4); // show last 4
+    show.forEach(function(c){
+      const row=document.createElement("div");
+      row.className="rv-cmt-row";
+      const av=document.createElement("div");
+      av.style.cssText="width:18px;height:18px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:800;color:#fff;flex-shrink:0;";
+      av.textContent=(c.userName||"?")[0].toUpperCase();
+      const bub=document.createElement("div");
+      bub.className="rv-cmt-bubble";
+      bub.innerHTML='<span class="rv-cmt-name">'+escHtml(c.userName||"ລູກຄ້າ")+'</span> <span class="rv-cmt-text">'+escHtml(c.text)+'</span>';
+      if(c.replyToName){
+        const re=document.createElement("div");
+        re.className="rv-cmt-text";
+        re.style.cssText="font-size:.55rem;color:rgba(255,255,255,.5);";
+        re.textContent="↩ "+c.replyToName;
+        bub.prepend(re);
+      }
+      const repBtn=document.createElement("div");
+      repBtn.className="rv-cmt-reply";
+      repBtn.textContent="ຕອບກັບ";
+      repBtn.onclick=function(e){
+        e.stopPropagation();
+        replyTo=c.id;replyToUid=c.uid;
+        const inp=inputBar.querySelector(".rv-cmt-inp");
+        if(inp){inp.placeholder="ຕອບ "+c.userName+"...";inp.focus();}
+        inputBar.style.display="flex";
+      };
+      bub.appendChild(repBtn);
+      row.appendChild(av);row.appendChild(bub);
+      cmtArea.appendChild(row);
+    });
+    if(cmtList.length>4){
+      const more=document.createElement("div");
+      more.style.cssText="font-size:.58rem;color:rgba(255,255,255,.7);cursor:pointer;padding:2px 6px;background:rgba(0,0,0,.4);border-radius:8px;display:inline-block;pointer-events:auto;";
+      more.textContent="ເບິ່ງທັງໝົດ ("+cmtList.length+")";
+      more.onclick=function(e){e.stopPropagation();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);};
+      const mrow=document.createElement("div");mrow.className="rv-cmt-row";mrow.appendChild(more);
+      cmtArea.prepend(mrow);
+    }
+  }
+
+  // Load initial comments
+  loadComments(targetId,targetType,function(list){
+    cmtList=list;renderCmts();
+  });
+
+  // Input bar
+  const inp=document.createElement("input");
+  inp.className="rv-cmt-inp";
+  inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+  inp.onclick=function(e){e.stopPropagation();};
+  const sendBtn=document.createElement("button");
+  sendBtn.className="rv-cmt-send";
+  sendBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+  sendBtn.onclick=function(e){
+    e.stopPropagation();
+    const txt=(inp.value||"").trim();if(!txt)return;
+    const cmt={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(targetId),targetType:targetType,uid:user?String(user.id):"anon",userName:user?(user.name||user.username||"ລູກຄ້າ"):"ແຂກ",text:txt,replyTo:replyTo||null,replyToUid:replyToUid||null,replyToName:replyTo?(cmtList.find(function(c){return c.id===replyTo;})||{}).userName||null:null,at:Date.now()};
+    cmtList.push(cmt);
+    saveComment(cmt,targetOwnerUid,targetTitle);
+    inp.value="";replyTo=null;replyToUid=null;inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+    renderCmts();
+  };
+  inputBar.appendChild(inp);inputBar.appendChild(sendBtn);
+
+  item.appendChild(cmtArea);
+  item.appendChild(inputBar);
+  return {cmtArea,inputBar};
+}
+
+// Show all comments in a modal
+function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle){
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto",padding:"16px"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"💬 ຄອມເມັນທັງໝົດ ("+cmtList.length+")"));
+  const list=document.createElement("div");list.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;";
+  cmtList.slice().reverse().forEach(function(c){
+    const row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:flex-start;";
+    const av=document.createElement("div");av.style.cssText="width:28px;height:28px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#fff;flex-shrink:0;";
+    av.textContent=(c.userName||"?")[0].toUpperCase();
+    const bub=document.createElement("div");bub.style.cssText="flex:1;background:#F0F7F2;border-radius:10px;padding:7px 10px;";
+    if(c.replyToName)bub.innerHTML='<div style="font-size:.58rem;color:#6B8F75;margin-bottom:2px">↩ '+escHtml(c.replyToName)+'</div>';
+    bub.innerHTML+='<span style="font-size:.7rem;font-weight:800;color:#1A2B5F;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span><br><span style="font-size:.72rem;color:#333;">'+escHtml(c.text)+'</span>';
+    row.appendChild(av);row.appendChild(bub);list.appendChild(row);
+  });
+  mod.appendChild(list);
+  // Reply input inside modal
+  if(user){
+    const replyRow=document.createElement("div");replyRow.style.cssText="display:flex;gap:6px;align-items:center;border-top:1px solid #E8F5EE;padding-top:10px;";
+    const replyInp=document.createElement("input");replyInp.className="inp";replyInp.style.cssText="flex:1;margin-bottom:0;";replyInp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
+    const replyBtn=el("button",{className:"btn btn-p",style:{padding:"7px 14px",fontSize:".74rem",width:"auto"}},_lang==="lo"?"ສົ່ງ":"Send");
+    replyBtn.onclick=function(){
+      const txt=(replyInp.value||"").trim();if(!txt)return;
+      const cmt={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(targetId),targetType:targetType,uid:String(user.id),userName:user.name||user.username||"ລູກຄ້າ",text:txt,replyTo:null,replyToUid:null,replyToName:null,at:Date.now()};
+      cmtList.unshift(cmt);
+      saveComment(cmt,targetOwnerUid,targetTitle);
+      replyInp.value="";
+      closeOv();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);
+    };
+    replyRow.appendChild(replyInp);replyRow.appendChild(replyBtn);
+    mod.appendChild(replyRow);
+  }
+  showOv(mod,null);
+}
+
+function escHtml(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function buildCommentSidebarBtn(targetId,targetType,targetOwnerUid,targetTitle,item,useSmall){
+  const saC=document.createElement("div");saC.className="feed-action";
+  const sbC=document.createElement("button");sbC.className=useSmall?"feed-action-btn-sm":"feed-action-btn";
+  sbC.textContent="💬";
+  const {inputBar}=buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item);
+  sbC.onclick=function(e){
+    e.stopPropagation();
+    inputBar.style.display=inputBar.style.display==="none"?"flex":"none";
+    if(inputBar.style.display==="flex"){const inp=inputBar.querySelector(".rv-cmt-inp");if(inp)inp.focus();}
+  };
+  saC.appendChild(sbC);
+  const slC=document.createElement("div");slC.className="feed-action-label";slC.textContent="ຄອມ";
+  saC.appendChild(slC);
+  return saC;
+}
 
 function buildFeedPage(){
   // Sort: active (has fbUrl) first
@@ -2613,167 +2791,6 @@ function buildFeedPage(){
 
   // render feed items (live first, then reviews interleaved)
   // ── Shop Post card builder ──────────────────────────────────────
-  // ── Comment system helpers (shared by review & post cards) ──────────
-
-  // Load comments from Firestore for a target
-  function loadComments(targetId, targetType, cb){
-    if(!db){cb([]);return;}
-    db.collection("comments").where("targetId","==",String(targetId)).where("targetType","==",targetType)
-      .orderBy("at","desc").limit(50).get()
-      .then(function(snap){cb(snap.docs.map(function(d){return d.data();}).reverse());})
-      .catch(function(){cb([]);});
-  }
-
-  // Save a comment to Firestore and push notification
-  function saveComment(cmt,targetOwnerUid,targetTitle){
-    if(!db)return;
-    db.collection("comments").doc(cmt.id).set(cmt).catch(function(){});
-    // Notify post/review owner (if not self)
-    if(targetOwnerUid&&targetOwnerUid!==cmt.uid){
-      pushNotif(targetOwnerUid,null,"comment","💬 ມີຄອມເມັນໃໝ່",(cmt.userName||"ລູກຄ້າ")+": "+cmt.text.slice(0,40),null);
-    }
-    // Notify reply target
-    if(cmt.replyToUid&&cmt.replyToUid!==cmt.uid){
-      pushNotif(cmt.replyToUid,null,"comment","↩️ ມີການຕອບກັບ",(cmt.userName||"ລູກຄ້າ")+" ຕອບ: "+cmt.text.slice(0,40),null);
-    }
-  }
-
-  // Build comment overlay for a feed item
-  function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item){
-    const cmtArea=document.createElement("div");
-    cmtArea.className="rv-cmts";
-    const inputBar=document.createElement("div");
-    inputBar.className="rv-cmt-input-bar";
-    inputBar.style.display="none";
-    let replyTo=null;
-    let replyToUid=null;
-    let cmtList=[];
-
-    function renderCmts(){
-      cmtArea.innerHTML="";
-      const show=cmtList.slice(-4); // show last 4
-      show.forEach(function(c){
-        const row=document.createElement("div");
-        row.className="rv-cmt-row";
-        const av=document.createElement("div");
-        av.style.cssText="width:18px;height:18px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.5rem;font-weight:800;color:#fff;flex-shrink:0;";
-        av.textContent=(c.userName||"?")[0].toUpperCase();
-        const bub=document.createElement("div");
-        bub.className="rv-cmt-bubble";
-        bub.innerHTML='<span class="rv-cmt-name">'+escHtml(c.userName||"ລູກຄ້າ")+'</span> <span class="rv-cmt-text">'+escHtml(c.text)+'</span>';
-        if(c.replyToName){
-          const re=document.createElement("div");
-          re.className="rv-cmt-text";
-          re.style.cssText="font-size:.55rem;color:rgba(255,255,255,.5);";
-          re.textContent="↩ "+c.replyToName;
-          bub.prepend(re);
-        }
-        const repBtn=document.createElement("div");
-        repBtn.className="rv-cmt-reply";
-        repBtn.textContent="ຕອບກັບ";
-        repBtn.onclick=function(e){
-          e.stopPropagation();
-          replyTo=c.id;replyToUid=c.uid;
-          const inp=inputBar.querySelector(".rv-cmt-inp");
-          if(inp){inp.placeholder="ຕອບ "+c.userName+"...";inp.focus();}
-          inputBar.style.display="flex";
-        };
-        bub.appendChild(repBtn);
-        row.appendChild(av);row.appendChild(bub);
-        cmtArea.appendChild(row);
-      });
-      if(cmtList.length>4){
-        const more=document.createElement("div");
-        more.style.cssText="font-size:.58rem;color:rgba(255,255,255,.7);cursor:pointer;padding:2px 6px;background:rgba(0,0,0,.4);border-radius:8px;display:inline-block;pointer-events:auto;";
-        more.textContent="ເບິ່ງທັງໝົດ ("+cmtList.length+")";
-        more.onclick=function(e){e.stopPropagation();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);};
-        const mrow=document.createElement("div");mrow.className="rv-cmt-row";mrow.appendChild(more);
-        cmtArea.prepend(mrow);
-      }
-    }
-
-    // Load initial comments
-    loadComments(targetId,targetType,function(list){
-      cmtList=list;renderCmts();
-    });
-
-    // Input bar
-    const inp=document.createElement("input");
-    inp.className="rv-cmt-inp";
-    inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
-    inp.onclick=function(e){e.stopPropagation();};
-    const sendBtn=document.createElement("button");
-    sendBtn.className="rv-cmt-send";
-    sendBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
-    sendBtn.onclick=function(e){
-      e.stopPropagation();
-      const txt=(inp.value||"").trim();if(!txt)return;
-      const cmt={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(targetId),targetType:targetType,uid:user?String(user.id):"anon",userName:user?(user.name||user.username||"ລູກຄ້າ"):"ແຂກ",text:txt,replyTo:replyTo||null,replyToUid:replyToUid||null,replyToName:replyTo?(cmtList.find(function(c){return c.id===replyTo;})||{}).userName||null:null,at:Date.now()};
-      cmtList.push(cmt);
-      saveComment(cmt,targetOwnerUid,targetTitle);
-      inp.value="";replyTo=null;replyToUid=null;inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
-      renderCmts();
-    };
-    inputBar.appendChild(inp);inputBar.appendChild(sendBtn);
-
-    item.appendChild(cmtArea);
-    item.appendChild(inputBar);
-    return {cmtArea,inputBar};
-  }
-
-  // Show all comments in a modal
-  function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle){
-    const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto",padding:"16px"}});
-    mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-    mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"💬 ຄອມເມັນທັງໝົດ ("+cmtList.length+")"));
-    const list=document.createElement("div");list.style.cssText="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;";
-    cmtList.slice().reverse().forEach(function(c){
-      const row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:flex-start;";
-      const av=document.createElement("div");av.style.cssText="width:28px;height:28px;border-radius:50%;background:#1B6B3A;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#fff;flex-shrink:0;";
-      av.textContent=(c.userName||"?")[0].toUpperCase();
-      const bub=document.createElement("div");bub.style.cssText="flex:1;background:#F0F7F2;border-radius:10px;padding:7px 10px;";
-      if(c.replyToName)bub.innerHTML='<div style="font-size:.58rem;color:#6B8F75;margin-bottom:2px">↩ '+escHtml(c.replyToName)+'</div>';
-      bub.innerHTML+='<span style="font-size:.7rem;font-weight:800;color:#1A2B5F;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span><br><span style="font-size:.72rem;color:#333;">'+escHtml(c.text)+'</span>';
-      row.appendChild(av);row.appendChild(bub);list.appendChild(row);
-    });
-    mod.appendChild(list);
-    // Reply input inside modal
-    if(user){
-      const replyRow=document.createElement("div");replyRow.style.cssText="display:flex;gap:6px;align-items:center;border-top:1px solid #E8F5EE;padding-top:10px;";
-      const replyInp=document.createElement("input");replyInp.className="inp";replyInp.style.cssText="flex:1;margin-bottom:0;";replyInp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
-      const replyBtn=el("button",{className:"btn btn-p",style:{padding:"7px 14px",fontSize:".74rem",width:"auto"}},_lang==="lo"?"ສົ່ງ":"Send");
-      replyBtn.onclick=function(){
-        const txt=(replyInp.value||"").trim();if(!txt)return;
-        const cmt={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),targetId:String(targetId),targetType:targetType,uid:String(user.id),userName:user.name||user.username||"ລູກຄ້າ",text:txt,replyTo:null,replyToUid:null,replyToName:null,at:Date.now()};
-        cmtList.unshift(cmt);
-        saveComment(cmt,targetOwnerUid,targetTitle);
-        replyInp.value="";
-        closeOv();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);
-      };
-      replyRow.appendChild(replyInp);replyRow.appendChild(replyBtn);
-      mod.appendChild(replyRow);
-    }
-    showOv(mod,null);
-  }
-
-  function escHtml(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-
-  function buildCommentSidebarBtn(targetId,targetType,targetOwnerUid,targetTitle,item,useSmall){
-    const saC=document.createElement("div");saC.className="feed-action";
-    const sbC=document.createElement("button");sbC.className=useSmall?"feed-action-btn-sm":"feed-action-btn";
-    sbC.textContent="💬";
-    const {inputBar}=buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item);
-    sbC.onclick=function(e){
-      e.stopPropagation();
-      inputBar.style.display=inputBar.style.display==="none"?"flex":"none";
-      if(inputBar.style.display==="flex"){const inp=inputBar.querySelector(".rv-cmt-inp");if(inp)inp.focus();}
-    };
-    saC.appendChild(sbC);
-    const slC=document.createElement("div");slC.className="feed-action-label";slC.textContent="ຄອມ";
-    saC.appendChild(slC);
-    return saC;
-  }
-
   function buildShopPostCard(post){
     const sh=shops.find(function(s){return s.id===post.shopId;})||{};
     const pp=post.pinnedProdId?prods.find(function(p){return p.id===post.pinnedProdId;}):null;
@@ -4253,7 +4270,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.7.2")
   );
 
   // Icon style helper
@@ -5799,9 +5816,10 @@ function showReviewDetail(itemType,itemData){
   // load comments
   if(db){
     db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review")
-      .orderBy("at","desc").limit(50).get()
+      .limit(50).get()
       .then(function(snap){
-        const list=snap.docs.map(function(d){return d.data();}).reverse();
+        const list=snap.docs.map(function(d){return d.data();});
+        list.sort(function(a,b){return (a.at||0)-(b.at||0);});
         renderModalCmts(list);
       }).catch(function(){cmtListDiv.innerHTML='<div style="font-size:.68rem;color:#aaa">ໂຫຼດຄອມເມັນບໍ່ສຳເລັດ</div>';});
   } else { cmtListDiv.innerHTML=''; }
@@ -5818,7 +5836,7 @@ function showReviewDetail(itemType,itemData){
       saveComment(nc,ownerUid,title);
       cinp.value="";
       // refresh
-      if(db)db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review").orderBy("at","desc").limit(50).get().then(function(snap){renderModalCmts(snap.docs.map(function(d){return d.data();}).reverse());}).catch(function(){});
+      if(db)db.collection("comments").where("targetId","==",String(itemData.id)).where("targetType","==",isPost?"post":"review").limit(50).get().then(function(snap){const l=snap.docs.map(function(d){return d.data();});l.sort(function(a,b){return (a.at||0)-(b.at||0);});renderModalCmts(l);}).catch(function(){});
     };
     inputRow.appendChild(cinp);inputRow.appendChild(csend);
     cmtSection.appendChild(inputRow);

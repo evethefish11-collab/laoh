@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v406 -->
+<!-- LaoH Marketplace v407 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1409,8 +1409,8 @@ function printOrder(o){
     "<div style='text-align:center'><img src='"+barcodeUrl+"' style='height:60px;border:1px solid #eee;border-radius:6px;display:block;max-width:140px' alt='Barcode'><div style='font-size:.6rem;color:#aaa;margin-top:2px;letter-spacing:2px;font-weight:700'>#"+orderId+"</div></div>"+
     "</div></div>"+
     "<div class='grid'>"+
-    "<div class='box'><b>ຊື່ຜູ້ຮັບ</b>"+o.name+"</div>"+
-    "<div class='box'><b>ເບີໂທ</b>"+o.phone+"</div>"+
+    (isShopPrinting?"":"<div class='box'><b>ຊື່ຜູ້ຮັບ</b>"+o.name+"</div>"+
+    "<div class='box'><b>ເບີໂທ</b>"+o.phone+"</div>")+
     (isShopPrinting?"":"<div class='box'><b>ຂົນສົ່ງ</b>"+o.carrier+"</div>"+
     "<div class='box'><b>ສາຂາ / ທີ່ຢູ່</b>"+o.branch+"</div>")+
     "</div>"+
@@ -1482,9 +1482,7 @@ function buildDeliveryNoteContent(o){
     "</div>"+
     "</div>"+
     "<div class='grid'>"+
-    "<div class='box'><b>ຊື່ລູກຄ້າ</b>"+(o.name||"-")+"</div>"+
-    "<div class='box'><b>ເບີໂທ</b>"+(o.phone||"-")+"</div>"+
-    "<div class='box' style='grid-column:1/3'><b>ສະຖານທີ່ຈັດສົ່ງ</b>"+addrStr+"</div>"+
+    "<div class='box' style='grid-column:1/3'><b>ຈຳນວນລາຍການ</b>"+(o.items||[]).length+" ລາຍການ</div>"+
     "</div>"+
     "<table><thead><tr><th style='width:106px'>ຮູບ</th><th style='text-align:center;width:90px'>ສີ/ກິ່ນ/ລົດຊາດ</th><th style='text-align:center;width:70px'>ໄຊສ໌</th><th style='text-align:center;width:60px'>ຈຳນວນ</th><th>ຊື່ສິນຄ້າ</th></tr></thead>"+
     "<tbody>"+rows+"</tbody></table>"+
@@ -2207,7 +2205,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.0.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.0.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4502,7 +4500,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.0.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.0.7")
   );
 
   // Icon style helper
@@ -11762,12 +11760,12 @@ function buildAdminTab(){
             return el("div",{className:"order-row-item","data-oid":String(o.id).slice(-6),"data-phone":(o.phone||""),"data-name":(o.name||"").toLowerCase(),style:{background:C,borderRadius:"10px",padding:"9px 11px",marginBottom:"7px"}},
               el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px",flexWrap:"wrap",gap:"4px"}},
                 el("div",null,
-                  el("b",{style:{fontSize:".79rem"}},"#"+String(o.id).slice(-6)+" — "+o.name),
+                  el("b",{style:{fontSize:".79rem"}},"#"+String(o.id).slice(-6)+(isShop?"":(" — "+o.name))),
                   o.shopName?el("span",{style:{fontSize:".65rem",color:"#5D2D7A",fontWeight:"600",marginLeft:"5px"}},"["+o.shopName+"]"):null
                 ),
                 el("div",{style:{display:"flex",gap:"4px",alignItems:"center"}},slipBtn,o.slipVerified?el("span",{style:{fontSize:".6rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 7px",borderRadius:"10px"}},"✅ ກວດສອບແລ້ວ"):null,wdBadge,sel)
               ),
-              el("div",{style:{fontSize:".69rem",color:"#2E5A3A",marginBottom:"6px"}},"📞 "+o.phone+(o.carrier?" · "+o.carrier:"")+(o.branch?" · "+o.branch:"")),
+              isShop?null:el("div",{style:{fontSize:".69rem",color:"#2E5A3A",marginBottom:"6px"}},"📞 "+o.phone+(o.carrier?" · "+o.carrier:"")+(o.branch?" · "+o.branch:"")),
               // ── Order Source Badge ─────────────────────────────────────────
               (o.orderSource&&isSuperAdmin)?(function(){
                 const srcMap={
@@ -12020,7 +12018,7 @@ function buildAdminTab(){
                 const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
                 modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
                 modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"📋 ປະຫວັດ Order #"+String(o.id).slice(-6)));
-                modal.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"10px"}},o.name+" · "+o.phone));
+                if(!isShop)modal.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"10px"}},o.name+" · "+o.phone));
                 if(logs.length===0){
                   modal.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"14px 0",fontSize:".8rem"}},"ຍັງບໍ່ມີປະຫວັດ"));
                 } else {
@@ -12040,7 +12038,7 @@ function buildAdminTab(){
               isShop?el("button",{style:{background:"none",border:"1.5px solid #6C5CE7",color:"#6C5CE7",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){shareDeliveryNotePdf(o);}},"📤 ແຊ PDF ໃຫ້ Printer"):null,
               isShop?el("button",{style:{background:"#FF9800",color:"#fff",border:"none",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
                 const shopName=(user&&user.shopName)||"ຮ້ານ";
-                const msg="ແຈ້ງ Admin LaoH\n\nOrder #"+String(o.id).slice(-6)+" ຈາກ "+shopName+"\nສະຖານະ: "+o.status+"\nລູກຄ້າ: "+o.name+" "+o.phone+"\n\nກະລຸນາກວດສອບ";
+                const msg="ແຈ້ງ Admin LaoH\n\nOrder #"+String(o.id).slice(-6)+" ຈາກ "+shopName+"\nສະຖານະ: "+o.status+"\n\nກະລຸນາກວດສອບ";
                 window.open("https://wa.me/"+_adminWaNumber+"?text="+encodeURIComponent(msg),"_blank");
               }},"📢 ແຈ້ງ Admin"):null,
               (isSuperAdmin&&o.phone)?el("button",{style:{background:"#25D366",color:"#fff",border:"none",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:()=>{const msg="ແຈ້ງສະຖານະ Order\n\nOrder #"+String(o.id).slice(-6)+" ຂອງ "+o.name+" ສະຖານະ: "+o.status+"\n\nຂອບໃຈທີ່ໃຊ້ LaoH ລາວເຮັດ ຕິດຕໍ່ຫາພວກເຮົາໄດ້ຖ້າມີຄຳຖາມ";window.open("https://wa.me/"+o.phone.replace(/[^0-9+]/g,"")+"?text="+encodeURIComponent(msg),"_blank");}},"ສົ່ງອັບເດດສະຖານະ WhatsApp"):null,
@@ -12082,9 +12080,7 @@ function buildAdminTab(){
                   return line;
                 }).join("\n");
                 const msg="🔔 LaoH — ທ່ານມີ Order ໃໝ່\n\n"
-                  +"Order #"+String(o.id).slice(-6)+"\n"
-                  +"ລູກຄ້າ: "+o.name+"\n"
-                  +"ເບີ: "+o.phone+"\n\n"
+                  +"Order #"+String(o.id).slice(-6)+"\n\n"
                   +"ລາຍການສິນຄ້າ:\n"+itemList+"\n\n"
                   +"ຍອດລວມ: ₭"+fmt(o.total)+"\n"
                   +"ສະຖານະ: "+o.status+"\n\n"

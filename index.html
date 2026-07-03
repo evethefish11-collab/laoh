@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v395 -->
+<!-- LaoH Marketplace v399 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -505,6 +505,14 @@ async function loadFromCloud(){
     }
     if(!prs.empty)promos=prs.docs.map(d=>d.data());
     if(!us.empty)users=us.docs.map(d=>d.data());
+    // ── ກູ້ຄືນ Members: ລຶບ ghost entries ທີ່ເກີດຈາກ shop-viewer session (bug ປຸ່ມຕິດຕາມ) ອອກຈາກ users ອັດຕະໂນມັດ ──
+    (function(){
+      const ghosts=users.filter(function(u){return u&&u.isShopViewer;});
+      if(ghosts.length>0){
+        users=users.filter(function(u){return !(u&&u.isShopViewer);});
+        ghosts.forEach(function(g){try{deleteFromCloud("users",g.id);}catch(e){}});
+      }
+    })();
     if(ss.exists&&ss.data().qrImg)qrImg=ss.data().qrImg;
     if(ss.exists&&ss.data().shippingFee!=null)_shippingFee=ss.data().shippingFee;
     if(ss.exists&&ss.data().freeShipQty!=null)_freeShipQty=ss.data().freeShipQty;
@@ -2146,7 +2154,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.9.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v3.9.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4337,24 +4345,24 @@ function maybeShowProductMiniPopupPromo(){
   try{
     const activeList=productMiniPopupPromos.filter(function(pp){return pp.active;});
     if(activeList.length===0)return;
-    const dismissKey="laoh_productMiniPopupDismissed_"+new Date().toDateString();
-    if(localStorage.getItem(dismissKey))return;
     const rotateMs=Math.max(1,_productMiniPopupRotateHours)*3600*1000;
     const idx=Math.floor(Date.now()/rotateMs)%activeList.length;
     const cur=activeList[idx];
-    const prodMatch=prods.find(function(p){return p&&p.id===cur.prodId;});
+    const dismissKey="laoh_productMiniPopupDismissed_"+cur.id+"_"+(cur.updatedAt||cur.createdAt||0)+"_"+(user&&user.id?user.id:"guest");
+    if(localStorage.getItem(dismissKey))return;
+    const prodMatch=prods.find(function(p){return p&&String(p.id)===String(cur.prodId);});
     if(!prodMatch)return; // สินค้าถูกลบไปแล้ว ไม่แสดง
     const widget=document.createElement("div");
     widget.id="product-mini-popup-widget";
-    widget.style.cssText="position:fixed;right:8px;top:70%;transform:translateY(-50%);z-index:500;width:100px;border-radius:10px;overflow:hidden;background:#F0F7F2;box-shadow:0 1px 4px rgba(0,0,0,.06);";
+    widget.style.cssText="position:fixed;right:8px;top:70%;transform:translateY(-50%);z-index:500;width:100px;";
     const img=document.createElement("img");
     img.src=cur.imageUrl;
-    img.style.cssText="width:100%;height:100px;object-fit:cover;display:block;cursor:pointer;";
+    img.style.cssText="width:100%;height:100px;object-fit:contain;display:block;cursor:pointer;";
     img.onclick=function(){showProduct(prodMatch);};
     widget.appendChild(img);
     const closeBtn=document.createElement("button");
     closeBtn.textContent="✕";
-    closeBtn.style.cssText="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#fff;border:none;font-size:.7rem;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);color:#c00;";
+    closeBtn.style.cssText="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff;border:none;font-size:.62rem;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);color:#c00;";
     closeBtn.onclick=function(e){e.stopPropagation();try{localStorage.setItem(dismissKey,"1");}catch(e2){}widget.remove();};
     widget.appendChild(closeBtn);
     document.body.appendChild(widget);
@@ -4366,25 +4374,25 @@ function maybeShowMiniPopupPromo(){
   try{
     const activeList=miniPopupPromos.filter(function(pp){return pp.active;});
     if(activeList.length===0)return;
-    const dismissKey="laoh_miniPopupDismissed_"+new Date().toDateString();
-    if(localStorage.getItem(dismissKey))return;
     const rotateMs=Math.max(1,_miniPopupRotateHours)*3600*1000;
     const idx=Math.floor(Date.now()/rotateMs)%activeList.length;
     const cur=activeList[idx];
+    const dismissKey="laoh_miniPopupDismissed_"+cur.id+"_"+(cur.updatedAt||cur.createdAt||0)+"_"+(user&&user.id?user.id:"guest");
+    if(localStorage.getItem(dismissKey))return;
     const widget=document.createElement("div");
     widget.id="mini-popup-widget";
-    widget.style.cssText="position:fixed;left:8px;top:50%;transform:translateY(-50%);z-index:500;width:100px;border-radius:10px;overflow:hidden;background:#F0F7F2;box-shadow:0 1px 4px rgba(0,0,0,.06);";
+    widget.style.cssText="position:fixed;left:8px;top:50%;transform:translateY(-50%);z-index:500;width:100px;";
     const img=document.createElement("img");
     img.src=cur.imageUrl;
-    img.style.cssText="width:100%;height:100px;object-fit:cover;display:block;cursor:pointer;";
+    img.style.cssText="width:100%;height:100px;object-fit:contain;display:block;cursor:pointer;";
     img.onclick=function(){
-      const shopMatch=shops.find(function(s){return s.id===cur.shopId;});
+      const shopMatch=shops.find(function(s){return String(s.id)===String(cur.shopId);});
       if(shopMatch){prevView=view;fShop=shopMatch.id;view="shopProfile";render();}
     };
     widget.appendChild(img);
     const closeBtn=document.createElement("button");
     closeBtn.textContent="✕";
-    closeBtn.style.cssText="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#fff;border:none;font-size:.7rem;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);color:#c00;";
+    closeBtn.style.cssText="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff;border:none;font-size:.62rem;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25);color:#c00;";
     closeBtn.onclick=function(e){e.stopPropagation();try{localStorage.setItem(dismissKey,"1");}catch(e2){}widget.remove();};
     widget.appendChild(closeBtn);
     document.body.appendChild(widget);
@@ -4397,12 +4405,12 @@ function maybeShowPopupPromo(){
     if(document.getElementById("ov"))return; // ไม่ให้ซ้อนกับ modal ที่เปิดอยู่
     const activePopup=popupPromos.find(function(pp){return pp.active;});
     if(!activePopup)return;
-    const dismissKey="laoh_popupDismissed_"+activePopup.id+"_"+new Date().toDateString();
+    const dismissKey="laoh_popupDismissed_"+activePopup.id+"_"+(activePopup.updatedAt||activePopup.createdAt||0)+"_"+(user&&user.id?user.id:"guest");
     if(localStorage.getItem(dismissKey))return;
     const overlay=document.createElement("div");
     overlay.id="popup-promo-ov";
     overlay.style.cssText="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);";
-    overlay.onclick=function(){overlay.remove();};
+    overlay.onclick=function(){try{localStorage.setItem(dismissKey,"1");}catch(e){}overlay.remove();};
     const inner=document.createElement("div");
     inner.style.cssText="position:relative;max-width:75vw;max-height:68vh;";
     inner.onclick=function(e){e.stopPropagation();};
@@ -4411,17 +4419,16 @@ function maybeShowPopupPromo(){
     img.style.cssText="max-width:75vw;max-height:64vh;display:block;cursor:pointer;object-fit:contain;";
     img.onclick=function(){
       overlay.remove();
-      const shopMatch=shops.find(function(s){return s.id===activePopup.shopId;});
+      const shopMatch=shops.find(function(s){return String(s.id)===String(activePopup.shopId);});
       if(shopMatch){prevView=view;fShop=shopMatch.id;view="shopProfile";render();}
     };
     const closeBtn=document.createElement("button");
     closeBtn.textContent="✕";
     closeBtn.style.cssText="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:#fff;border:none;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);";
-    closeBtn.onclick=function(e){e.stopPropagation();overlay.remove();};
+    closeBtn.onclick=function(e){e.stopPropagation();try{localStorage.setItem(dismissKey,"1");}catch(e2){}overlay.remove();};
     inner.appendChild(img);inner.appendChild(closeBtn);
     overlay.appendChild(inner);
     document.body.appendChild(overlay);
-    try{localStorage.setItem(dismissKey,"1");}catch(e){}
   }catch(e){}
 }
 
@@ -4442,7 +4449,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.9.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v3.9.9")
   );
 
   // Icon style helper
@@ -4967,10 +4974,19 @@ function buildShopProfile(shopId){
   // Stats row
   const followerCount = getFollowers(shopId).length;
   const followed = isFollowing(shopId);
-  const followBtn = user&&user.id?el("button",{
+  const isMyShopViaCustomerChannel=user&&user.isShopViewer&&user.shopId===shopId;
+  const followBtn = isMyShopViaCustomerChannel?el("button",{
+    style:{background:"#fff",color:"#C0392B",border:"1.5px solid #C0392B",borderRadius:"40px",padding:"8px 20px",fontWeight:"700",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},
+    onclick:function(){
+      try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
+      cart=[];selectedCartKeys=new Set();_checkoutCart=null;
+      user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
+      toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();
+    }
+  },"🚪 "+(_lang==="lo"?"ອອກຈາກລະບົບ":"Logout")):(user&&user.id?el("button",{
     style:{background:followed?"#1B6B3A":"#fff",color:followed?"#fff":"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"40px",padding:"8px 20px",fontWeight:"700",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},
     onclick:function(){toggleFollow(shopId);render();}
-  },followed?("✓ "+(_lang==="lo"?"ຕິດຕາມແລ້ວ":"Following")):"🔔 "+(_lang==="lo"?"ຕິດຕາມ":"Follow")):null;
+  },followed?("✓ "+(_lang==="lo"?"ຕິດຕາມແລ້ວ":"Following")):"🔔 "+(_lang==="lo"?"ຕິດຕາມ":"Follow")):null);
   const stats = el("div",{style:{display:"flex",background:"#F0F7F2",padding:"10px 16px",gap:"0",borderBottom:"1px solid #E8F5EE"}});
   const shopPromoMap=getPromoMap();
   [
@@ -5187,7 +5203,6 @@ function buildShopProfile(shopId){
   }
 
   // ── ແຖບແຈ້ງເຕືອນ (ເຫັນສະເພາະເຈົ້າຂອງຮ້ານ ຕອນເຂົ້າຜ່ານຊ່ອງລູກຄ້າໃນໂໝດ "ເບິ່ງຮ້ານ") ──
-  const isMyShopViaCustomerChannel=user&&user.isShopViewer&&user.shopId===shopId;
   const notifRow=isMyShopViaCustomerChannel?el("div",{style:{padding:"0 16px",marginTop:"10px"}},
     el("button",{
       style:{width:"100%",padding:"11px 16px",background:"#fff",border:"none",borderRadius:"14px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left",boxShadow:"0 2px 8px rgba(0,0,0,.06)"},
@@ -5219,6 +5234,7 @@ function isFollowing(shopId){return getFollowing().includes(shopId);}
 function isFollowingUser(uid){return user&&user.followingUsers&&user.followingUsers.includes(uid);}
 function toggleFollowUser(uid){
   if(!user){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບ":"Please login");return;}
+  if(blockIfShopViewer())return;
   if(uid===user.id){toast("ຕິດຕາມຕົວເອງບໍ່ໄດ້");return;}
   if(!user.followingUsers)user.followingUsers=[];
   if(isFollowingUser(uid)){
@@ -5236,6 +5252,7 @@ function toggleFollowUser(uid){
 }
 function toggleFollow(shopId){
   if(!user){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບ":"Please login");return;}
+  if(blockIfShopViewer())return;
   if(!user.following)user.following=[];
   if(isFollowing(shopId)){
     user.following=user.following.filter(function(id){return id!==shopId;});
@@ -7427,6 +7444,7 @@ function buildCart(){
   // checkout button
   const chkBtn=el("button",{className:"btn btn-p cart-checkout-btn",onclick:function(){
     if(selectedCartKeys.size===0)return;
+    if(blockIfShopViewer())return;
     if(!user||(!user.id&&!user.username)){
       $("cdraw").classList.remove("on");
       showOv(el("div",{className:"mod",style:{textAlign:"center",maxWidth:"320px"},onclick:function(e){e.stopPropagation();}},
@@ -7964,6 +7982,7 @@ function renderCo(){
         el("button",{className:"btn btn-g",style:{padding:"12px 20px",fontSize:".85rem"},onclick:()=>{coStep=1;renderCo();}},(_lang==="lo"?"← ກັບ":"← Back")),
         el("button",{type:"button",className:"btn btn-p",disabled:(!coSlip||coSlipUploading||coSlipUploadFailed||!isUrl(coSlip)),style:{padding:"13px",fontSize:".95rem",fontWeight:"800",opacity:(!coSlip||coSlipUploading||coSlipUploadFailed||!isUrl(coSlip))?".5":"1",cursor:(!coSlip||coSlipUploading||coSlipUploadFailed||!isUrl(coSlip))?"not-allowed":"pointer"},onclick:function(){
           try{
+          if(blockIfShopViewer()){closeOv();cart=[];selectedCartKeys=new Set();view="shop";render();return;}
           if(coSlipUploading){toast(_lang==="lo"?"ກະລຸນາລໍຖ້າອັບໂຫຼດສລິບໃຫ້ສຳເລັດກ່ອນ":"Please wait for the slip to finish uploading");return;}
           if(!coSlip||!isUrl(coSlip)||coSlipUploadFailed){toast("ກະລຸນາອັບໂຫຼດສລິບກ່ອນ");return;}
           // Place order now
@@ -12677,7 +12696,7 @@ function buildAdminTab(){
         (function(){
           const wrap=el("div",null);
           const activePopup=popupPromos.find(function(pp){return pp.active;});
-          const activeShop=activePopup?shops.find(function(s){return s.id===activePopup.shopId;}):null;
+          const activeShop=activePopup?shops.find(function(s){return String(s.id)===String(activePopup.shopId);}):null;
           const statusDiv=el("div",{style:{background:activePopup?"#E8F5EE":"#FFF5F5",borderRadius:"9px",padding:"8px 12px",fontSize:".78rem",color:activePopup?"#1B6B3A":"#c00",marginBottom:"10px",fontWeight:"600"}},
             activePopup?("✅ ກຳລັງໃຊ້ງານ: "+(activeShop?activeShop.name:activePopup.shopId)):"⭕ ຍັງບໍ່ມີປ໊ອບອັບທີ່ Active"
           );
@@ -12762,6 +12781,7 @@ function buildAdminTab(){
                   toast("⌛ ກຳລັງອັບໂຫຼດຮູບໃໝ່...");
                   uploadImage(newImgDataBig,"laoh/popupPromos").then(function(uploadedUrlBig){
                     pp.imageUrl=uploadedUrlBig;
+                    pp.updatedAt=Date.now();
                     saveToCloud("popupPromos",pp.id,pp);
                     toast("🖼️ ອັບເດດຮູບແລ້ວ ✓");
                     render();
@@ -12777,7 +12797,7 @@ function buildAdminTab(){
               shopEditSelBig.className="inp"; shopEditSelBig.style.cssText="margin:0 0 3px 0;font-size:.7rem;padding:3px 6px;";
               shops.slice().sort(function(a,b){return (a.name||"").localeCompare(b.name||"");}).forEach(function(s){
                 const opt=new Option(s.name+(s.commissionPct!=null?" ("+s.commissionPct+"%)":""), s.id);
-                if(s.id===pp.shopId)opt.selected=true;
+                if(String(s.id)===String(pp.shopId))opt.selected=true;
                 shopEditSelBig.appendChild(opt);
               });
               shopEditSelBig.onchange=function(){
@@ -12926,6 +12946,7 @@ function buildAdminTab(){
                   toast("⌛ ກຳລັງອັບໂຫຼດຮູບໃໝ່...");
                   uploadImage(newImgData,"laoh/miniPopupPromos").then(function(uploadedUrl){
                     pp.imageUrl=uploadedUrl;
+                    pp.updatedAt=Date.now();
                     saveToCloud("miniPopupPromos",pp.id,pp);
                     toast("🖼️ ອັບເດດຮູບແລ້ວ ✓");
                     render();
@@ -12941,7 +12962,7 @@ function buildAdminTab(){
               shopEditSel.className="inp"; shopEditSel.style.cssText="margin:0 0 3px 0;font-size:.7rem;padding:3px 6px;";
               shops.slice().sort(function(a,b){return (a.name||"").localeCompare(b.name||"");}).forEach(function(s){
                 const opt=new Option(s.name+(s.commissionPct!=null?" ("+s.commissionPct+"%)":""), s.id);
-                if(s.id===pp.shopId)opt.selected=true;
+                if(String(s.id)===String(pp.shopId))opt.selected=true;
                 shopEditSel.appendChild(opt);
               });
               shopEditSel.onchange=function(){
@@ -13084,6 +13105,7 @@ function buildAdminTab(){
                   toast("⌛ ກຳລັງອັບໂຫຼດຮູບໃໝ່...");
                   uploadImage(newImgData3,"laoh/productMiniPopupPromos").then(function(uploadedUrl3){
                     pp.imageUrl=uploadedUrl3;
+                    pp.updatedAt=Date.now();
                     saveToCloud("productMiniPopupPromos",pp.id,pp);
                     toast("🖼️ ອັບເດດຮູບແລ້ວ ✓");
                     render();
@@ -13099,7 +13121,7 @@ function buildAdminTab(){
               prodEditSel.className="inp"; prodEditSel.style.cssText="margin:0 0 3px 0;font-size:.7rem;padding:3px 6px;";
               prods.filter(function(p){return p&&p.id&&p.name;}).slice().sort(function(a,b){return (a.name||"").localeCompare(b.name||"");}).forEach(function(p){
                 const opt=new Option(p.name,p.id);
-                if(p.id===pp.prodId)opt.selected=true;
+                if(String(p.id)===String(pp.prodId))opt.selected=true;
                 prodEditSel.appendChild(opt);
               });
               prodEditSel.onchange=function(){

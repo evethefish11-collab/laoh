@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v420 -->
+<!-- LaoH Marketplace v422 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -225,6 +225,7 @@ input:focus,select:focus,textarea:focus{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js" crossorigin="anonymous"></script>
 <!-- Firebase SDK (compat mode) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
@@ -1363,6 +1364,14 @@ function shareContentAsPdf(bodyHtml, cssText, filename, shareTitle, shareText, w
   off.style.cssText="position:fixed;top:-99999px;left:0;width:"+(widthPx||680)+"px;background:#fff;font-family:'Noto Sans Lao','Noto Lao','DM Sans',sans-serif;";
   off.innerHTML="<style>"+(cssText||"")+"</style>"+bodyHtml;
   document.body.appendChild(off);
+  try{
+    const barcodeSvgs=off.querySelectorAll("svg[data-barcode-value]");
+    barcodeSvgs.forEach(function(svgEl){
+      if(typeof JsBarcode!=="undefined"){
+        try{JsBarcode(svgEl,svgEl.getAttribute("data-barcode-value"),{format:"CODE128",width:3,height:180,displayValue:false,margin:0});}catch(e){}
+      }
+    });
+  }catch(e){}
   const imgs=off.querySelectorAll("img");
   Promise.all(Array.from(imgs).map(function(img){
     return new Promise(function(resolve){
@@ -1523,14 +1532,15 @@ function buildDeliveryNoteContent(o){
     ".footer{margin-top:20px;font-size:.7rem;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}",
     "@media print{.no-print{display:none}}"
   ].join("");
-  const bodyHtml="<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px'>"+
+  const bodyHtml="<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px'>"+
     "<div><h1>📦 ໃບສົ່ງສິນຄ້າ</h1><div class='sub'>ຈາກ "+shopName+" ໃຫ້ ສູນ LaoH ລາວເຮັດ</div></div>"+
-    "<div style='display:flex;gap:12px;align-items:flex-start'>"+
     "<div style='text-align:right'><div style='font-size:1.1rem;font-weight:900'>#"+orderId+"</div>"+
     "<div class='sub'>"+new Date().toLocaleDateString("lo-LA")+"</div>"+
     "<div style='margin-top:4px;background:#1B6B3A;color:#fff;display:inline-block;padding:3px 10px;border-radius:12px;font-size:.72rem'>"+(o.status||"")+"</div></div>"+
-    "<div style='text-align:center'><img src='https://barcodeapi.org/api/128/"+orderId+"' crossorigin='anonymous' style='height:60px;border:1px solid #eee;border-radius:6px;display:block;max-width:140px' alt='Barcode'><div style='font-size:.6rem;color:#aaa;margin-top:2px;letter-spacing:2px;font-weight:700'>#"+orderId+"</div></div>"+
     "</div>"+
+    "<div style='text-align:center;margin-bottom:18px'>"+
+    "<svg id='dn-barcode-"+orderId+"' data-barcode-value='"+orderId+"' style='max-width:100%'></svg>"+
+    "<div style='font-size:.85rem;color:#555;letter-spacing:3px;font-weight:700;margin-top:2px'>#"+orderId+"</div>"+
     "</div>"+
     "<div class='grid'>"+
     "<div class='box' style='grid-column:1/3'><b>ຈຳນວນລາຍການ</b>"+(o.items||[]).length+" ລາຍການ</div>"+
@@ -1556,6 +1566,66 @@ function printDeliveryNote(o){
     "</body></html>";
   win.document.write(html);
   win.document.close();
+  try{
+    const bcEl=win.document.getElementById("dn-barcode-"+c.orderId);
+    if(bcEl&&typeof JsBarcode!=="undefined"){
+      JsBarcode(bcEl,c.orderId,{format:"CODE128",width:3,height:180,displayValue:false,margin:0});
+    }
+  }catch(e){}
+}
+
+// ── ป้ายผู้ส่ง-ผู้รับ (ซุปเปอร์แอดมิน/สตาฟเท่านั้น) — ผู้ส่ง: LaoH+เบอร์แอดมิน, ผู้รับ: ขนส่ง+สาขาปลายทาง+ชื่อ+เบอร์ผู้รับ ──
+function buildSenderReceiverLabelContent(o){
+  const orderId=String(o.id).slice(-6);
+  const adminPhoneDisp="+"+String(_adminWaNumber||"").replace(/[^0-9]/g,"");
+  const css=[
+    "body{font-family:'Noto Sans Lao',sans-serif;padding:28px;max-width:680px;margin:0 auto;color:#1a1020}",
+    "h1{color:#1B6B3A;font-size:1.3rem;letter-spacing:1px;margin:0}",
+    ".sub{font-size:.75rem;color:#888;margin-top:2px}",
+    ".box{background:#F0F7F2;border-radius:10px;padding:16px 18px;margin-top:14px}",
+    ".box b{display:block;font-size:.68rem;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}",
+    ".box .name{font-size:1.05rem;font-weight:900;color:#1A2B5F;margin-bottom:3px}",
+    ".box .line{font-size:.85rem;color:#333;margin-top:2px}",
+    ".footer{margin-top:24px;font-size:.7rem;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px}",
+    "@media print{.no-print{display:none}}"
+  ].join("");
+  const bodyHtml="<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px'>"+
+    "<div><h1>🏷️ ປ້າຍຜູ້ສົ່ງ-ຜູ້ຮັບ</h1><div class='sub'>Order #"+orderId+"</div></div>"+
+    "<div style='text-align:right'><div class='sub'>"+new Date().toLocaleDateString("lo-LA")+"</div></div>"+
+    "</div>"+
+    "<div class='box'>"+
+      "<b>ຜູ້ສົ່ງ / Sender</b>"+
+      "<div class='name'>LaoH ລາວເຮັດ</div>"+
+      "<div class='line'>📞 "+adminPhoneDisp+"</div>"+
+    "</div>"+
+    "<div class='box'>"+
+      "<b>ຜູ້ຮັບ / Receiver</b>"+
+      (o.carrier?"<div class='line'>🚚 "+o.carrier+"</div>":"")+
+      (o.branch?"<div class='line'>🏢 "+o.branch+"</div>":"")+
+      "<div class='name' style='margin-top:8px'>"+(o.name||"-")+"</div>"+
+      "<div class='line'>📞 "+(o.phone||"-")+"</div>"+
+    "</div>"+
+    "<div class='footer'>LaoH ລາວເຮັດ &bull; "+new Date().toLocaleDateString("lo-LA")+"</div>";
+  return {css:css, bodyHtml:bodyHtml, orderId:orderId};
+}
+
+function printSenderReceiverLabel(o){
+  const win=window.open("","_blank");
+  if(!win)return;
+  const c=buildSenderReceiverLabelContent(o);
+  const html="<html><head><meta charset='UTF-8'><title>ປ້າຍຜູ້ສົ່ງ-ຜູ້ຮັບ #"+c.orderId+"</title><style>"+c.css+"</style></head><body>"+
+    c.bodyHtml+
+    "<br><button class='no-print' onclick='window.print()' style='background:#1B6B3A;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit'>🖨 ພິມປ້າຍ / Save PDF</button>"+
+    " <button class='no-print' onclick='window.close()' style='background:none;color:#1B6B3A;border:1.5px solid #1B6B3A;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:inherit'>✕ ປິດໜ້ານີ້</button>"+
+    "</body></html>";
+  win.document.write(html);
+  win.document.close();
+}
+
+// ── แชร์ป้ายผู้ส่ง-ผู้รับเป็น PDF ผ่าน Share Sheet (สำหรับพิมพ์ผ่านแอป Bluetooth printer) ──
+function shareSenderReceiverLabelPdf(o){
+  const c=buildSenderReceiverLabelContent(o);
+  shareContentAsPdf(c.bodyHtml,c.css,"ປ້າຍຜູ້ສົ່ງຜູ້ຮັບ_"+c.orderId+".pdf","ປ້າຍຜູ້ສົ່ງ-ຜູ້ຮັບ #"+c.orderId,"LaoH ລາວເຮັດ");
 }
 
 // ── ແຊໃບສົ່ງສິນຄ້າເປັນ PDF ຜ່ານ Share Sheet (ສຳລັບພິມຜ່ານແອັບ Bluetooth printer) ──
@@ -2256,7 +2326,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.2.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.2.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4552,7 +4622,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.2.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.2.2")
   );
 
   // Icon style helper
@@ -8734,6 +8804,8 @@ function buildStaffDashboard(){
             modal.appendChild(el("div",{style:{borderTop:"1px solid #eee",marginTop:"10px",paddingTop:"8px",fontSize:".72rem",color:"#888"}},"ສ້າງ: "+(o.at||"")));showOv(modal);
           }));
           btnRow.appendChild(mkBtn("🖨 ພິມ","none","#1B6B3A","1.5px solid #1B6B3A",function(){printOrder(o);}));
+          btnRow.appendChild(mkBtn("🏷️ ພິມຜູ້ສົ່ງ-ຜູ້ຮັບ","none","#0B7285","1.5px solid #0B7285",function(){printSenderReceiverLabel(o);}));
+          btnRow.appendChild(mkBtn("📤 ແຊ ປ້າຍ PDF","none","#6C5CE7","1.5px solid #6C5CE7",function(){shareSenderReceiverLabelPdf(o);}));
           if(custPhone2){
             btnRow.appendChild(mkBtn("ສົ່ງອັບເດດສະຖານະ WhatsApp","#25D366","#fff","none",function(){window.open("https://wa.me/"+custPhone2+"?text="+encodeURIComponent("ສະບາຍດີ "+o.name+"\n\nOrder #"+String(o.id).slice(-6)+"\nສະຖານະ: "+o.status+"\n\nຂອບໃຈທີ່ໃຊ້ LaoH ລາວເຮັດ"),"_blank");}));
             if(o.trackingNo)btnRow.appendChild(mkBtn("📦 ສົ່ງເລກພັສດຸ","#1565c0","#fff","none",function(){window.open("https://wa.me/"+custPhone2+"?text="+encodeURIComponent("ສະບາຍດີ "+o.name+"\n\nພັສດຸ #"+String(o.id).slice(-6)+" ໄດ້ຈັດສົ່ງແລ້ວ\nຕິດຕາມ: "+o.trackingNo+(o.carrier?"\nຂົນສົ່ງ: "+o.carrier:"")+(o.branch?"\nສາຂາ: "+o.branch:"")),"_blank");}));
@@ -10481,6 +10553,8 @@ function buildShopOrdersSection(){
               el("button",{style:{background:"none",border:"1.5px solid #1B6B3A",color:"#1B6B3A",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){printOrder(o);}},"🖨 ພິມໃບບິນ"),
               isShop?el("button",{style:{background:"none",border:"1.5px solid #FF8C00",color:"#FF8C00",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){printDeliveryNote(o);}},"🖨 ໃບສົ່ງສິນຄ້າ"):null,
               isShop?el("button",{style:{background:"none",border:"1.5px solid #6C5CE7",color:"#6C5CE7",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){shareDeliveryNotePdf(o);}},"📤 ແຊ PDF ໃຫ້ Printer"):null,
+              isSuperAdmin?el("button",{style:{background:"none",border:"1.5px solid #0B7285",color:"#0B7285",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){printSenderReceiverLabel(o);}},"🏷️ ພິມຜູ້ສົ່ງ-ຜູ້ຮັບ"):null,
+              isSuperAdmin?el("button",{style:{background:"none",border:"1.5px solid #6C5CE7",color:"#6C5CE7",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){shareSenderReceiverLabelPdf(o);}},"📤 ແຊ ປ້າຍ PDF"):null,
               isShop?el("button",{style:{background:"#FF9800",color:"#fff",border:"none",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
                 const shopName=(user&&user.shopName)||"ຮ້ານ";
                 const msg="ແຈ້ງ Admin LaoH\n\nOrder #"+String(o.id).slice(-6)+" ຈາກ "+shopName+"\nສະຖານະ: "+o.status+"\n\nກະລຸນາກວດສອບ";

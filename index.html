@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v414 -->
+<!-- LaoH Marketplace v417 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1030,7 +1030,21 @@ function showNotifModal(){
             // ── ໄປໜ້າ Members (superAdminTabMap[5]=4) ──
             view="admin";aTab=5;render();
           } else if(n.orderId){
-            if(user&&(user.role==="shop"||user.role==="admin"||user.isShopViewer)){
+            if(user&&user.isShopViewer){
+              // ── ຮ້ານຄ້າທີ່ login ຜ່ານຊ່ອງລູກຄ້າ: ເປີດໜ້າ "🧾 ຄຳສັ່ງຊື້" ເຕັມ ແລ້ວເລື່ອນໄປຫາອໍເດີ້ນັ້ນເລີຍ ──
+              const targetOid=String(n.orderId).slice(-6);
+              openShopModalSection(buildShopOrdersSection,"🧾 "+(_lang==="lo"?"ຄຳສັ່ງຊື້":"Orders"));
+              setTimeout(function(){
+                const row=document.querySelector(".order-row-item[data-oid='"+targetOid+"']");
+                if(row){
+                  row.scrollIntoView({behavior:"smooth",block:"center"});
+                  const origBg=row.style.background;
+                  row.style.transition="background .3s";
+                  row.style.background="#FFF3CD";
+                  setTimeout(function(){row.style.background=origBg;},1800);
+                }
+              },150);
+            } else if(user&&(user.role==="shop"||user.role==="admin")){
               // ── ເປີດ modal read-only ສະແດງລາຍລະອຽດ order ນັ້ນທັນທີ ──
               const targetOrder=orders.find(function(o){return String(o.id)===String(n.orderId)||String(o.id).slice(-6)===String(n.orderId).slice(-6);});
               const orderNo="#"+String(n.orderId).slice(-6);
@@ -1155,10 +1169,10 @@ function blockIfShopViewer(){
 function closeOv(){
   const ov=$("ov");if(ov)ov.remove();
   const sub=$("hist-sub-ov");if(sub)sub.remove();
-  if(window._activeShopModalRefresh){
+  if(window._activeShopModalRestore){
     setTimeout(function(){
-      if(window._activeShopModalRefresh&&!document.getElementById("ov")){
-        window._activeShopModalRefresh();
+      if(window._activeShopModalRestore&&!document.getElementById("ov")){
+        window._activeShopModalRestore();
       }
     },0);
   }
@@ -1167,20 +1181,28 @@ function closeOv(){
 function openShopModalSection(buildFn,title){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch"}});
   const inner=el("div",null);
+  function closeModalForGood(){window._activeShopModalRefresh=null;window._activeShopModalRestore=null;closeOv();}
   function refresh(){
+    // ใช้ตอนข้อมูล/สถานะจริงเปลี่ยน (เช่น กดเปลี่ยนแท็บสถานะ, render() ถูกเรียก) — สร้างเนื้อหาใหม่ทั้งหมด
     inner.innerHTML="";
     inner.appendChild(buildFn());
     if(!document.getElementById("ov")){
-      // popup ย่อยที่ซ้อนอยู่ (ເຊັ່ນ ປະຫວັດອໍເດີ້) ຖືກປິດໄປແລ້ວ ແຕ່ບໍ່ມີຫຍັງສະແດງ — ເອົາ modal ນີ້ກັບມາສະແດງອີກຄັ້ງ
-      showOv(mod,function(){window._activeShopModalRefresh=null;closeOv();});
+      showOv(mod,closeModalForGood);
     }
   }
-  mod.appendChild(el("button",{className:"mcl",onclick:function(){window._activeShopModalRefresh=null;closeOv();}},"✕"));
+  function restore(){
+    // ใช้ตอน popup ย่อยที่ซ้อนอยู่ (เช่น กล้องสแกน, ดูประวัติ) เพิ่งปิดไป — เอา modal นี้กลับมาแสดงตามสภาพเดิม ไม่สร้างใหม่ กันข้อมูลที่เพิ่งอัปเดตในจอ (เช่น ผลสแกน/ข้อความไม่พบ) หายไป
+    if(!document.getElementById("ov")){
+      showOv(mod,closeModalForGood);
+    }
+  }
+  mod.appendChild(el("button",{className:"mcl",onclick:closeModalForGood},"✕"));
   if(title)mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},title));
   mod.appendChild(inner);
   refresh();
   window._activeShopModalRefresh=refresh;
-  showOv(mod,function(){window._activeShopModalRefresh=null;closeOv();});
+  window._activeShopModalRestore=restore;
+  showOv(mod,closeModalForGood);
 }
 function showOv(content,onbg=closeOv){
   closeOv();
@@ -1375,7 +1397,7 @@ function printOrder(o){
   const win=window.open("","_blank");
   if(!win)return;
   const fmt2=function(n){return Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});};
-  const isShopPrinting=user&&user.role==="shop";
+  const isShopPrinting=(user&&user.role==="shop")||(user&&user.role==="c"&&user.isShopViewer);
   const cancelledKeys=o.cancelledItems||[];
   const refundAmt=getCancelledTotal(o);
   const _cT2=Number(o.total)||0;const _cD2=Number(o.discount)||0;
@@ -2234,7 +2256,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.1.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.1.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4530,7 +4552,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.1.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.1.7")
   );
 
   // Icon style helper

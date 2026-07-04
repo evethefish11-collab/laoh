@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v425 -->
+<!-- LaoH Marketplace v427 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1368,7 +1368,7 @@ function shareContentAsPdf(bodyHtml, cssText, filename, shareTitle, shareText, w
     const barcodeSvgs=off.querySelectorAll("svg[data-barcode-value]");
     barcodeSvgs.forEach(function(svgEl){
       if(typeof JsBarcode!=="undefined"){
-        try{JsBarcode(svgEl,svgEl.getAttribute("data-barcode-value"),{format:"CODE128",width:3,height:180,displayValue:false,margin:0});}catch(e){}
+        try{JsBarcode(svgEl,svgEl.getAttribute("data-barcode-value"),{format:"CODE128",width:3,height:54,displayValue:false,margin:0});}catch(e){}
       }
     });
   }catch(e){}
@@ -1569,7 +1569,7 @@ function printDeliveryNote(o){
   try{
     const bcEl=win.document.getElementById("dn-barcode-"+c.orderId);
     if(bcEl&&typeof JsBarcode!=="undefined"){
-      JsBarcode(bcEl,c.orderId,{format:"CODE128",width:3,height:180,displayValue:false,margin:0});
+      JsBarcode(bcEl,c.orderId,{format:"CODE128",width:3,height:54,displayValue:false,margin:0});
     }
   }catch(e){}
 }
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.2.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.2.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4624,7 +4624,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.2.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.2.7")
   );
 
   // Icon style helper
@@ -10802,13 +10802,12 @@ function buildShopPosSection(){
               "<div class='ft'>ຂອບໃຈ · "+shopName+"</div>";
             w2.document.open();w2.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"+receiptCss2+"</style></head><body>");
             w2.document.write(receiptBody2);
-            w2.document.write("<div class='np' style='text-align:center;margin-top:10px'><button id='_w2PrintBtn' style='padding:8px 14px;font-size:12px;border:none;background:#1B6B3A;color:#fff;border-radius:8px;cursor:pointer'>🖨 ພິມ</button><button id='_w2ShareBtn' style='padding:8px 14px;font-size:12px;border:none;background:#6C5CE7;color:#fff;border-radius:8px;cursor:pointer;margin-left:5px'>📤 ພິມ+ແຊ PDF ໃຫ້ printer</button><button id='_w2CloseBtn' style='padding:8px 12px;font-size:12px;border:none;background:#eee;border-radius:8px;margin-left:5px;cursor:pointer'>✕</button></div>");
+            w2.document.write("<div class='np' style='text-align:center;margin-top:10px'><button id='_w2PrintBtn' style='padding:8px 14px;font-size:12px;border:none;background:#1B6B3A;color:#fff;border-radius:8px;cursor:pointer'>🖨 ພິມ</button><button id='_w2ShareBtn' style='padding:8px 14px;font-size:12px;border:none;background:#6C5CE7;color:#fff;border-radius:8px;cursor:pointer;margin-left:5px'>📤 ແຊ PDF ໃຫ້ printer</button><button id='_w2CloseBtn' style='padding:8px 12px;font-size:12px;border:none;background:#eee;border-radius:8px;margin-left:5px;cursor:pointer'>✕</button></div>");
             w2.document.write("</body></html>");w2.document.close();
             var _w2PrintBtn=w2.document.getElementById("_w2PrintBtn");if(_w2PrintBtn)_w2PrintBtn.onclick=function(){w2.print();};
             var _w2CloseBtn=w2.document.getElementById("_w2CloseBtn");if(_w2CloseBtn)_w2CloseBtn.onclick=function(){w2.close();};
             var _w2ShareBtn=w2.document.getElementById("_w2ShareBtn");
             if(_w2ShareBtn)_w2ShareBtn.onclick=function(){
-              w2.print();
               shareContentAsPdf(receiptBody2,receiptCss2,"ບິນ_"+(ord.billId||String(ord.at).slice(-8))+".pdf","ບິນ #"+(ord.billId||String(ord.at).slice(-8)),shopName,300);
             };
           };})(o);
@@ -10930,7 +10929,7 @@ function buildShopPosSection(){
     LP.appendChild(mCard);
     var aCard=el("div",{className:"acard"});
     var closeBtn=el("button",{type:"button",style:{width:"100%",padding:"12px",background:"linear-gradient(135deg,#1B6B3A,#27ae60)",color:"#fff",border:"none",borderRadius:"11px",fontSize:".88rem",fontWeight:"800",cursor:"pointer",fontFamily:"inherit",marginBottom:"7px"}},
-      "✅ "+(_lang==="lo"?"ປິດ + ພິມບິນ":"Close + Print"));
+      "✅ "+(_lang==="lo"?"ປິດ + ພິມ + ແຊ PDF":"Close + Print + Share PDF"));
     closeBtn.onclick=function(){if(_cart.length===0){toast(_lang==="lo"?"ເພີ່ມສິນຄ້າກ່ອນ":"Add items first");return;}_doClose();};
     var cancelBtn2=el("button",{type:"button",style:{width:"100%",padding:"9px",background:"none",color:"#c00",border:"1.5px solid #c00",borderRadius:"11px",fontSize:".76rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",marginBottom:"7px"}},
       "❌ "+(_lang==="lo"?"ຍົກເລີກບິນ":"Cancel Bill"));
@@ -10995,15 +10994,12 @@ function buildShopPosSection(){
         "<div class='ft'>ຂອບໃຈ · "+shopName+"</div>";
       w.document.open();w.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"+receiptCss+"</style></head><body>");
       w.document.write(receiptBody);
-      w.document.write("<div class='np' style='text-align:center;margin-top:10px'><button id='_wPrintBtn' style='padding:8px 14px;font-size:12px;border:none;background:#1B6B3A;color:#fff;border-radius:8px;cursor:pointer'>🖨 ພິມ</button><button id='_wShareBtn' style='padding:8px 14px;font-size:12px;border:none;background:#6C5CE7;color:#fff;border-radius:8px;cursor:pointer;margin-left:5px'>📤 ພິມ+ແຊ PDF ໃຫ້ printer</button><button id='_wCloseBtn' style='padding:8px 12px;font-size:12px;border:none;background:#eee;border-radius:8px;margin-left:5px;cursor:pointer'>✕</button></div>");
+      w.document.write("<div class='np' style='text-align:center;margin-top:10px'><button id='_wPrintBtn' style='padding:8px 18px;font-size:12px;border:none;background:#1B6B3A;color:#fff;border-radius:8px;cursor:pointer'>🖨 ພິມ</button><button id='_wCloseBtn' style='padding:8px 14px;font-size:12px;border:none;background:#eee;border-radius:8px;margin-left:6px;cursor:pointer'>✕</button></div>");
       w.document.write("</body></html>");w.document.close();
       var _wPrintBtn=w.document.getElementById("_wPrintBtn");if(_wPrintBtn)_wPrintBtn.onclick=function(){w.print();};
       var _wCloseBtn=w.document.getElementById("_wCloseBtn");if(_wCloseBtn)_wCloseBtn.onclick=function(){w.close();};
-      var _wShareBtn=w.document.getElementById("_wShareBtn");
-      if(_wShareBtn)_wShareBtn.onclick=function(){
-        w.print();
-        shareContentAsPdf(receiptBody,receiptCss,"ບິນ_"+_billId+".pdf","ບິນ #"+_billId,shopName,300);
-      };
+      // ── ແຊ PDF ໃຫ້ printer ອັດຕະໂນມັດທັນທີທີ່ປິດບິນ (ບໍ່ຕ້ອງກົດປຸ່ມແຍກໃນ popup ໃບບິນອີກ) ──
+      shareContentAsPdf(receiptBody,receiptCss,"ບິນ_"+_billId+".pdf","ບິນ #"+_billId,shopName,300);
       var txn={id:Date.now(),at:Date.now(),shopId:_sid,billId:_billId,memberName:window._posMember?window._posMember.name:null,
         items:_cart.map(function(it){return {pid:it.pid,name:it.name,color:it.color,size:it.size,qty:it.qty,price:it.price};}),
         subTotal:t.sub,disc:t.disc,vatAmt:t.vat,total:t.grand,memberDiscPct:_mdisc,posVatPct:_vat};

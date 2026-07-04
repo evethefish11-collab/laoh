@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v417 -->
+<!-- LaoH Marketplace v420 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2143,7 +2143,7 @@ const T = {
       '🔄 ສາມາດຄືນສິນຄ້າ 3 ວັນ'
     ],
     sizeGuide:'📏 ດູຕາຕາລາງຂະໜາດ', contact:'💬 ຕິດຕໍ່ທີມງານ WhatsApp',
-    footer:'🌺 ສ້ອນໂດຍຄົນລາວ ເພື່ອຄົນລາວ', 
+    footer:'ເພື່ອຄົນລາວຊື້ງ່າຍ-ຂາຍຄ່ອງ', 
     tagSale:'ຂາຍດີ', tagNew:'ໃໝ່', preorder:'📦 ພຣີໂອເດີ', refund:'🔄 ຄືນໄດ້',
     colorPick:'🎨 ສີ / ກິ່ນ / ລົດຊາດ', sizePick:'📏 ຂະໜາດ',
     readyShip:'ພ້ອມສົ່ງ 24 ຊມ.', stock:'ສິນຄ້າ', stockLeft:'ຊິ້ນ'
@@ -2164,7 +2164,7 @@ const T = {
       '🔄 Returns accepted within 3 days'
     ],
     sizeGuide:'📏 Size Guide', contact:'💬 Contact WhatsApp',
-    footer:'🌺 Built by Laotians, for Laotians',
+    footer:'Built by Laotians, for Laotians',
     tagSale:'Best Seller', tagNew:'New', preorder:'📦 Pre-order', refund:'🔄 Refund',
     colorPick:'🎨 Color / Scent / Flavor', sizePick:'📏 Size',
     readyShip:'Ships in 24h', stock:'Items', stockLeft:'left'
@@ -2256,7 +2256,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.1.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.2.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4552,7 +4552,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.1.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.2.0")
   );
 
   // Icon style helper
@@ -5104,6 +5104,29 @@ function buildShopProfile(shopId){
     style:{background:followed?"#1B6B3A":"#fff",color:followed?"#fff":"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"40px",padding:"8px 12px",fontWeight:"700",fontSize:".7rem",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"},
     onclick:function(){toggleFollow(shopId);render();}
   },followed?("✓ "+(_lang==="lo"?"ຕິດຕາມແລ້ວ":"Following")):"🔔 "+(_lang==="lo"?"ຕິດຕາມ":"Follow")):null);
+  // ── ยอดขายรวม + ยอดเงินคงเหลือ (เห็นเฉพาะเจ้าของร้าน ตอนล็อกอินผ่านช่องลูกค้า) ──
+  const shopFinanceRow=isMyShopViaCustomerChannel?(function(){
+    const shObj=shops.find(function(s){return s.id===shopId;})||{};
+    const commPct2=shObj.commission||10;
+    const deliveredOrders2=orders.filter(function(o){return o.shopId===shopId&&o.status==="ອໍເດີສຳເລັດແລ້ວ";});
+    const allDelivActual2=deliveredOrders2.reduce(function(s,o){return s+getShopNetTotal(o);},0);
+    const allCommission2=Math.round(allDelivActual2*commPct2/100);
+    const allShopGet2=allDelivActual2-allCommission2;
+    const shWds2=withdrawals.filter(function(w){return w.shopId===shopId;});
+    const totalWd2=shWds2.reduce(function(s,w){return s+w.amount;},0);
+    const remaining2=allShopGet2-totalWd2;
+    const row=el("div",{style:{display:"flex",background:"#F0F7F2",padding:"10px 16px",gap:"0",borderBottom:"1px solid #E8F5EE"}});
+    [
+      [allDelivActual2,_lang==="lo"?"ຍອດຂາຍລວມ":"Total Sales"],
+      [remaining2,_lang==="lo"?"ຍອດເງິນຄົງເຫຼືອ":"Remaining Balance"]
+    ].forEach(function(item){
+      row.appendChild(el("div",{style:{flex:"1",textAlign:"center",borderRight:"1px solid #C8E6D4"}},
+        el("div",{style:{fontWeight:"900",fontSize:"1.1rem",color:"#1B6B3A"}},"₭"+fmt(item[0])),
+        el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginTop:"1px"}},item[1])
+      ));
+    });
+    return row;
+  })():null;
   const stats = el("div",{style:{display:"flex",background:"#F0F7F2",padding:"10px 16px",gap:"0",borderBottom:"1px solid #E8F5EE"}});
   const shopPromoMap=getPromoMap();
   [
@@ -5371,7 +5394,7 @@ function buildShopProfile(shopId){
     );
   })():null;
 
-  const parts=[banner,avatarRow,info,stats,notifRow,addPostRow,profTabBar];
+  const parts=[banner,avatarRow,info,shopFinanceRow,stats,notifRow,addPostRow,profTabBar];
   if(window._shopProfileTab==="videos"){
     parts.push(buildShopVideoGrid());
   } else {
@@ -6807,8 +6830,8 @@ function buildShopFooter(){
       el("a",{href:"https://wa.me/"+_adminWaNumber,target:"_blank",style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:"11px",borderRadius:"10px",background:"#25D366",color:"#fff",textDecoration:"none",fontWeight:"700",fontSize:".85rem",fontFamily:"sans-serif"}},t("contact"))
     ),
     el("div",{style:{background:"#1A2B5F",color:"rgba(255,255,255,.4)",padding:"20px 14px 14px"}},
-      el("div",{style:{fontSize:"1.05rem",color:"#4CAF88",marginBottom:"6px",fontWeight:"900",fontFamily:"'Playfair Display',Georgia,serif"}},"🌺 LaoH ລາວເຮັດ"),
-      el("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:"10px",fontSize:".69rem"}},("© 2025 LaoH ລາວເຮັດ · "+t("footer")))
+      el("div",{style:{fontSize:"1.05rem",color:"#4CAF88",marginBottom:"6px",fontWeight:"900",fontFamily:"'Playfair Display',Georgia,serif"}},"LaoH ລາວເຮັດ"),
+      el("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:"10px",fontSize:".69rem"}},("© 2026 LaoH ລາວເຮັດ · "+t("footer")))
     )
   );
 }
@@ -10693,16 +10716,25 @@ function buildShopPosSection(){
             var disc=ord.disc||0;var vat=ord.vatAmt||0;var mDiscPct=ord.memberDiscPct||0;var vatPct=ord.posVatPct||0;
             var w2=window.open("","_blank","width=320,height=600");
             if(!w2){toast(_lang==="lo"?"ກາລຸນາອະນຸຍາດ popup":"Allow popup");return;}
-            w2.document.open();w2.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Noto Sans Lao',sans-serif;font-size:12px;width:58mm;padding:6px}.shop{font-size:14px;font-weight:900;text-align:center;margin-bottom:2px}.meta{font-size:9px;text-align:center;color:#666;margin-bottom:5px}hr{border:none;border-top:1px dashed #999;margin:4px 0}table{width:100%;border-collapse:collapse}th{font-size:9px;padding:3px 2px;border-bottom:1px solid #ccc;text-align:left}th:nth-child(2){text-align:center;padding-left:6px;padding-right:6px}th:nth-child(3){text-align:right}td{font-size:11px;vertical-align:top;padding:4px 2px;border-bottom:1px dashed #ddd}td:nth-child(2){text-align:center;padding-left:6px;padding-right:6px}td:nth-child(3){text-align:right}.tr{display:flex;justify-content:space-between;font-size:11px;margin:2px 0}.grand{font-weight:900;font-size:14px}.ft{text-align:center;font-size:9px;color:#888;margin-top:7px}@media print{.np{display:none}}</style></head><body>");
-            w2.document.write("<div class='shop'>"+shopName+"</div>");
-            w2.document.write("<div class='meta'>#"+(ord.billId||String(ord.at).slice(-8))+" "+billDateStr+(ord.memberName?" 🎟 "+ord.memberName:"")+"</div>");
-            w2.document.write("<hr><table><thead><tr><th>ສິນຄ້າ</th><th style='text-align:center'>ຈ</th><th style='text-align:right'>₭</th></tr></thead><tbody>"+rows2+"</tbody></table><hr>");
-            if(disc>0)w2.document.write("<div class='tr'><span>ສ່ວນຫຼຸດ "+mDiscPct+"%"+(ord.memberName?" ("+ord.memberName+")":"")+"</span><span>-"+fmt(disc)+"</span></div>");
-            if(vat>0)w2.document.write("<div class='tr'><span>VAT "+vatPct+"%</span><span>+"+fmt(vat)+"</span></div>");
-            w2.document.write("<div class='tr grand'><span>ລວມ</span><span>₭"+fmt(ord.total)+"</span></div>");
-            w2.document.write("<div class='ft'>ຂອບໃຈ · "+shopName+"</div>");
-            w2.document.write("<div class='np' style='text-align:center;margin-top:10px'><button onclick='window.print()' style='padding:8px 18px;font-size:12px;border:none;background:#1B6B3A;color:#fff;border-radius:8px;cursor:pointer'>🖨 ພິມ</button><button onclick='window.close()' style='padding:8px 14px;font-size:12px;border:none;background:#eee;border-radius:8px;margin-left:6px;cursor:pointer'>✕</button></div>");
+            var receiptCss2="*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Noto Sans Lao',sans-serif;font-size:12px;width:58mm;padding:6px}.shop{font-size:14px;font-weight:900;text-align:center;margin-bottom:2px}.meta{font-size:9px;text-align:center;color:#666;margin-bottom:5px}hr{border:none;border-top:1px dashed #999;margin:4px 0}table{width:100%;border-collapse:collapse}th{font-size:9px;padding:3px 2px;border-bottom:1px solid #ccc;text-align:left}th:nth-child(2){text-align:center;padding-left:6px;padding-right:6px}th:nth-child(3){text-align:right}td{font-size:11px;vertical-align:top;padding:4px 2px;border-bottom:1px dashed #ddd}td:nth-child(2){text-align:center;padding-left:6px;padding-right:6px}td:nth-child(3){text-align:right}.tr{display:flex;justify-content:space-between;font-size:11px;margin:2px 0}.grand{font-weight:900;font-size:14px}.ft{text-align:center;font-size:9px;color:#888;margin-top:7px}@media print{.np{display:none}}";
+            var receiptBody2="<div class='shop'>"+shopName+"</div>"+
+              "<div class='meta'>#"+(ord.billId||String(ord.at).slice(-8))+" "+billDateStr+(ord.memberName?" 🎟 "+ord.memberName:"")+"</div>"+
+              "<hr><table><thead><tr><th>ສິນຄ້າ</th><th style='text-align:center'>ຈ</th><th style='text-align:right'>₭</th></tr></thead><tbody>"+rows2+"</tbody></table><hr>"+
+              (disc>0?("<div class='tr'><span>ສ່ວນຫຼຸດ "+mDiscPct+"%"+(ord.memberName?" ("+ord.memberName+")":"")+"</span><span>-"+fmt(disc)+"</span></div>"):"")+
+              (vat>0?("<div class='tr'><span>VAT "+vatPct+"%</span><span>+"+fmt(vat)+"</span></div>"):"")+
+              "<div class='tr grand'><span>ລວມ</span><span>₭"+fmt(ord.total)+"</span></div>"+
+              "<div class='ft'>ຂອບໃຈ · "+shopName+"</div>";
+            w2.document.open();w2.document.write("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"+receiptCss2+"</style></head><body>");
+            w2.document.write(receiptBody2);
+            w2.document.write("<div class='np' style='text-align:center;margin-top:10px'><button id='_w2PrintBtn' style='padding:8px 14px;font-size:12px;border:none;background:#1B6B3A;color:#fff;border-radius:8px;cursor:pointer'>🖨 ພິມ</button><button id='_w2ShareBtn' style='padding:8px 14px;font-size:12px;border:none;background:#6C5CE7;color:#fff;border-radius:8px;cursor:pointer;margin-left:5px'>📤 ພິມ+ແຊ PDF ໃຫ້ printer</button><button id='_w2CloseBtn' style='padding:8px 12px;font-size:12px;border:none;background:#eee;border-radius:8px;margin-left:5px;cursor:pointer'>✕</button></div>");
             w2.document.write("</body></html>");w2.document.close();
+            var _w2PrintBtn=w2.document.getElementById("_w2PrintBtn");if(_w2PrintBtn)_w2PrintBtn.onclick=function(){w2.print();};
+            var _w2CloseBtn=w2.document.getElementById("_w2CloseBtn");if(_w2CloseBtn)_w2CloseBtn.onclick=function(){w2.close();};
+            var _w2ShareBtn=w2.document.getElementById("_w2ShareBtn");
+            if(_w2ShareBtn)_w2ShareBtn.onclick=function(){
+              w2.print();
+              shareContentAsPdf(receiptBody2,receiptCss2,"ບິນ_"+(ord.billId||String(ord.at).slice(-8))+".pdf","ບິນ #"+(ord.billId||String(ord.at).slice(-8)),shopName,300);
+            };
           };})(o);
           oRow.appendChild(pBtn);
           hCard.appendChild(oRow);

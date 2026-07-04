@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v430 -->
+<!-- LaoH Marketplace v432 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -447,7 +447,7 @@ function makeSaveIndicator(){
   return s;
 }
 function showResetPwdModal(label, onSave){
-  const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxWidth:"320px"}});
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxWidth:"320px"}});
   mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
   mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?"🔑 ຕັ້ງລະຫັດຜ່ານໃໝ່":"🔑 Reset Password")));
   mod.appendChild(el("div",{style:{fontSize:".78rem",color:"#6B8F75",marginBottom:"10px"}},label));
@@ -1780,7 +1780,7 @@ function buildMyOrderCard(o,redrawFn){
   // ── ປຸ່ມດຽວ: ປະຫວັດ (read-only, ບໍ່ມີປຸ່ມແກ້ໄຂ/ປ່ຽນສະຖານະ/ສລິບ) ──
   const histBtn=el("button",{style:{marginTop:"8px",width:"100%",padding:"7px",borderRadius:"8px",background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
     const logs=o.statusLog||[];
-    const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+    const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
     modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
     modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📋 ປະຫວັດ #"+String(o.id).slice(-6)));
     if(logs.length===0){
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.3.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.3.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4197,7 +4197,7 @@ function showAddrModal(){
   var newType="carrier"; var newLbl=""; var newCarrier=getCustomCarriers()[0]||"";
   var newBranch=""; var newHouse=""; var newVill=""; var newDist="";
   var newLat=null; var newLng=null; var newFee=0;
-  const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
+  const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
   modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
   modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")));
   // list
@@ -4624,7 +4624,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.3.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.3.2")
   );
 
   // Icon style helper
@@ -4961,12 +4961,18 @@ function buildShopProfile(shopId){
     ):null
   );
 
-  const avatarRow = el("div",{style:{display:"flex",alignItems:"flex-end",padding:"0 16px",marginTop:"-36px",gap:"12px",position:"relative",zIndex:"2"}},
+  const isMyShopHereForAvatar=user&&user.isShopViewer&&user.shopId===shopId;
+  const avatarWrap=el("div",{style:{position:"relative",flexShrink:"0"}},
     el("div",{className:"shop-avatar",style:{background:sh.color||"#1B6B3A",overflow:"hidden"}},
       sh.logo&&isUrl(sh.logo)
         ? el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}})
         : el("span",{style:{fontSize:"2rem"}},sh.emoji||"🏪")
     ),
+    isMyShopHereForAvatar?el("button",{type:"button",style:{position:"absolute",bottom:"2px",right:"2px",width:"26px",height:"26px",borderRadius:"50%",background:"#1B6B3A",border:"2px solid #fff",color:"#fff",fontSize:".75rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,.3)",fontFamily:"inherit"},onclick:function(e){e.stopPropagation();openShopAvatarBannerEditor(sh);}},"✏️"):null
+  );
+
+  const avatarRow = el("div",{style:{display:"flex",alignItems:"flex-end",padding:"0 16px",marginTop:"-36px",gap:"12px",position:"relative",zIndex:"2"}},
+    avatarWrap,
     el("div",{style:{paddingBottom:"8px",flex:"1"}},
       el("div",{style:{fontWeight:"900",fontSize:"1.1rem",color:"#1A2B5F",fontFamily:"'Noto Sans Lao',sans-serif"}},sh.name),
       el("div",{style:{display:"flex",gap:"6px",alignItems:"center",marginTop:"3px",flexWrap:"wrap"}},
@@ -5675,7 +5681,7 @@ function buildUserProfile(uid){
           var newBranch=""; var newHouse=""; var newVill=""; var newDist="";
           var newLat=null; var newLng=null; var newFee=0;
 
-          const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
+          const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
           modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
           modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")));
 
@@ -7762,7 +7768,7 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
     const ip=el("input",{className:"inp",placeholder:_lang==="lo"?"ລະຫັດ":"Password",type:"password"});ip.value=aF.p;ip.oninput=e=>aF.p=e.target.value;
     fields.push(iu,ip);
     if(aMode==="register"&&aType==="c"){const ic=el("input",{className:"inp",placeholder:_lang==="lo"?"ຢືນຢັນລະຫັດ":"Confirm Password",type:"password"});ic.oninput=e=>aF.c2=e.target.value;fields.push(ic);}
-    showOv(el("div",{className:"mod",onclick:e=>e.stopPropagation()},
+    showOv(el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation()},
       el("button",{className:"mcl",onclick:closeOv},"✕"),
       el("div",{className:"tabs",style:{marginBottom:"10px"}},el("button",{className:"tab"+(aType==="c"?" on":""),onclick:()=>{aType="c";aErr="";drawAuth();}},_lang==="lo"?"ລູກຄ້າ 👤":"Customer 👤"),el("button",{className:"tab"+(aType==="a"?" on":""),onclick:()=>{aType="a";aMode="login";aErr="";drawAuth();}},_lang==="lo"?"ແອດມິນ ⚙️":"Admin ⚙️")),
       aType==="c"?el("div",{className:"tabs"},el("button",{className:"tab"+(aMode==="login"?" on":""),onclick:()=>{aMode="login";aErr="";drawAuth();}},_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login"),el("button",{className:"tab"+(aMode==="register"?" on":""),onclick:()=>{aMode="register";aErr="";drawAuth();}},_lang==="lo"?"ສະໝັກສະມາຊິກ":"Register")):null,
@@ -7845,7 +7851,7 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
     } else {aErr=_lang==="lo"?"ຂໍ້ມູນບໍ່ຖືກຕ້ອງ":"Incorrect credentials";drawAuth();}
   }}
         else{if(!aF.u||!aF.p||!aF.n||!aF.ph||(aF.ph).replace(/[^0-9]/g,"").length<8){aErr="ກະລຸນາໃສ່ຂໍ້ມູນໃຫ້ຄົບ (ເບີ 8 ຕົວ)";drawAuth();return;}if(!aF.consent){
-              showOv(el("div",{className:"mod",style:{textAlign:"center",maxWidth:"320px"},onclick:function(e){e.stopPropagation();}},
+              showOv(el("div",{className:"mod","data-noswipe":"1",style:{textAlign:"center",maxWidth:"320px"},onclick:function(e){e.stopPropagation();}},
                 el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"📋"),
                 el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"8px"}},_lang==="lo"?"ກະລຸນາຍອມຮັບເງື່ອນໄຂ":"Please Accept Terms"),
                 el("div",{style:{fontSize:".8rem",color:"#4a4a6a",marginBottom:"16px",lineHeight:"1.5"}},_lang==="lo"?"ກະລຸນາອ່ານ ແລະ ເຂົ້າໃຈ ຈາກນັ້ນກົດຕິ໊ກຍອມຮັບເງື່ອນໄຂຄວາມເປັນສ່ວນຕົວກ່ອນທີ່ຈະສະໝັກສະມາຊິກ":"Please read and understand, then check the box to accept our privacy terms before registering."),
@@ -10534,7 +10540,7 @@ function buildShopOrdersSection(){
               el("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginTop:"6px"}},
               (isSuperAdmin||isShop)?el("button",{style:{background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
                 const logs=o.statusLog||[];
-                const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+                const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
                 modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
                 modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"📋 ປະຫວັດ Order #"+String(o.id).slice(-6)));
                 if(!isShop)modal.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"10px"}},o.name+" · "+o.phone));
@@ -12192,7 +12198,7 @@ function buildAdminTab(){
           const draft={};
           curCombos.forEach(function(cb){draft[cb.k]=cb.q;});
 
-          const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxWidth:"360px",maxHeight:"80vh",overflowY:"auto",padding:"18px 16px"}});
+          const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxWidth:"360px",maxHeight:"80vh",overflowY:"auto",padding:"18px 16px"}});
           mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
           mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"4px"}},"📦 ແກ້ໄຂ Stock"));
           mod.appendChild(el("div",{style:{fontSize:".76rem",color:"#6B8F75",marginBottom:"14px"}},cur.name+" · #"+String(cur.id).slice(-6)));
@@ -14450,7 +14456,7 @@ function buildAdminTab(){
           if(w.slip){
             topRight.appendChild(el("button",{type:"button",style:{background:"none",border:"1.5px solid #1565c0",color:"#1565c0",padding:"3px 8px",borderRadius:"14px",fontSize:".6rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(e){
               e.stopPropagation();
-              const m=el("div",{className:"mod",onclick:function(ev){ev.stopPropagation();}});
+              const m=el("div",{className:"mod","data-noswipe":"1",onclick:function(ev){ev.stopPropagation();}});
               m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
               m.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"8px"}},"💳 ສລິບໂອນ — "+w.date));
               m.appendChild(el("img",{src:w.slip,style:{width:"100%",borderRadius:"10px",maxHeight:"70vh",objectFit:"contain"}}));
@@ -16238,7 +16244,7 @@ function showShopApplyModal(){
     aboutTA.style.cssText="min-height:70px;resize:vertical;";aboutTA.value=f.about||"";
     aboutTA.oninput=function(e){f.about=e.target.value;};
 
-    showOv(el("div",{className:"mod",style:{maxWidth:"380px"},onclick:function(e){e.stopPropagation();}},
+    showOv(el("div",{className:"mod","data-noswipe":"1",style:{maxWidth:"380px"},onclick:function(e){e.stopPropagation();}},
       el("button",{className:"mcl",onclick:closeOv},"✕"),
       el("div",{style:{fontWeight:"900",fontSize:"1.1rem",color:"#1A2B5F",marginBottom:"4px"}},"🏪 ສະໝັກເປັນຮ້ານຄ້າ"),
       el("div",{style:{fontSize:".75rem",color:"#6B8F75",marginBottom:"12px"}},"ກະລຸນາກຮອກຂໍ້ມູນ SuperAdmin ຈະ Approve ໃຫ້"),
@@ -16307,6 +16313,58 @@ function showShopApplyModal(){
   };
   draw();
 }
+// ── ป็อบอัพแก้ไขแค่โลโก้+แบนเนอร์ของร้าน (สำหรับปุ่มดินสอบนหน้าโปรไฟล์ร้านค้า โหมดลูกค้า) — แยกจาก showEditShop เต็มรูปแบบ ไม่ให้ไปยุ่งกับฟิลด์อื่น ──
+function openShopAvatarBannerEditor(sh){
+  const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxWidth:"340px"}});
+  modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"✏️ "+(_lang==="lo"?"ແກ້ໄຂຮູບຮ້ານ":"Edit Shop Photos")));
+
+  // ── โลโก้/อวตาร ──
+  modal.appendChild(el("label",{className:"lbl"},_lang==="lo"?"ໂລໂກ້ / ຮູບໂປຣໄຟລ໌":"Logo / Avatar"));
+  const logoPrev=el("div",{style:{marginBottom:"8px"}},
+    sh.logo&&isUrl(sh.logo)?el("img",{src:sh.logo,style:{width:"60px",height:"60px",borderRadius:"50%",objectFit:"cover",border:"2px solid #9A7ABE"}}):el("div",{style:{width:"60px",height:"60px",borderRadius:"50%",background:"#F0F7F2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.6rem"}},sh.emoji||"🏪")
+  );
+  modal.appendChild(logoPrev);
+  const fiLogo=document.createElement("input");fiLogo.type="file";fiLogo.accept="image/*";fiLogo.style.display="none";
+  fiLogo.onchange=function(e){
+    const f=e.target.files[0];if(!f)return;
+    resizeImage(f,300,300,0.85,function(resized){
+      logoPrev.innerHTML="<div style='font-size:.65rem;color:#888;padding:10px'>⬆️ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...")+"</div>";
+      uploadImage(resized,"laoh/logos").then(function(url){
+        sh.logo=url;
+        saveToCloud("shops",sh.id,sh);
+        logoPrev.innerHTML="";
+        logoPrev.appendChild(el("img",{src:url,style:{width:"60px",height:"60px",borderRadius:"50%",objectFit:"cover",border:"2px solid #9A7ABE"}}));
+        toast(_lang==="lo"?"✅ ອັບເດດໂລໂກ້ແລ້ວ":"✅ Logo updated");
+      }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");});
+    });
+  };
+  modal.appendChild(el("label",{className:"uplbl",style:{marginBottom:"14px"}},"📷 "+(_lang==="lo"?"ປ່ຽນໂລໂກ້":"Change Logo"),fiLogo));
+
+  // ── Banner ──
+  modal.appendChild(el("label",{className:"lbl"},_lang==="lo"?"ຮູບ Banner ຮ້ານ":"Shop Banner"));
+  const bannerPrev=el("div",{style:{height:"60px",borderRadius:"8px",marginBottom:"8px",background:sh.bannerImg?("url('"+sh.bannerImg+"') center/cover no-repeat"):(sh.banner||sh.color||"#1B6B3A"),border:"1px solid #C8E6D4"}});
+  modal.appendChild(bannerPrev);
+  const fiBanner=document.createElement("input");fiBanner.type="file";fiBanner.accept="image/*";fiBanner.style.display="none";
+  fiBanner.onchange=function(e){
+    const f=e.target.files[0];if(!f)return;
+    resizeImage(f,800,300,0.85,function(resized){
+      bannerPrev.style.background="none";
+      bannerPrev.innerHTML="<div style='font-size:.65rem;color:#888;padding:10px;text-align:center'>⬆️ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...")+"</div>";
+      uploadImage(resized,"laoh/banners").then(function(url){
+        sh.bannerImg=url;
+        saveToCloud("shops",sh.id,sh);
+        bannerPrev.innerHTML="";
+        bannerPrev.style.background="url('"+url+"') center/cover no-repeat";
+        toast(_lang==="lo"?"✅ ອັບເດດ Banner ແລ້ວ":"✅ Banner updated");
+      }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");});
+    });
+  };
+  modal.appendChild(el("label",{className:"uplbl"},"🖼 "+(_lang==="lo"?"ປ່ຽນ Banner":"Change Banner"),fiBanner));
+
+  showOv(modal,closeOv);
+}
+
 function showEditShop(sh){
   const isShopSelf = user && user.role==="shop" && user.shopId===sh.id;
   const isSA = user && user.role==="admin";
@@ -16328,7 +16386,7 @@ function showEditShop(sh){
   );
   // Banner preview
   const bannerPrev=el("div",{style:{height:"48px",borderRadius:"8px",marginBottom:"6px",background:fm.banner||"linear-gradient(135deg,#1B6B3A,#0F3D22)",border:"1px solid #C8E6D4"}});
-  const modal=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+  const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
   modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
   modal.appendChild(el("p",{style:{fontSize:"1.05rem",fontWeight:"700",marginBottom:"10px"}},"✏️ ແກ້ໄຂຮ້ານ — "+sh.name));
 
@@ -16961,7 +17019,7 @@ function showEditProd(p){
       stockRow.appendChild(stockLabel);
       const addStockBtn=el("button",{type:"button",style:{background:"#E8F5EE",color:"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"8px",padding:"3px 9px",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},"➕ ເພີ່ມສະຕັອກ");
       addStockBtn.onclick=function(){
-        const addMod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{padding:"18px",maxWidth:"320px",textAlign:"center"}});
+        const addMod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{padding:"18px",maxWidth:"320px",textAlign:"center"}});
         addMod.appendChild(el("button",{className:"mcl",onclick:function(){var ov=document.getElementById("ov");if(ov)ov.remove();showOv(modal,null);}},"✕"));
         addMod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"4px"}},"➕ ເພີ່ມສະຕັອກ"));
         addMod.appendChild(el("div",{style:{fontSize:".78rem",color:"#6B8F75",marginBottom:"12px"}},lbl+" · ປັດຈຸບັນ "+(fm.stock[cb.k]||0)+" ຊິ້ນ"));

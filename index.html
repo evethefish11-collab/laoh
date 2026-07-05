@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v443 -->
+<!-- LaoH Marketplace v445 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.4.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.4.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2862,8 +2862,9 @@ function buildFeedPage(){
         else{tryPlayFeedVid();}
         showFeedVidControlsTemporarily();
       };
-      // iOS: ต้อง muted + playsinline ถึงจะ autoplay; ถ้าไม่ได้ show controls
-      tryPlayFeedVid();
+      // ── ไม่เล่นทันทีตอนสร้าง (วิดีโอที่ยังไม่เลื่อนมาเห็นจะเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) — ให้ IntersectionObserver ด้านล่างเป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
+      vid._tryPlayFeedVid=tryPlayFeedVid;
+      vid._setFeedVidPaused=function(){vidPlaying=false;};
       media.appendChild(vid);
     } else if(rv.mediaUrl){
       const img=document.createElement("img");
@@ -3621,8 +3622,13 @@ function buildFeedPage(){
       entries.forEach(function(entry){
         const vEl=entry.target.querySelector("video");
         if(!vEl)return;
-        if(entry.isIntersecting)vEl.play().catch(function(){});
-        else vEl.pause();
+        if(entry.isIntersecting){
+          if(vEl._tryPlayFeedVid)vEl._tryPlayFeedVid();
+          else vEl.play().catch(function(){});
+        } else {
+          vEl.pause();
+          if(vEl._setFeedVidPaused)vEl._setFeedVidPaused();
+        }
       });
     },{root:scroll,threshold:0.6});
     scroll.querySelectorAll(".feed-item").forEach(function(it){feedVidObs.observe(it);});
@@ -4636,7 +4642,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.4.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.4.5")
   );
 
   // Icon style helper
@@ -5070,7 +5076,9 @@ function buildShopProfile(shopId){
             else{tryPlayV2();}
             showV2ControlsTemporarily();
           };
-          tryPlayV2();
+          // ── ไม่เล่นทันทีตอนสร้าง (จะให้ตอน scroll ไปเห็น/เปิด viewer เป็นคนสั่งเล่นแทน ป้องกัน video ที่ยังไม่เห็นเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) ──
+          v2._tryPlayV2=tryPlayV2;
+          v2._setV2Paused=function(){v2Playing=false;};
           mediaArea.appendChild(v2);
           itemEl.appendChild(mediaArea);
           const vmInfo=el("div",{style:{padding:"12px 14px",background:"#111",color:"#fff"}});
@@ -5173,15 +5181,20 @@ function buildShopProfile(shopId){
         setTimeout(function(){
           const idx=allShopVideos.indexOf(v);
           const items=scrollWrap.querySelectorAll(".feed-item");
-          if(items[idx]){items[idx].scrollIntoView({behavior:"auto"});const vEl=items[idx].querySelector("video");if(vEl)vEl.play().catch(function(){});}
+          if(items[idx]){items[idx].scrollIntoView({behavior:"auto"});const vEl=items[idx].querySelector("video");if(vEl){if(vEl._tryPlayV2)vEl._tryPlayV2();else vEl.play().catch(function(){});}}
           // ── ໃຫ້ມີແຕ່ວິດີໂອທີ່ເຫັນຢູ່ໃນຈໍຫຼີ້ນ, ວິດີໂອອື່ນ pause ອັດຕະໂນມັດ ──
           try{
             const obs=new IntersectionObserver(function(entries){
               entries.forEach(function(entry){
                 const vEl2=entry.target.querySelector("video");
                 if(!vEl2)return;
-                if(entry.isIntersecting)vEl2.play().catch(function(){});
-                else vEl2.pause();
+                if(entry.isIntersecting){
+                  if(vEl2._tryPlayV2)vEl2._tryPlayV2();
+                  else vEl2.play().catch(function(){});
+                } else {
+                  vEl2.pause();
+                  if(vEl2._setV2Paused)vEl2._setV2Paused();
+                }
               });
             },{root:scrollWrap,threshold:0.6});
             items.forEach(function(it){obs.observe(it);});
@@ -7174,8 +7187,30 @@ function showReviewDetail(itemType,itemData){
   if(mediaUrl){
     if(mediaType==="video"){
       const vid=document.createElement("video");
-      vid.src=mediaUrl;vid.autoplay=true;vid.loop=true;vid.muted=false;vid.controls=true;vid.playsInline=true;vid.setAttribute("playsinline","");
-      vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;";
+      vid.src=mediaUrl;vid.loop=true;vid.muted=true;vid.controls=false;vid.playsInline=true;vid.setAttribute("playsinline","");
+      vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;cursor:pointer;";
+      // ── ป๊อบอัพนี้เปิดจากการกดการ์ดโดยตรง (ถือเป็น user gesture ชัดเจน) จึงลองเล่นแบบมีเสียงทันที ถ้าไม่สำเร็จค่อยถอยไปปิดเสียงแทน ──
+      var rvVidPlaying=false;
+      var rvVidCtrlTimer=null;
+      function showRvVidControlsTemporarily(){
+        vid.controls=true;
+        clearTimeout(rvVidCtrlTimer);
+        rvVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
+      }
+      function tryPlayRvVid(unmuteAttempt){
+        if(unmuteAttempt)vid.muted=false;
+        vid.play().then(function(){rvVidPlaying=true;}).catch(function(){
+          if(unmuteAttempt){vid.muted=true;tryPlayRvVid(false);}
+          else vid.controls=true;
+        });
+      }
+      vid.onclick=function(e){
+        e.stopPropagation();
+        if(rvVidPlaying){vid.pause();rvVidPlaying=false;}
+        else{vid.play().then(function(){rvVidPlaying=true;}).catch(function(){vid.controls=true;});}
+        showRvVidControlsTemporarily();
+      };
+      tryPlayRvVid(true);
       mediaBox.appendChild(vid);
     } else {
       mediaBox.appendChild(el("img",{src:mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"},alt:""}));

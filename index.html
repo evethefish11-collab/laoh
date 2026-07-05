@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v440 -->
+<!-- LaoH Marketplace v443 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.4.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.4.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2559,6 +2559,8 @@ function renderChatBubble(){
 
 // ── LIVE FEED ──────────────────────────────────────────────────────
 let _feedMuted = true;
+window._feedSoundOn = window._feedSoundOn || false; // ຈື່ຄວາມມັກສຽງລ່າສຸດຂອງຜູ້ໃຊ້ໃນ Feed (ວິດີໂອຣີວິວ/ໂພສ) ໃຫ້ຄົງຢູ່ຕະຫຼອດ session
+window._shopVidSoundOn = window._shopVidSoundOn || false; // ຄືກັນກັບ Feed ແຕ່ແຍກສະເພາະໜ້າວິດີໂອຣີວິວໃນໂປຣໄຟລ໌ຮ້ານຄ້າ
 
 
 // ── Comment system helpers (shared by review & post cards) ──────────
@@ -2833,25 +2835,35 @@ function buildFeedPage(){
     if(rv.mediaType==="video"&&rv.mediaUrl){
       const vid=document.createElement("video");
       vid.src=rv.mediaUrl;
-      vid.loop=true; vid.muted=true;
+      vid.loop=true; vid.muted=true; // ເລີ່ມແບບປິດສຽງກ່ອນສະເໝີ ຮັບປະກັນເລີ່ມຫຼີ້ນສຳເລັດ
       vid.setAttribute("playsinline","");
       vid.setAttribute("webkit-playsinline","");
       vid.controls=false;
       vid.style.cssText="width:100%;height:100%;object-fit:cover;cursor:pointer;";
-      // tap to play/pause on iOS
+      // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว ──
+      vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
       var vidPlaying=false;
+      var feedVidCtrlTimer=null;
+      function showFeedVidControlsTemporarily(){
+        vid.controls=true;
+        clearTimeout(feedVidCtrlTimer);
+        feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
+      }
+      function tryPlayFeedVid(){
+        vid.play().then(function(){
+          vidPlaying=true;
+          // ປົດສຽງທັນທີຫຼັງຈາກຫຼີ້ນຕິດແລ້ວ (browser ຍອມງ່າຍກວ່າການຫຼີ້ນມີສຽງຕັ້ງແຕ່ຕົ້ນ)
+          if(window._feedSoundOn)vid.muted=false;
+        }).catch(function(){vid.controls=true;});
+      }
       vid.onclick=function(e){
         e.stopPropagation();
         if(vidPlaying){vid.pause();vidPlaying=false;}
-        else{vid.play().then(function(){vidPlaying=true;}).catch(function(){vid.controls=true;vid.muted=false;});}
+        else{tryPlayFeedVid();}
+        showFeedVidControlsTemporarily();
       };
       // iOS: ต้อง muted + playsinline ถึงจะ autoplay; ถ้าไม่ได้ show controls
-      vid.play().then(function(){vidPlaying=true;}).catch(function(){
-        vid.controls=true;
-        vid.muted=false;
-        const playPromise=vid.play();
-        if(playPromise!==undefined)playPromise.catch(function(){vid.controls=true;});
-      });
+      tryPlayFeedVid();
       media.appendChild(vid);
     } else if(rv.mediaUrl){
       const img=document.createElement("img");
@@ -4624,7 +4636,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.4.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.4.3")
   );
 
   // Icon style helper
@@ -5025,7 +5037,7 @@ function buildShopProfile(shopId){
         try{vidThumb.currentTime=Math.min(0.1,(vidThumb.duration||1)/2);}catch(e){}
       });
       cell.appendChild(vidThumb);
-      cell.appendChild(el("div",{style:{position:"absolute",top:"4px",right:"4px",fontSize:"1rem"}},"▶️"));
+      cell.appendChild(el("div",{style:{position:"absolute",top:"4px",right:"4px",fontSize:".5rem",opacity:".5"}},"▶️"));
       if(v.userName){cell.appendChild(el("div",{style:{position:"absolute",bottom:"3px",left:"4px",right:"4px",fontSize:".6rem",color:"#fff",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,.8)"}},v.userName));}
       cell.onclick=function(){
         // ── ເປີດ viewer ແບບເລື່ອນເບິ່ງວິດີໂອອື່ນຂອງຮ້ານນີ້ໄດ້ (ບໍ່ປ່ຽນ view, ຍັງຄ້າງຢູ່ໜ້າໂປຣໄຟລ໌ຮ້ານ) ──
@@ -5037,7 +5049,28 @@ function buildShopProfile(shopId){
           const itemProd=vItem.prodId?prods.find(function(p){return p.id===vItem.prodId;}):(vItem.pinnedProdId?prods.find(function(p){return p.id===vItem.pinnedProdId;}):null);
           const itemEl=el("div",{className:"feed-item",style:{background:"#0a0a0a",display:"flex",flexDirection:"column"}});
           const mediaArea=el("div",{style:{flex:"1",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}});
-          const v2=document.createElement("video");v2.src=vItem.mediaUrl;v2.controls=true;v2.playsInline=true;v2.setAttribute("playsinline","");v2.setAttribute("webkit-playsinline","");v2.style.cssText="max-width:100%;max-height:100%;";
+          const v2=document.createElement("video");v2.src=vItem.mediaUrl;v2.controls=false;v2.muted=true;v2.playsInline=true;v2.setAttribute("playsinline","");v2.setAttribute("webkit-playsinline","");v2.style.cssText="max-width:100%;max-height:100%;cursor:pointer;";
+          v2.onvolumechange=function(){window._shopVidSoundOn=!v2.muted;};
+          var v2Playing=false;
+          var v2CtrlTimer=null;
+          function showV2ControlsTemporarily(){
+            v2.controls=true;
+            clearTimeout(v2CtrlTimer);
+            v2CtrlTimer=setTimeout(function(){v2.controls=false;},2500);
+          }
+          function tryPlayV2(){
+            v2.play().then(function(){
+              v2Playing=true;
+              if(window._shopVidSoundOn)v2.muted=false;
+            }).catch(function(){v2.controls=true;});
+          }
+          v2.onclick=function(e){
+            e.stopPropagation();
+            if(v2Playing){v2.pause();v2Playing=false;}
+            else{tryPlayV2();}
+            showV2ControlsTemporarily();
+          };
+          tryPlayV2();
           mediaArea.appendChild(v2);
           itemEl.appendChild(mediaArea);
           const vmInfo=el("div",{style:{padding:"12px 14px",background:"#111",color:"#fff"}});

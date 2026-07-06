@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v462 -->
+<!-- LaoH Marketplace v468 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1027,6 +1027,8 @@ function showNotifModal(){
               } else if(rv){showReviewDetail("review",rv);return;}
             }
             view="feed";render();
+          } else if(n.type==="adminChat"&&n.targetId){
+            showAdminChatModal(n.targetId);
           } else if(n.type==="new_user"&&user&&user.role==="admin"){
             // ── ໄປໜ້າ Members (superAdminTabMap[5]=4) ──
             view="admin";aTab=5;render();
@@ -2328,7 +2330,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.6.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.6.8")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2639,6 +2641,20 @@ function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item
         inputBar.style.display="flex";
       };
       bub.appendChild(repBtn);
+      if(user&&String(c.uid)===String(user.id)){
+        const delBtn=document.createElement("div");
+        delBtn.className="rv-cmt-reply";
+        delBtn.textContent="🗑 "+(_lang==="lo"?"ລຶບ":"Delete");
+        delBtn.onclick=function(e){
+          e.stopPropagation();
+          if(!confirm(_lang==="lo"?"ລຶບຄອມເມັນນີ້?":"Delete this comment?"))return;
+          if(db){try{db.collection("comments").doc(c.id).delete();}catch(e2){}}
+          cmtList=cmtList.filter(function(x){return x.id!==c.id;});
+          renderCmts();
+          if(onCountChange)onCountChange(cmtList.length);
+        };
+        bub.appendChild(delBtn);
+      }
       row.appendChild(av);row.appendChild(bub);
       cmtArea.appendChild(row);
     });
@@ -2699,6 +2715,20 @@ function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle)
     bub.innerHTML+='<span class="cmt-all-name" style="font-size:.7rem;font-weight:800;color:#1A2B5F;cursor:pointer;">'+escHtml(c.userName||"ລູກຄ້າ")+'</span><br><span style="font-size:.72rem;color:#333;">'+escHtml(c.text)+'</span>';
     const nameEl2=bub.querySelector(".cmt-all-name");
     if(nameEl2)nameEl2.onclick=function(e){e.stopPropagation();goToCommenterProfile(c.uid);};
+    if(user&&String(c.uid)===String(user.id)){
+      const delBtn2=document.createElement("div");
+      delBtn2.style.cssText="font-size:.62rem;color:#c0392b;cursor:pointer;margin-top:3px;display:inline-block;";
+      delBtn2.textContent="🗑 "+(_lang==="lo"?"ລຶບ":"Delete");
+      delBtn2.onclick=function(e){
+        e.stopPropagation();
+        if(!confirm(_lang==="lo"?"ລຶບຄອມເມັນນີ້?":"Delete this comment?"))return;
+        if(db){try{db.collection("comments").doc(c.id).delete();}catch(e2){}}
+        const idx2=cmtList.findIndex(function(x){return x.id===c.id;});
+        if(idx2>=0)cmtList.splice(idx2,1);
+        closeOv();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);
+      };
+      bub.appendChild(delBtn2);
+    }
     row.appendChild(av);row.appendChild(bub);list.appendChild(row);
   });
   mod.appendChild(list);
@@ -4677,7 +4707,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.6.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.6.8")
   );
 
   // Icon style helper
@@ -5613,13 +5643,9 @@ function buildSaveSidebarBtn(itemId,itemType,itemData){
   const sa=document.createElement("div"); sa.className="feed-action";
   const sb=document.createElement("button"); sb.className="feed-action-btn-sm";
   function bookmarkSvg(saved){
-    const fillC=saved?"#1B6B3A":"none";
-    const strokeC=saved?"#1B6B3A":"#fff";
-    return "<svg viewBox='0 0 24 24' width='20' height='20' fill='none'>"+
-      "<path d='M7 3.5h8a2 2 0 0 1 2 2v13.3c0 .55-.62.87-1.06.55L12 15.8l-3.94 3.55c-.44.32-1.06 0-1.06-.55V5.5a2 2 0 0 1 2-2z' fill='"+fillC+"' stroke='"+strokeC+"' stroke-width='1.4' stroke-linejoin='round'/>"+
-      "<path d='M9.3 6.6h5.4' stroke='"+strokeC+"' stroke-width='1.1' stroke-linecap='round' opacity='.85'/>"+
-      "<path d='M17 6.2v10.5' stroke='"+strokeC+"' stroke-width='1' opacity='.55'/>"+
-      "</svg>";
+    // ── ใช้รูปไอคอนที่ออกแบบเอง (ฝัง base64 ในโค้ดโดยตรง ไม่ต้องพึ่งเซิร์ฟเวอร์ภายนอก) ──
+    const src=saved?"data:image/png;base64,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":"data:image/png;base64,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";
+    return "<img src='"+src+"' style='width:20px;height:20px;object-fit:contain;display:block;' alt='save'>";
   }
   const sl=document.createElement("div"); sl.className="feed-action-label"; sl.textContent=String((itemData&&itemData.savedCount)||0);
   function refreshIcon(){
@@ -7082,6 +7108,92 @@ function buildShop(){
   );
 }
 
+// ══════════════════════════════════════════════════════════════
+// ── ระบบข้อความหาแอดมิน (Real-time chat ระหว่างลูกค้า-ซุปเปอร์แอดมิน) ──
+// ══════════════════════════════════════════════════════════════
+// โครงสร้าง: adminChats/{msgId} = {id, uid, sender:"customer"|"admin", text, imageUrl, at}
+// ผูกกับ uid ของลูกค้าแต่ละคน (1 ลูกค้า = 1 บทสนทนากับแอดมิน)
+function sendAdminChatMsg(forUid,sender,text,imageUrl){
+  if(!db)return;
+  const msg={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),uid:String(forUid),sender:sender,text:text||"",imageUrl:imageUrl||null,at:Date.now()};
+  db.collection("adminChats").doc(msg.id).set(msg).catch(function(){});
+  // แจ้งเตือนฝั่งตรงข้าม
+  if(sender==="customer"){
+    const n={id:Date.now()+"nc",toUid:null,toRole:"admin",type:"adminChat",title:"💬 ຂໍ້ຄວາມໃໝ່ຈາກລູກຄ້າ",body:(user&&(user.name||user.username))||"ລູກຄ້າ",orderId:null,targetId:String(forUid),targetType:"adminChat",at:new Date().toISOString(),read:false};
+    try{db.collection("notifications").doc(n.id).set(n);}catch(e){}
+  } else {
+    const n2={id:Date.now()+"na",toUid:String(forUid),toRole:null,type:"adminChat",title:"💬 Admin ຕອບຂໍ້ຄວາມແລ້ວ",body:text||"📷 ຮູບພາບ",orderId:null,targetId:String(forUid),targetType:"adminChat",at:new Date().toISOString(),read:false};
+    try{db.collection("notifications").doc(n2.id).set(n2);}catch(e){}
+  }
+}
+// ── หน้าต่างแชท ใช้ร่วมกันทั้งฝั่งลูกค้า (forUid=ตัวเอง) และฝั่งแอดมิน (forUid=ลูกค้าที่เลือกดู) ──
+function showAdminChatModal(forUid){
+  const isAdminSide=user&&user.role==="admin";
+  const custUser=users.find(function(u){return u.id===forUid;});
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{padding:"0",display:"flex",flexDirection:"column",height:"78vh",maxWidth:"440px"}});
+  mod.appendChild(el("div",{style:{padding:"12px 16px",borderBottom:"1px solid #E8F5EE",display:"flex",alignItems:"center",gap:"10px"}},
+    el("button",{style:{background:"#F0F7F2",border:"none",borderRadius:"50%",width:"30px",height:"30px",cursor:"pointer",fontSize:"1rem"},onclick:closeOv},"✕"),
+    el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},isAdminSide?("💬 "+(custUser?(custUser.name||custUser.username):"ລູກຄ້າ")):"💬 "+(_lang==="lo"?"ຂໍ້ຄວາມຫາ Admin":"Message Admin"))
+  ));
+  const msgArea=el("div",{style:{flex:"1",overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:"8px",background:"#F8FCF8"}});
+  mod.appendChild(msgArea);
+  function bubble(m){
+    const mine=isAdminSide?m.sender==="admin":m.sender==="customer";
+    const row=el("div",{style:{display:"flex",justifyContent:mine?"flex-end":"flex-start"}});
+    const bub=el("div",{style:{maxWidth:"75%",background:mine?"#1B6B3A":"#fff",color:mine?"#fff":"#1A2B5F",borderRadius:"14px",padding:"8px 12px",boxShadow:"0 1px 4px rgba(0,0,0,.08)",fontSize:".82rem"}});
+    if(m.imageUrl)bub.appendChild(el("img",{src:m.imageUrl,style:{maxWidth:"100%",borderRadius:"8px",marginBottom:m.text?"5px":"0",display:"block",cursor:"pointer"},onclick:function(){window.open(m.imageUrl,"_blank");}}));
+    if(m.text)bub.appendChild(el("div",{style:{whiteSpace:"pre-wrap",wordBreak:"break-word"}},m.text));
+    bub.appendChild(el("div",{style:{fontSize:".6rem",opacity:".6",marginTop:"3px",textAlign:"right"}},new Date(m.at).toLocaleTimeString("lo-LA",{hour:"2-digit",minute:"2-digit"})));
+    row.appendChild(bub);
+    return row;
+  }
+  let unsub=null;
+  if(db){
+    unsub=db.collection("adminChats").where("uid","==",String(forUid)).orderBy("at","asc")
+      .onSnapshot(function(snap){
+        msgArea.innerHTML="";
+        if(snap.empty){
+          msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".8rem",padding:"30px 0"}},_lang==="lo"?"ຍັງບໍ່ມີຂໍ້ຄວາມ":"No messages yet"));
+        } else {
+          snap.docs.forEach(function(d){msgArea.appendChild(bubble(d.data()));});
+          msgArea.scrollTop=msgArea.scrollHeight;
+        }
+      },function(){});
+  }
+  // ── ช่องพิมพ์ + แนบรูป ──
+  const inputRow=el("div",{style:{display:"flex",gap:"8px",padding:"10px 12px",borderTop:"1px solid #E8F5EE",alignItems:"center"}});
+  const fileInp=document.createElement("input");fileInp.type="file";fileInp.accept="image/*";fileInp.style.display="none";
+  const attachBtn=el("button",{type:"button",style:{background:"#F0F7F2",border:"none",borderRadius:"50%",width:"36px",height:"36px",fontSize:"1.1rem",cursor:"pointer",flexShrink:"0"},onclick:function(){fileInp.click();}},"📷");
+  const txtInp=document.createElement("input");
+  txtInp.type="text";txtInp.placeholder=_lang==="lo"?"ພິມຂໍ້ຄວາມ...":"Type a message...";
+  txtInp.style.cssText="flex:1;border:1.5px solid #C8E6D4;border-radius:20px;padding:9px 14px;font-size:.82rem;font-family:inherit;outline:none;";
+  const sendBtn=el("button",{type:"button",style:{background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",color:"#fff",fontSize:"1rem",cursor:"pointer",flexShrink:"0"}},"➤");
+  function doSend(){
+    const txt=(txtInp.value||"").trim();
+    if(!txt)return;
+    sendAdminChatMsg(forUid,isAdminSide?"admin":"customer",txt,null);
+    txtInp.value="";
+  }
+  sendBtn.onclick=doSend;
+  txtInp.onkeydown=function(e){if(e.key==="Enter")doSend();};
+  fileInp.onchange=function(e){
+    const f=e.target.files[0];if(!f)return;
+    resizeImage(f,900,900,0.8,function(resized){
+      toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...");
+      uploadImage(resized,"laoh/adminChat").then(function(url){
+        sendAdminChatMsg(forUid,isAdminSide?"admin":"customer",null,url);
+      }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");});
+    });
+    fileInp.value="";
+  };
+  inputRow.appendChild(fileInp);
+  inputRow.appendChild(attachBtn);
+  inputRow.appendChild(txtInp);
+  inputRow.appendChild(sendBtn);
+  mod.appendChild(inputRow);
+  showOv(mod,function(){if(unsub)try{unsub();}catch(e){}closeOv();});
+}
+
 function buildShopFooter(){
   return el("div",null,
     el("div",{style:{margin:"16px 14px 0",background:"#1A2B5F",borderRadius:"14px",padding:"20px 16px"}},
@@ -7092,7 +7204,13 @@ function buildShopFooter(){
           el("span",{style:{fontSize:".8rem",color:"rgba(255,255,255,.8)"}},s)))
       ),
       
-      el("a",{href:"https://wa.me/"+_adminWaNumber,target:"_blank",style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:"11px",borderRadius:"10px",background:"#25D366",color:"#fff",textDecoration:"none",fontWeight:"700",fontSize:".85rem",fontFamily:"sans-serif"}},t("contact"))
+      el("a",{href:"https://wa.me/"+_adminWaNumber,target:"_blank",style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:"11px",borderRadius:"10px",background:"#25D366",color:"#fff",textDecoration:"none",fontWeight:"700",fontSize:".85rem",fontFamily:"sans-serif",marginBottom:"8px"}},t("contact")),
+      el("button",{type:"button",style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",width:"100%",padding:"11px",borderRadius:"10px",background:"#1A2B5F",border:"1.5px solid #3D5A9C",color:"#fff",fontWeight:"700",fontSize:".85rem",fontFamily:"sans-serif",cursor:"pointer"},
+        onclick:function(){
+          if(!user){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບ":"Please login");return;}
+          showAdminChatModal(user.id);
+        }
+      },"💬 "+(_lang==="lo"?"ຂໍ້ຄວາມຫາ Admin":"Message Admin"))
     ),
     el("div",{style:{background:"#1A2B5F",color:"rgba(255,255,255,.4)",padding:"20px 14px 14px"}},
       el("div",{style:{fontSize:"1.05rem",color:"#4CAF88",marginBottom:"6px",fontWeight:"900",fontFamily:"'Playfair Display',Georgia,serif"}},"LaoH ລາວເຮັດ"),
@@ -7422,7 +7540,11 @@ function buildReviewDetailItemContent(itemType,itemData){
 function showReviewDetail(itemType,itemData){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",overflow:"hidden",maxWidth:"420px"}});
   mod.appendChild(el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"));
-  mod.appendChild(buildReviewDetailItemContent(itemType,itemData));
+  const content=buildReviewDetailItemContent(itemType,itemData);
+  mod.appendChild(content);
+  // ── เปิดจากการกดการ์ดโดยตรง (user gesture ชัดเจน) — ไม่มี IntersectionObserver คอยสั่งเล่นแบบในป๊อบอัพเลื่อนได้ ต้องสั่งเล่นเองทันทีตรงนี้ ──
+  const vEl=content.querySelector("video");
+  if(vEl){if(vEl._tryPlayFeedVid)vEl._tryPlayFeedVid();else vEl.play().catch(function(){});}
   showOv(mod,null);
 }
 
@@ -11703,8 +11825,8 @@ function buildAdminTab(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
-  const superAdminTabMap={0:5,1:7,2:8,3:9,4:15,5:4,6:10,7:11,8:12,9:13,10:14,11:30};
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages"];
+  const superAdminTabMap={0:5,1:7,2:8,3:9,4:15,5:4,6:10,7:11,8:12,9:13,10:14,11:30,12:40};
   const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:31,7:20,8:32};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
@@ -16229,6 +16351,46 @@ function buildAdminTab(){
 
 
   // ── SUPER ADMIN: CREATE ORDER FOR CUSTOMER (effectiveTab 30) ───────────
+  if(effectiveTab===40){
+    const section=el("div",null);
+    section.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",marginBottom:"10px"}},"💬 "+(_lang==="lo"?"ຂໍ້ຄວາມຈາກລູກຄ້າ":"Customer Messages")));
+    const listWrap=el("div",null);
+    section.appendChild(listWrap);
+    listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".82rem",padding:"20px 0"}},_lang==="lo"?"ກຳລັງໂຫຼດ...":"Loading..."));
+    if(db){
+      db.collection("adminChats").orderBy("at","desc").limit(500).get().then(function(snap){
+        listWrap.innerHTML="";
+        // ── รวมเป็นรายชื่อลูกค้าแยกตาม uid เอาข้อความล่าสุดของแต่ละคน (ไม่แสดงถ้าไม่มีข้อความเลย) ──
+        const byUid={};
+        snap.docs.forEach(function(d){
+          const m=d.data();
+          if(!byUid[m.uid]||m.at>byUid[m.uid].at)byUid[m.uid]=m;
+        });
+        const convos=Object.keys(byUid).map(function(uid){return {uid:uid,last:byUid[uid]};}).sort(function(a,b){return b.last.at-a.last.at;});
+        if(convos.length===0){
+          listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".82rem",padding:"20px 0"}},_lang==="lo"?"ຍັງບໍ່ມີຂໍ້ຄວາມຈາກລູກຄ້າ":"No customer messages yet"));
+          return;
+        }
+        convos.forEach(function(c){
+          const cu=users.find(function(u){return String(u.id)===String(c.uid);});
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 12px",background:"#fff",borderRadius:"12px",marginBottom:"8px",boxShadow:"0 1px 4px rgba(0,0,0,.06)",cursor:"pointer"},
+            onclick:function(){showAdminChatModal(c.uid);}
+          });
+          const av=el("div",{style:{width:"38px",height:"38px",borderRadius:"50%",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1rem",color:"#fff",overflow:"hidden",flexShrink:"0"}});
+          if(cu&&cu.avatar&&isUrl(cu.avatar)){const img=document.createElement("img");img.src=cu.avatar;img.style.cssText="width:100%;height:100%;object-fit:cover;";av.appendChild(img);}
+          else av.textContent="👤";
+          row.appendChild(av);
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1A2B5F"}},cu?(cu.name||cu.username):("UID "+c.uid)));
+          info.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},(c.last.sender==="admin"?"👤 Admin: ":"")+(c.last.text||(c.last.imageUrl?"📷 ຮູບພາບ":""))));
+          row.appendChild(info);
+          row.appendChild(el("div",{style:{fontSize:".65rem",color:"#aaa",flexShrink:"0"}},new Date(c.last.at).toLocaleDateString("lo-LA",{day:"2-digit",month:"2-digit"})));
+          listWrap.appendChild(row);
+        });
+      }).catch(function(){listWrap.innerHTML="";listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#c00",fontSize:".8rem",padding:"20px 0"}},"⚠ ໂຫຼດຂໍ້ມູນບໍ່ສຳເລັດ"));});
+    }
+    return section;
+  }
   if(effectiveTab===30){
     if(!window._adminOrderDraft){
       window._adminOrderDraft={

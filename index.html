@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v456 -->
+<!-- LaoH Marketplace v462 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.5.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.6.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2595,9 +2595,10 @@ function saveComment(cmt,targetOwnerUid,targetTitle){
 }
 
 // Build comment overlay for a feed item
-function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item){
+function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item,onCountChange){
   const cmtArea=document.createElement("div");
   cmtArea.className="rv-cmts";
+  cmtArea.style.display="none";
   const inputBar=document.createElement("div");
   inputBar.className="rv-cmt-input-bar";
   inputBar.style.display="none";
@@ -2654,6 +2655,7 @@ function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item
   // Load initial comments
   loadComments(targetId,targetType,function(list){
     cmtList=list;renderCmts();
+    if(onCountChange)onCountChange(cmtList.length);
   });
 
   // Input bar
@@ -2672,6 +2674,7 @@ function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item
     saveComment(cmt,targetOwnerUid,targetTitle);
     inp.value="";replyTo=null;replyToUid=null;inp.placeholder=_lang==="lo"?"ຂຽນຄອມເມັນ...":"Add a comment...";
     renderCmts();
+    if(onCountChange)onCountChange(cmtList.length);
   };
   inputBar.appendChild(inp);inputBar.appendChild(sendBtn);
 
@@ -2738,14 +2741,18 @@ function buildCommentSidebarBtn(targetId,targetType,targetOwnerUid,targetTitle,i
   const saC=document.createElement("div");saC.className="feed-action";
   const sbC=document.createElement("button");sbC.className=useSmall?"feed-action-btn-sm":"feed-action-btn";
   sbC.textContent="💬";
-  const {inputBar}=buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item);
+  const slC=document.createElement("div");slC.className="feed-action-label";slC.textContent="0";
+  const {cmtArea,inputBar}=buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item,function(count){
+    slC.textContent=String(count);
+  });
   sbC.onclick=function(e){
     e.stopPropagation();
-    inputBar.style.display=inputBar.style.display==="none"?"flex":"none";
-    if(inputBar.style.display==="flex"){const inp=inputBar.querySelector(".rv-cmt-inp");if(inp)inp.focus();}
+    const show=cmtArea.style.display==="none";
+    cmtArea.style.display=show?"flex":"none";
+    inputBar.style.display=show?"flex":"none";
+    if(show){const inp=inputBar.querySelector(".rv-cmt-inp");if(inp)inp.focus();}
   };
   saC.appendChild(sbC);
-  const slC=document.createElement("div");slC.className="feed-action-label";slC.textContent="ຄອມ";
   saC.appendChild(slC);
   return saC;
 }
@@ -3029,7 +3036,7 @@ function buildFeedPage(){
     const slCopy=document.createElement("div"); slCopy.className="feed-action-label"; slCopy.textContent="ລິ້ງ";
     saCopy.appendChild(slCopy); sidebar.appendChild(saCopy);
     // Save button (เฉพาะบัญชีลูกค้า)
-    const saveBtn1=buildSaveSidebarBtn(rv.id,"review");
+    const saveBtn1=buildSaveSidebarBtn(rv.id,"review",rv);
     if(saveBtn1)sidebar.appendChild(saveBtn1);
     // Comment button
     sidebar.appendChild(buildCommentSidebarBtn(rv.id,"review",rv.uid,rv.userName||"Review",item,true));
@@ -3153,28 +3160,9 @@ function buildFeedPage(){
     }
     item.appendChild(info);
 
-    // ── Sidebar: ไลก์ + ส่งต่อ + ลิงก์ (ตามแบบ review card) ──
+    // ── Sidebar: ส่งต่อ + ลิงก์ (เอาปุ่มไลก์ออกแล้ว) ──
     const sidebar=document.createElement("div");
     sidebar.className="feed-sidebar-compact";
-
-    // Like
-    const likeKey="like_"+post.id;
-    let liked=false;try{liked=!!localStorage.getItem(likeKey);}catch(e){}
-    const saLike=document.createElement("div"); saLike.className="feed-action";
-    const sbLike=document.createElement("button"); sbLike.className="feed-action-btn-sm";
-    sbLike.textContent=liked?"❤️":"🤍";
-    sbLike.onclick=function(){
-      try{
-        if(liked){localStorage.removeItem(likeKey);post.likes=Math.max(0,(post.likes||0)-1);}
-        else{localStorage.setItem(likeKey,"1");post.likes=(post.likes||0)+1;}
-        saveToCloud("shopPosts",post.id,post);liked=!liked;
-        sbLike.textContent=liked?"❤️":"🤍";
-        slLikeCount.textContent=String(post.likes||0);
-      }catch(e){}
-    };
-    saLike.appendChild(sbLike);
-    const slLikeCount=document.createElement("div"); slLikeCount.className="feed-action-label"; slLikeCount.textContent=String(post.likes||0);
-    saLike.appendChild(slLikeCount); sidebar.appendChild(saLike);
 
     // Share
     const saShare=document.createElement("div"); saShare.className="feed-action";
@@ -3208,7 +3196,7 @@ function buildFeedPage(){
     saLink.appendChild(slLink); sidebar.appendChild(saLink);
 
     // Save button (เฉพาะบัญชีลูกค้า)
-    const saveBtn2=buildSaveSidebarBtn(post.id,"shoppost");
+    const saveBtn2=buildSaveSidebarBtn(post.id,"shoppost",post);
     if(saveBtn2)sidebar.appendChild(saveBtn2);
 
     // Comment button
@@ -4689,7 +4677,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.5.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.6.2")
   );
 
   // Icon style helper
@@ -5168,25 +5156,6 @@ function buildShopProfile(shopId){
           const rdTitle=isPostItem?(sh.name||"Post"):(vItem.userName||"Review");
           const rdSidebar2=document.createElement("div");
           rdSidebar2.className="feed-sidebar-compact";
-          if(isPostItem){
-            const likeKey2="like_"+vItem.id;
-            let liked2=false;try{liked2=!!localStorage.getItem(likeKey2);}catch(e){}
-            const saLike2=document.createElement("div"); saLike2.className="feed-action";
-            const sbLike2=document.createElement("button"); sbLike2.className="feed-action-btn-sm";
-            sbLike2.textContent=liked2?"❤️":"🤍";
-            const slLikeCount2=document.createElement("div"); slLikeCount2.className="feed-action-label"; slLikeCount2.textContent=String(vItem.likes||0);
-            sbLike2.onclick=function(){
-              try{
-                if(liked2){localStorage.removeItem(likeKey2);vItem.likes=Math.max(0,(vItem.likes||0)-1);}
-                else{localStorage.setItem(likeKey2,"1");vItem.likes=(vItem.likes||0)+1;}
-                saveToCloud("shopPosts",vItem.id,vItem);liked2=!liked2;
-                sbLike2.textContent=liked2?"❤️":"🤍";
-                slLikeCount2.textContent=String(vItem.likes||0);
-              }catch(e){}
-            };
-            saLike2.appendChild(sbLike2);saLike2.appendChild(slLikeCount2);
-            rdSidebar2.appendChild(saLike2);
-          }
           // Share
           const rdShareA2=document.createElement("div"); rdShareA2.className="feed-action";
           const rdShareBtn2=document.createElement("button"); rdShareBtn2.className="feed-action-btn-sm";
@@ -5616,15 +5585,22 @@ function isItemSaved(itemId,itemType){
   if(!user||!user.savedPosts)return false;
   return user.savedPosts.some(function(x){return x.id===itemId&&x.type===itemType;});
 }
-function toggleSaveItem(itemId,itemType){
+function toggleSaveItem(itemId,itemType,itemData){
   if(!user){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບ":"Please login");return;}
   if(!user.savedPosts)user.savedPosts=[];
-  if(isItemSaved(itemId,itemType)){
+  const wasSaved=isItemSaved(itemId,itemType);
+  if(wasSaved){
     user.savedPosts=user.savedPosts.filter(function(x){return !(x.id===itemId&&x.type===itemType);});
     toast(_lang==="lo"?"ຍົກເລີກເຊັບແລ້ວ":"Removed from saved");
   } else {
     user.savedPosts.push({id:itemId,type:itemType,at:Date.now()});
     toast(_lang==="lo"?"🔖 ເຊັບແລ້ວ":"🔖 Saved");
+  }
+  // ── อัปเดตจำนวนคนเซฟรวม (เก็บไว้กับตัวโพสต์/รีวิวเอง เหมือนกับยอดไลก์) ──
+  if(itemData){
+    itemData.savedCount=Math.max(0,(itemData.savedCount||0)+(wasSaved?-1:1));
+    if(itemType==="review")saveReview(itemData);
+    else if(itemType==="shoppost")saveToCloud("shopPosts",itemData.id,itemData);
   }
   const u=users.find(function(x){return x.id===user.id;});
   if(u)u.savedPosts=[...user.savedPosts];
@@ -5632,19 +5608,31 @@ function toggleSaveItem(itemId,itemType){
   if(user.id)saveToCloud("users",user.id,user);
 }
 // ── ปุ่มเซฟ สไตล์เดียวกับปุ่มไลก์/แชร์ในกลุ่ม sidebar ของ Feed — เห็นเฉพาะบัญชีลูกค้าเท่านั้น (ไม่ใช่ร้านค้า/โหมดดูร้าน) ──
-function buildSaveSidebarBtn(itemId,itemType){
+function buildSaveSidebarBtn(itemId,itemType,itemData){
   if(!(user&&user.role==="c"&&!user.isShopViewer))return null;
   const sa=document.createElement("div"); sa.className="feed-action";
   const sb=document.createElement("button"); sb.className="feed-action-btn-sm";
-  function refreshIcon(){sb.textContent=isItemSaved(itemId,itemType)?"🔖":"📑";}
+  function bookmarkSvg(saved){
+    const fillC=saved?"#1B6B3A":"none";
+    const strokeC=saved?"#1B6B3A":"#fff";
+    return "<svg viewBox='0 0 24 24' width='20' height='20' fill='none'>"+
+      "<path d='M7 3.5h8a2 2 0 0 1 2 2v13.3c0 .55-.62.87-1.06.55L12 15.8l-3.94 3.55c-.44.32-1.06 0-1.06-.55V5.5a2 2 0 0 1 2-2z' fill='"+fillC+"' stroke='"+strokeC+"' stroke-width='1.4' stroke-linejoin='round'/>"+
+      "<path d='M9.3 6.6h5.4' stroke='"+strokeC+"' stroke-width='1.1' stroke-linecap='round' opacity='.85'/>"+
+      "<path d='M17 6.2v10.5' stroke='"+strokeC+"' stroke-width='1' opacity='.55'/>"+
+      "</svg>";
+  }
+  const sl=document.createElement("div"); sl.className="feed-action-label"; sl.textContent=String((itemData&&itemData.savedCount)||0);
+  function refreshIcon(){
+    sb.innerHTML=bookmarkSvg(isItemSaved(itemId,itemType));
+    sl.textContent=String((itemData&&itemData.savedCount)||0);
+  }
   refreshIcon();
   sb.onclick=function(e){
     if(e)e.stopPropagation();
-    toggleSaveItem(itemId,itemType);
+    toggleSaveItem(itemId,itemType,itemData);
     refreshIcon();
   };
   sa.appendChild(sb);
-  const sl=document.createElement("div"); sl.className="feed-action-label"; sl.textContent=_lang==="lo"?"ເຊັບ":"Save";
   sa.appendChild(sl);
   return sa;
 }
@@ -5725,10 +5713,18 @@ function buildUserProfile(uid){
       isFollowingUser(uid)?"✓ ຕິດຕາມແລ້ວ":"🔔 ຕິດຕາມ");
   infoRow.appendChild(nameBlock);infoRow.appendChild(actionBtn);
   // Stats — clickable followers/following
-  function showUserList(title,userIds,shopIds){
+  function showUserList(title,userIds,shopIds,restricted){
     const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto"}});
     mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
     mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"10px"}},title));
+    if(restricted){
+      mod.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"30px 20px",fontSize:".82rem",lineHeight:"1.6"}},
+        el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"🔒"),
+        (_lang==="lo"?"ບັນຊີນີ້ຕັ້ງຄ່າລາຍຊື່ນີ້ເປັນສ່ວນຕົວ":"This account has set this list to private")
+      ));
+      showOv(mod,null);
+      return;
+    }
     if((!userIds||userIds.length===0)&&(!shopIds||shopIds.length===0)){
       mod.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px",fontSize:".82rem"}},(_lang==="lo"?"ຍັງບໍ່ມີ":"None yet")));
     } else {
@@ -5770,8 +5766,16 @@ function buildUserProfile(uid){
   const followingShopIds=(pu.following||[]);
   const stats=el("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",padding:"8px 16px",borderTop:"1px solid #E8F5EE",borderBottom:"1px solid #E8F5EE",marginBottom:"12px",textAlign:"center"}},
     el("div",{style:{cursor:"default"}},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},uRvs.length),el("div",{style:{fontSize:".65rem",color:"#6B8F75"}},(_lang==="lo"?"ຮີວິວ":"Reviews"))),
-    el("div",{style:{cursor:"pointer"},onclick:function(){showUserList((_lang==="lo"?"👥 ຜູ້ຕິດຕາມ":"👥 Followers"),followerUserIds,[]);}},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},followerCount),el("div",{style:{fontSize:".65rem",color:"#1B6B3A",fontWeight:"600"}},(_lang==="lo"?"ຜູ້ຕິດຕາມ ›":"Followers ›"))),
-    el("div",{style:{cursor:"pointer"},onclick:function(){showUserList((_lang==="lo"?"🔔 ກຳລັງຕິດຕາມ":"🔔 Following"),followingUserIds,followingShopIds);}},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},followingCount+(pu.following||[]).length),el("div",{style:{fontSize:".65rem",color:"#1B6B3A",fontWeight:"600"}},(_lang==="lo"?"ຕິດຕາມ ›":"Following ›")))
+    el("div",{style:{cursor:"pointer"},onclick:function(){
+      const puPriv=pu.privacy||{};
+      const restrictFollowers=!isMe&&puPriv.showFollowers===false;
+      showUserList((_lang==="lo"?"👥 ຜູ້ຕິດຕາມ":"👥 Followers"),followerUserIds,[],restrictFollowers);
+    }},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},followerCount),el("div",{style:{fontSize:".65rem",color:"#1B6B3A",fontWeight:"600"}},(_lang==="lo"?"ຜູ້ຕິດຕາມ ›":"Followers ›"))),
+    el("div",{style:{cursor:"pointer"},onclick:function(){
+      const puPriv=pu.privacy||{};
+      const restrictFollowing=!isMe&&puPriv.showFollowing===false;
+      showUserList((_lang==="lo"?"🔔 ກຳລັງຕິດຕາມ":"🔔 Following"),followingUserIds,followingShopIds,restrictFollowing);
+    }},el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},followingCount+(pu.following||[]).length),el("div",{style:{fontSize:".65rem",color:"#1B6B3A",fontWeight:"600"}},(_lang==="lo"?"ຕິດຕາມ ›":"Following ›")))
   );
   const myO=user?orders.filter(function(o){return o.uid===user.id;}):[];
   // ── Settings / Notifications / Coupons / My Orders (ย้ายมาจากหน้าโปรไฟล์ของฉัน — เห็นเฉพาะเจ้าของบัญชี) ──
@@ -5783,6 +5787,49 @@ function buildUserProfile(uid){
       label:_lang==="lo"?"ພາສາ / Language":"ພາສາ / Language",
       value:_lang==="lo"?"ລາວ":"EN",
       action:()=>{_lang=_lang==="lo"?"en":"lo";try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();}
+    },
+    {
+      icon:"👥",
+      label:_lang==="lo"?"ຄວາມເປັນສ່ວນຕົວ ຜູ້ຕິດຕາມ":"Follower Privacy",
+      value:"",
+      action:()=>{
+        if(!user.privacy)user.privacy={};
+        if(user.privacy.showFollowers===undefined)user.privacy.showFollowers=true;
+        if(user.privacy.showFollowing===undefined)user.privacy.showFollowing=true;
+        function savePrivacy(){
+          const u3=users.find(function(x){return x.id===user.id;});
+          if(u3)u3.privacy=Object.assign({},user.privacy);
+          try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
+          if(user.id)saveToCloud("users",user.id,user);
+        }
+        const pMod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+        pMod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+        pMod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"👥 "+(_lang==="lo"?"ຄວາມເປັນສ່ວນຕົວ ຜູ້ຕິດຕາມ":"Follower Privacy")));
+        pMod.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",marginBottom:"14px",lineHeight:"1.5"}},_lang==="lo"?"ຖ້າປິດໄວ້ ຄົນອື່ນຈະຍັງເຫັນຈຳນວນ ແຕ່ຈະບໍ່ເຫັນລາຍຊື່ຕອນກົດເຂົ້າໄປເບິ່ງ":"If turned off, others still see the count but won't see the name list when tapping in"));
+        const rowsWrap=el("div",null);
+        pMod.appendChild(rowsWrap);
+        function renderToggleRows(){
+          rowsWrap.innerHTML="";
+          function toggleRow(label,key){
+            const row=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #F0F7F2"}});
+            row.appendChild(el("span",{style:{fontSize:".85rem",color:"#1A2B5F",fontWeight:"600"}},label));
+            const sw=el("button",{type:"button",style:{width:"44px",height:"24px",borderRadius:"14px",border:"none",cursor:"pointer",background:user.privacy[key]?"#1B6B3A":"#ddd",position:"relative",transition:"background .2s"}},
+              el("span",{style:{position:"absolute",top:"2px",left:user.privacy[key]?"22px":"2px",width:"20px",height:"20px",borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}})
+            );
+            sw.onclick=function(){
+              user.privacy[key]=!user.privacy[key];
+              savePrivacy();
+              renderToggleRows();
+            };
+            row.appendChild(sw);
+            rowsWrap.appendChild(row);
+          }
+          toggleRow(_lang==="lo"?"ລາຍຊື່ຜູ້ຕິດຕາມ":"Follower list",  "showFollowers");
+          toggleRow(_lang==="lo"?"ລາຍຊື່ທີ່ຕິດຕາມຢູ່":"Following list", "showFollowing");
+        }
+        renderToggleRows();
+        showOv(pMod,null);
+      }
     },
     {
       icon:"🗣️",
@@ -7294,27 +7341,9 @@ function buildReviewDetailItemContent(itemType,itemData){
   // ── Sidebar ขวามือของวิดีโอ (ไลก์/แชร์/ลิงก์/คอมเมนต์) เหมือนกับใน Feed ──
   const rdSidebar=document.createElement("div");
   rdSidebar.className="feed-sidebar-compact";
-
-  if(isPost){
-    // Like (เฉพาะโพสต์ร้าน เหมือนใน feed)
-    const likeKey="like_"+itemData.id;
-    let liked=false;try{liked=!!localStorage.getItem(likeKey);}catch(e){}
-    const saLike=document.createElement("div"); saLike.className="feed-action";
-    const sbLike=document.createElement("button"); sbLike.className="feed-action-btn-sm";
-    sbLike.textContent=liked?"❤️":"🤍";
-    const slLikeCount=document.createElement("div"); slLikeCount.className="feed-action-label"; slLikeCount.textContent=String(itemData.likes||0);
-    sbLike.onclick=function(){
-      try{
-        if(liked){localStorage.removeItem(likeKey);itemData.likes=Math.max(0,(itemData.likes||0)-1);}
-        else{localStorage.setItem(likeKey,"1");itemData.likes=(itemData.likes||0)+1;}
-        saveToCloud("shopPosts",itemData.id,itemData);liked=!liked;
-        sbLike.textContent=liked?"❤️":"🤍";
-        slLikeCount.textContent=String(itemData.likes||0);
-      }catch(e){}
-    };
-    saLike.appendChild(sbLike);saLike.appendChild(slLikeCount);
-    rdSidebar.appendChild(saLike);
-  }
+  // ── ปรับระยะห่าง/ตำแหน่งเฉพาะ popup นี้เท่านั้น (ไม่แตะ CSS กลางที่ใช้ร่วมกับ Feed) — กล่องรูปที่นี่เตี้ยกว่าวิดีโอเต็มจอใน Feed พอเพิ่มปุ่มเซฟเข้ามา ไอคอนบนสุด (ไลก์) เลยล้นขึ้นไปนอกกรอบ ──
+  rdSidebar.style.gap="10px";
+  rdSidebar.style.bottom="130px";
 
   // Share
   const rdShareA=document.createElement("div"); rdShareA.className="feed-action";
@@ -7349,7 +7378,7 @@ function buildReviewDetailItemContent(itemType,itemData){
 
   // Comment (วางคอมเมนต์ทับวิดีโอมุมล่างซ้าย + ปุ่มเปิด/ปิดช่องพิมพ์ เหมือนกับ Feed ทุกอย่าง)
   // Save button (เฉพาะบัญชีลูกค้า)
-  const saveBtn3=buildSaveSidebarBtn(itemData.id,isPost?"shoppost":"review");
+  const saveBtn3=buildSaveSidebarBtn(itemData.id,isPost?"shoppost":"review",itemData);
   if(saveBtn3)rdSidebar.appendChild(saveBtn3);
   rdSidebar.appendChild(buildCommentSidebarBtn(itemData.id,isPost?"post":"review",ownerUid,title,mediaBox,true));
   // ปรับตำแหน่งคอมเมนต์ให้ลงมาใกล้ขอบล่างวิดีโอ เฉพาะ popup นี้เท่านั้น (mediaBox ไม่มีแถบข้อมูลด้านล่างซ้อนทับเหมือน Feed จึงมีช่องว่างเยอะเกินไปถ้าใช้ค่าเดิม)

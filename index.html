@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v453 -->
+<!-- LaoH Marketplace v455 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.5.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.5.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4682,7 +4682,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.5.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.5.5")
   );
 
   // Icon style helper
@@ -6551,34 +6551,10 @@ function buildUserProfile(uid){
       }
       card.appendChild(imgBox);
       // ── ດາວ + ຄຳອະທິບາຍ ໃຕ້ຮູບ (ຮູບແບບດຽວກັບ "ຮີວິວຂອງຂ້ອຍ" ທີ່ຂໍໄວ້) ──
-      const capBox=el("div",{style:{padding:"6px 10px 0"}});
+      const capBox=el("div",{style:{padding:"6px 10px 10px"}});
       capBox.appendChild(el("div",{style:{fontSize:".7rem",color:"#FFA000"}},"★".repeat(rv.stars||5)));
       if(rv.caption)capBox.appendChild(el("div",{style:{fontSize:".72rem",color:"#555",marginTop:"3px",lineHeight:"1.35",overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:"2",WebkitBoxOrient:"vertical"}},rv.caption));
       card.appendChild(capBox);
-      // Product info + add to cart
-      if(p){
-        const info=el("div",{style:{padding:"6px 10px 8px"}});
-        info.appendChild(el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},p.name));
-        info.appendChild(el("div",{style:{fontSize:".75rem",color:"#1B6B3A",fontWeight:"800",marginTop:"2px"}},"₭"+fmt(price)));
-        const addBtn=el("button",{style:{width:"100%",marginTop:"6px",padding:"6px",borderRadius:"10px",background:"#1B6B3A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".72rem",fontWeight:"700"},
-          onclick:function(e){
-            e.stopPropagation();
-            if(blockIfShopViewer())return;
-            const cs=p.colors||[];
-            const co=cs.length>0?cs[0]:"";const si=(p.sizes||[]).length>0?p.sizes[0]:"";
-            if(cs.length>0&&!co){showProduct(p);return;}
-            const k=p.id+"-"+co+"-"+si;
-            const ex=cart.find(function(x){return x.k===k;});
-            if(ex){
-              const eidx=cart.findIndex(function(x){return x.k===k;});
-              if(eidx>=0)cart[eidx]=Object.assign({},cart[eidx],{q:(cart[eidx].q||1)+1});
-            }else{const _cImg=(p.colorImgs&&p.colorImgs[co]&&isUrl(p.colorImgs[co]))?p.colorImgs[co]:null;cart.push({...p,k,co,si,q:1,preorder:false,dispPrice:price,img:_cImg||p.img,orderSource:"product"});}saveCart();saveCart();
-            toast((_lang==="lo"?"✅ ເພີ່ມໃສ່ກະຕ່າ!":"✅ Added to cart!"));render();
-          }
-        },(_lang==="lo"?"🛒 ເພີ່ມໃສ່ກະຕ່າ":"🛒 Add to Cart"));
-        info.appendChild(addBtn);
-        card.appendChild(info);
-      }
       rvGrid.appendChild(card);
     });
   }

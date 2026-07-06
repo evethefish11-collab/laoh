@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v447 -->
+<!-- LaoH Marketplace v450 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2328,7 +2328,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.4.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.5.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3051,8 +3051,36 @@ function buildFeedPage(){
     if(post.mediaUrl){
       if(post.mediaType==="video"){
         const vid=document.createElement("video");
-        vid.src=post.mediaUrl;vid.controls=true;vid.playsInline=true;vid.muted=true;
-        vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;";
+        vid.src=post.mediaUrl;
+        vid.loop=true; vid.muted=true; // ເລີ່ມແບບປິດສຽງກ່ອນສະເໝີ ຮັບປະກັນເລີ່ມຫຼີ້ນສຳເລັດ
+        vid.setAttribute("playsinline","");
+        vid.setAttribute("webkit-playsinline","");
+        vid.controls=false;
+        vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;cursor:pointer;";
+        // ── ใช้ตัวจดจำเสียงตัวเดียวกับ buildReviewCard เพื่อให้ทุกวิดีโอใน Feed (ทั้งโพสต์ร้านค้าและรีวิว) ใช้การตั้งค่าเดียวกันต่อเนื่องกัน ──
+        vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
+        var vidPlaying=false;
+        var feedVidCtrlTimer=null;
+        function showFeedVidControlsTemporarily(){
+          vid.controls=true;
+          clearTimeout(feedVidCtrlTimer);
+          feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
+        }
+        function tryPlayFeedVid(){
+          vid.play().then(function(){
+            vidPlaying=true;
+            if(window._feedSoundOn)vid.muted=false;
+          }).catch(function(){vid.controls=true;});
+        }
+        vid.onclick=function(e){
+          e.stopPropagation();
+          if(vidPlaying){vid.pause();vidPlaying=false;}
+          else{tryPlayFeedVid();}
+          showFeedVidControlsTemporarily();
+        };
+        // ── ไม่เล่นทันทีตอนสร้าง — ให้ IntersectionObserver ของ Feed (ตัวเดียวกับที่ใช้กับ buildReviewCard) เป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
+        vid._tryPlayFeedVid=tryPlayFeedVid;
+        vid._setFeedVidPaused=function(){vidPlaying=false;};
         mediaWrap.appendChild(vid);
       } else {
         const img=document.createElement("img");
@@ -3239,7 +3267,7 @@ function buildFeedPage(){
       const pinnedProd=ab.pinnedProdId?prods.find(function(p){return p.id===ab.pinnedProdId;}):null;
       const item=el("div",{className:"feed-item",style:{background:"#0D1B2A",display:"flex",flexDirection:"column"}});
       // Cover image fills top portion
-      const coverWrap=el("div",{style:{flex:"1",position:"relative",overflow:"hidden",background:"#0D1B2A",display:"flex",alignItems:"center",justifyContent:"center"}});
+      const coverWrap=el("div",{style:{flex:"1",position:"relative",overflow:"hidden",background:"#0D1B2A",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}});
       if(ab.coverImg){
         coverWrap.appendChild(el("img",{src:ab.coverImg,style:{width:"100%",height:"100%",objectFit:"cover",opacity:"0.7"}}));
       } else {
@@ -3249,25 +3277,37 @@ function buildFeedPage(){
       coverWrap.appendChild(el("div",{style:{position:"absolute",top:"12px",left:"12px",background:"rgba(0,0,0,.65)",color:"#FFD700",borderRadius:"8px",padding:"3px 10px",fontSize:".7rem",fontWeight:"800"}},"Part "+ab.partNo));
       // Duration badge
       coverWrap.appendChild(el("div",{style:{position:"absolute",top:"12px",right:"12px",background:"rgba(0,0,0,.65)",color:"#fff",borderRadius:"8px",padding:"3px 10px",fontSize:".7rem"}},"🎵 "+Math.floor(ab.duration/60)+":"+String(Math.floor(ab.duration%60)).padStart(2,"0")));
-      // Play button (opens audio player)
-      const playBtn=el("button",{style:{position:"absolute",bottom:"20px",left:"50%",transform:"translateX(-50%)",background:"rgba(255,255,255,.18)",border:"2px solid rgba(255,255,255,.6)",borderRadius:"50%",width:"60px",height:"60px",fontSize:"1.6rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-        onclick:function(e){
-          e.stopPropagation();
-          if(!ab.audioData){toast((_lang==="lo"?"ໄຟລ໌ສຽງຍັງບໍ່ພ້ອມ":"Audio not ready"));return;}
-          // inline audio player overlay
-          const ov2=el("div",{style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.85)",zIndex:"9999",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"16px"},onclick:function(e2){if(e2.target===ov2){ov2.remove();}}});
-          if(ab.coverImg)ov2.appendChild(el("img",{src:ab.coverImg,style:{width:"160px",height:"160px",borderRadius:"16px",objectFit:"cover",boxShadow:"0 4px 24px rgba(0,0,0,.5)"}}));
-          ov2.appendChild(el("div",{style:{color:"#fff",fontWeight:"800",fontSize:".95rem",textAlign:"center"}},ab.bookTitle+" — Part "+ab.partNo));
-          const audioEl=document.createElement("audio");audioEl.src=ab.audioData;audioEl.controls=true;audioEl.style.cssText="width:280px;max-width:90vw;";audioEl.autoplay=true;
-          ov2.appendChild(audioEl);
-          ov2.appendChild(el("button",{style:{background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:"8px",padding:"8px 20px",cursor:"pointer",fontFamily:"inherit"},onclick:function(){ov2.remove();}},"✕ ປິດ"));
-          document.body.appendChild(ov2);
-          // track view
-          ab.views=(ab.views||0)+1;
-          saveAudiobook(ab);
+      // ── ผู้บรรยาย: เล่นอัตโนมัติแบบเดียวกับวิดีโอ ไม่ต้องกดปุ่มเล่นเอง ไม่มีปุ่มควบคุมค้าง ใช้ตัวจดจำเสียงร่วมกัน ──
+      if(ab.audioData){
+        const audioEl=document.createElement("audio");
+        audioEl.src=ab.audioData;
+        audioEl.loop=false; audioEl.muted=true; audioEl.controls=false;
+        audioEl.onvolumechange=function(){window._feedSoundOn=!audioEl.muted;};
+        var abPlaying=false;
+        var abViewCounted=false;
+        var abCtrlTimer=null;
+        function showAbControlsTemporarily(){
+          audioEl.controls=true;
+          clearTimeout(abCtrlTimer);
+          abCtrlTimer=setTimeout(function(){audioEl.controls=false;},2500);
         }
-      },"▶");
-      coverWrap.appendChild(playBtn);
+        function tryPlayAb(){
+          audioEl.play().then(function(){
+            abPlaying=true;
+            if(window._feedSoundOn)audioEl.muted=false;
+            if(!abViewCounted){abViewCounted=true;ab.views=(ab.views||0)+1;saveAudiobook(ab);}
+          }).catch(function(){audioEl.controls=true;});
+        }
+        audioEl._tryPlayFeedVid=tryPlayAb;
+        audioEl._setFeedVidPaused=function(){abPlaying=false;};
+        coverWrap.onclick=function(e){
+          e.stopPropagation();
+          if(abPlaying){audioEl.pause();abPlaying=false;}
+          else{tryPlayAb();}
+          showAbControlsTemporarily();
+        };
+        coverWrap.appendChild(el("div",{style:{position:"absolute",bottom:"12px",left:"12px",right:"12px"}},audioEl));
+      }
       item.appendChild(coverWrap);
       // Bottom info strip
       const infoStrip=el("div",{style:{background:"#0D1B2A",padding:"10px 14px",color:"#fff"}});
@@ -3317,7 +3357,7 @@ function buildFeedPage(){
     const videoEl = room.fbUrl
       ? el("div",{className:"feed-video"},
           el("iframe",{
-            src:getFbEmbedUrl(room.fbUrl)+"&autoplay=1&mute="+(_feedMuted?1:0),
+            src:getFbEmbedUrl(room.fbUrl)+"&autoplay=1&mute="+(window._feedSoundOn?0:1),
             allow:"autoplay; encrypted-media",
             allowFullScreen:true
           })
@@ -3330,15 +3370,15 @@ function buildFeedPage(){
           )
         );
 
-    // Mute toggle
+    // Mute toggle — ใช้ตัวจดจำเสียงร่วมกับวิดีโอ/หนังสือเสียงทั้งฟีด (ปุ่มควบคุมภายในของ Facebook/YouTube เองยังคงซ่อนไม่ได้ เพราะเป็นเนื้อหาข้ามโดเมนที่เราสั่งงานเข้าไปไม่ได้)
     const muteBtn = el("button",{
       className:"feed-mute",
       onclick:function(e){
         e.stopPropagation();
-        _feedMuted=!_feedMuted;
+        window._feedSoundOn=!window._feedSoundOn;
         render();
       }
-    },_feedMuted?"🔇":"🔊");
+    },window._feedSoundOn?"🔊":"🔇");
 
     // Back button top-left + rooms button
     const navTabs = el("div",{className:"feed-nav"},
@@ -3620,7 +3660,7 @@ function buildFeedPage(){
   try{
     const feedVidObs=new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
-        const vEl=entry.target.querySelector("video");
+        const vEl=entry.target.querySelector("video, audio");
         if(!vEl)return;
         if(entry.isIntersecting){
           if(vEl._tryPlayFeedVid)vEl._tryPlayFeedVid();
@@ -4642,7 +4682,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.4.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.5.0")
   );
 
   // Icon style helper
@@ -5176,12 +5216,19 @@ function buildShopProfile(shopId){
           scrollWrap.appendChild(itemEl);
         });
         vm.appendChild(scrollWrap);
+        // ── ສັ່ງເລີ່ມຫຼີ້ນ+ປົດສຽງທັນທີ ແບບ synchronous ພາຍໃນ click handler ດຽວກັນ (ບໍ່ຜ່ານ setTimeout) — iOS Safari ຕ້ອງການໃຫ້ການປົດສຽງເກີດຂຶ້ນຕິດກັບ user gesture ໂດຍກົງ ຖ້າຜ່ານ setTimeout ແມ່ນແຕ່ 0ms ກໍ່ອາດຖືກຕັດການເຊື່ອມຕໍ່ກັບ gesture ເຮັດໃຫ້ຄ້າງປິດສຽງເງียบໆ ──
+        const clickedIdx=allShopVideos.indexOf(v);
+        const clickedItems=scrollWrap.querySelectorAll(".feed-item");
+        if(clickedItems[clickedIdx]){
+          const clickedVEl=clickedItems[clickedIdx].querySelector("video");
+          if(clickedVEl){if(clickedVEl._tryPlayV2)clickedVEl._tryPlayV2();else clickedVEl.play().catch(function(){});}
+        }
         showOv(vm,null);
-        // ── Scroll ໄປທີ່ວິດີໂອທີ່ກົດເຂົ້າມາ ແລະໃຫ້ມັນເລີ່ມຫຼີ້ນ (videos ອື່ນຄ້າງ paused ຈົນກວ່າຈະ scroll ໄປເຫັນ) ──
+        // ── Scroll ໄປທີ່ວິດີໂອທີ່ກົດເຂົ້າມາ ແລະຕັ້ງ IntersectionObserver ສຳລັບວິດີໂອອື່ນ (ບໍ່ຈຳເປັນຕ້ອງ synchronous ກັບ gesture) ──
         setTimeout(function(){
-          const idx=allShopVideos.indexOf(v);
+          const idx=clickedIdx;
           const items=scrollWrap.querySelectorAll(".feed-item");
-          if(items[idx]){items[idx].scrollIntoView({behavior:"auto"});const vEl=items[idx].querySelector("video");if(vEl){if(vEl._tryPlayV2)vEl._tryPlayV2();else vEl.play().catch(function(){});}}
+          if(items[idx])items[idx].scrollIntoView({behavior:"auto"});
           // ── ໃຫ້ມີແຕ່ວິດີໂອທີ່ເຫັນຢູ່ໃນຈໍຫຼີ້ນ, ວິດີໂອອື່ນ pause ອັດຕະໂນມັດ ──
           try{
             const obs=new IntersectionObserver(function(entries){

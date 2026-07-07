@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v480 -->
+<!-- LaoH Marketplace v486 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -883,6 +883,38 @@ let _feedBackProd=null;    // product object to go back to | null
 // ── NOTIFICATION SYSTEM ─────────────────────────────────────────────
 let _notifUnread=0;
 let _notifListener=null; // Firestore realtime listener
+let _msgUnread=0;
+let _msgUnreadListeners=[];
+// ── ตัวจับข้อความยังไม่อ่านแบบเรียลไทม์ (แอดมิน+เพื่อน) สำหรับตัวเลขแดงที่ไอคอนโปรไฟล์ + ปุ่ม 📨 ข้อความ ──
+function startMsgUnreadListener(){
+  if(!db||!user)return;
+  stopMsgUnreadListener();
+  let adminUnread=0,friendUnread=0;
+  function recompute(){
+    _msgUnread=adminUnread+friendUnread;
+    const msgBadge=document.getElementById("profile-msg-badge");
+    if(msgBadge){
+      msgBadge.textContent=(_notifUnread+_msgUnread)>99?"99+":String(_notifUnread+_msgUnread);
+      msgBadge.style.display=(_notifUnread+_msgUnread)>0?"flex":"none";
+    }
+  }
+  try{
+    const l1=db.collection("adminChats").where("uid","==",String(user.id)).onSnapshot(function(snap){
+      adminUnread=snap.docs.filter(function(d){const m=d.data();return m.sender==="admin"&&!m.read;}).length;
+      recompute();
+    },function(){});
+    const l2=db.collection("directMessages").where("receiverId","==",String(user.id)).onSnapshot(function(snap){
+      friendUnread=snap.docs.filter(function(d){return !d.data().read;}).length;
+      recompute();
+    },function(){});
+    _msgUnreadListeners=[l1,l2];
+  }catch(e){}
+}
+function stopMsgUnreadListener(){
+  _msgUnreadListeners.forEach(function(u){try{u();}catch(e){}});
+  _msgUnreadListeners=[];
+  _msgUnread=0;
+}
 
 // ── ສ້າງ notification ສ່ງໃຫ້ຜູ້ຮັບ ──
 function pushNotif(toUid,toRole,type,title,body,orderId){
@@ -1030,8 +1062,8 @@ function showNotifModal(){
           } else if(n.type==="adminChat"&&n.targetId){
             showAdminChatModal(n.targetId);
           } else if(n.type==="new_user"&&user&&user.role==="admin"){
-            // ── ໄປໜ້າ Members (superAdminTabMap[5]=4) ──
-            view="admin";aTab=5;render();
+            // ── ໄປໜ້າ Members (superAdminTabMap[6]=4) — ປັບຈາກ 5 ເປັນ 6 ເພາະເພີ່ມແທັບ "ຂໍ້ຄວາມ" ໄວ້ຕຳແໜ່ງ 1 ──
+            view="admin";aTab=6;render();
           } else if(n.orderId){
             if(user&&user.isShopViewer){
               // ── ຮ້ານຄ້າທີ່ login ຜ່ານຊ່ອງລູກຄ້າ: ເປີດໜ້າ "🧾 ຄຳສັ່ງຊື້" ເຕັມ ແລ້ວເລື່ອນໄປຫາອໍເດີ້ນັ້ນເລີຍ ──
@@ -2331,7 +2363,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.8.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.8.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4727,7 +4759,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.8.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.8.6")
   );
 
   // Icon style helper
@@ -4906,7 +4938,7 @@ function buildBottomNav(){
   };
   const profileBtn2=el("button",{className:"ibt",style:{position:"relative",padding:"2px"},onclick:goProfile2},
     el("img",{src:isProfileActive?_ICON_PROFILE_ACTIVE:"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTQiIGZpbGw9IndoaXRlIi8+CiAgPHBhdGggZD0iTTE4IDg4IEMxOCA2NSAyOCA1OCA1MCA1OCBDNzIgNTggODIgNjUgODIgODggWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",style:{width:isProfileActive?"42px":"33px",height:isProfileActive?"42px":"33px",objectFit:"contain",verticalAlign:"middle"}}),
-    _notifUnread>0?el("span",{style:{display:"flex",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},_notifUnread>99?"99+":String(_notifUnread)):null
+    (_notifUnread+_msgUnread)>0?el("span",{id:"profile-msg-badge",style:{display:"flex",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},(_notifUnread+_msgUnread)>99?"99+":String(_notifUnread+_msgUnread)):null
   );
   const cN2=cart.reduce((s,i)=>s+i.q,0);
   const cartBtn2=el("button",{className:"ibt",style:{position:"relative",padding:"2px"},onclick:()=>{const d=$("cdraw");if(d)d.classList.toggle("on");}},
@@ -6349,14 +6381,8 @@ function buildUserProfile(uid){
     )
     );
     (function(){
-      const msgBtn=custQuickBtn("📨",_lang==="lo"?"ຂໍ້ຄວາມ":"Messages",null,function(){showMessagesListModal();});
+      const msgBtn=custQuickBtn("📨",_lang==="lo"?"ຂໍ້ຄວາມ":"Messages",_msgUnread>0?(_msgUnread>99?"99+":String(_msgUnread)):null,function(){showMessagesListModal();});
       quickRow.appendChild(msgBtn);
-      getUnreadMsgCount(function(count){
-        if(count>0){
-          const badge=el("span",{style:{position:"absolute",top:"4px",right:"6px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"16px",height:"16px",fontSize:".6rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}},count>99?"99+":String(count));
-          msgBtn.appendChild(badge);
-        }
-      });
     })();
     return wrap;
   })():null;
@@ -7274,6 +7300,8 @@ function showDirectChatModal(otherUid){
     el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},"📨 "+(otherUser?(otherUser.name||otherUser.username):"ໝູ່"))
   ));
   const msgArea=el("div",{style:{flex:"1",overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:"8px",background:"#F8FCF8"}});
+  // ── โชว์ตัวโหลดทันทีตั้งแต่เปิดกล่องแชท กันไม่ให้ดูเหมือนว่างเปล่า/ค้าง ระหว่างรอเชื่อมต่อเรียลไทม์ครั้งแรก (มักช้ากว่าปกติเฉพาะตอนเปิดคุยกับเพื่อนใหม่ครั้งแรก) ──
+  msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".78rem",padding:"30px 0"}},_lang==="lo"?"ກຳລັງໂຫຼດ...":"Loading..."));
   mod.appendChild(msgArea);
   function openSharedItem(shared){
     if(!shared)return;
@@ -7328,7 +7356,12 @@ function showDirectChatModal(otherUid){
         } else {
           const msgs=snap.docs.map(function(d){return d.data();}).sort(function(a,b){return (a.at||0)-(b.at||0);});
           msgs.forEach(function(m){
-            msgArea.appendChild(bubble(m));
+            try{
+              msgArea.appendChild(bubble(m));
+            }catch(bubbleErr){
+              // ── กันไม่ให้ข้อความเดียวที่มีปัญหาทำให้ทั้งกล่องแชทว่างเปล่าไปหมด ──
+              msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#c0392b",fontSize:".7rem",padding:"4px"}},"⚠ "+(bubbleErr&&bubbleErr.message?bubbleErr.message:"Render error")));
+            }
             // ── ทำเครื่องหมายว่าอ่านแล้ว ถ้าเป็นข้อความที่ส่งถึงเรา ──
             if(String(m.receiverId)===String(user.id)&&!m.read){
               db.collection("directMessages").doc(m.id).update({read:true}).catch(function(){});
@@ -7340,6 +7373,8 @@ function showDirectChatModal(otherUid){
         msgArea.innerHTML="";
         msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#c0392b",fontSize:".78rem",padding:"20px 0"}},"⚠ "+(err&&err.message?err.message:"Load error")));
       });
+  } else {
+    msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#c0392b",fontSize:".78rem",padding:"20px 0"}},"⚠ Database not connected"));
   }
   const inputRow=el("div",{style:{display:"flex",gap:"8px",padding:"10px 12px",borderTop:"1px solid #E8F5EE",alignItems:"center"}});
   const fileInp=document.createElement("input");fileInp.type="file";fileInp.accept="image/*";fileInp.style.display="none";
@@ -7379,6 +7414,43 @@ function showMessagesListModal(){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto"}});
   mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
   mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},"📨 "+(_lang==="lo"?"ຂໍ້ຄວາມ":"Messages")));
+  // ── ค้นหาชื่อเพื่อเข้าไปดูโปรไฟล์ (ต้องพิมพ์ตรงเป๊ะเท่านั้น ไม่ใช่ค้นหาแบบใกล้เคียง) ──
+  const searchRow=el("div",{style:{display:"flex",gap:"6px",marginBottom:"8px"}});
+  const searchInp=document.createElement("input");
+  searchInp.type="text";
+  searchInp.placeholder=_lang==="lo"?"ພິມຊື່ໃຫ້ຖືກຕ້ອງ (ຕ້ອງກົງກັນ 100%)":"Type exact name (must match 100%)";
+  searchInp.style.cssText="flex:1;border:1.5px solid #C8E6D4;border-radius:20px;padding:8px 14px;font-size:.8rem;font-family:inherit;outline:none;";
+  const searchResult=el("div",null);
+  const searchBtn=el("button",{type:"button",style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"20px",padding:"8px 16px",fontSize:".8rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
+    onclick:function(){
+      const q=(searchInp.value||"").trim();
+      searchResult.innerHTML="";
+      if(!q)return;
+      // ── ต้องตรงเป๊ะทุกตัวอักษร (ไม่สนตัวพิมพ์เล็ก-ใหญ่) ห้ามค้นหาแบบใกล้เคียง/บางส่วน ──
+      const match=users.find(function(u){
+        return u.id!==user.id&&u.role==="c"&&!u.isShopViewer&&
+          ((u.name&&u.name.toLowerCase()===q.toLowerCase())||(u.username&&u.username.toLowerCase()===q.toLowerCase()));
+      });
+      if(!match){
+        searchResult.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".78rem",padding:"10px 0"}},_lang==="lo"?"ບໍ່ພົບຊື່ນີ້":"No exact match found"));
+        return;
+      }
+      const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 8px",borderRadius:"10px",cursor:"pointer",background:"#F0F7F2"},
+        onclick:function(){closeOv();setTimeout(function(){prevView=view;window._fUserId=match.id;view="userProfile";render();},80);}
+      });
+      const av=el("div",{style:{width:"36px",height:"36px",borderRadius:"50%",overflow:"hidden",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".95rem",color:"#fff",flexShrink:"0"}});
+      if(match.avatar&&isUrl(match.avatar))av.appendChild(el("img",{src:match.avatar,style:{width:"100%",height:"100%",objectFit:"cover"},alt:""}));
+      else av.textContent="👤";
+      row.appendChild(av);
+      row.appendChild(el("div",{style:{fontSize:".83rem",fontWeight:"600",color:"#1A2B5F"}},match.name||match.username));
+      searchResult.appendChild(row);
+    }
+  },_lang==="lo"?"ຄົ້ນຫາ":"Search");
+  searchInp.onkeydown=function(e){if(e.key==="Enter")searchBtn.onclick();};
+  searchRow.appendChild(searchInp);
+  searchRow.appendChild(searchBtn);
+  mod.appendChild(searchRow);
+  mod.appendChild(searchResult);
   mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",marginBottom:"14px",lineHeight:"1.5"}},
     _lang==="lo"?"ລາຍຊື່ນີ້ມາຈາກບັນຊີທີ່ຕິດຕາມກັນທັງສອງຝ່າຍ (ທ່ານຕິດຕາມເຂົາ ແລະ ເຂົາຕິດຕາມທ່ານກັບ)":"This list comes from accounts that follow each other (mutual follow)"
   ));
@@ -11887,7 +11959,7 @@ function buildAdmin(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
   return el("div",{style:{padding:"14px 14px 60px"}},
     el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}},
       el("div",{style:{fontSize:"1.3rem",fontWeight:"900"}},isNarrator?"🎙️ Narrator Dashboard":(_lang==="lo"?"⚙️ ແດຊບອດ":"⚙️ Dashboard")),
@@ -18547,8 +18619,8 @@ loadFromCloud().then(function(){
     const curUid=user?String(user.id):null;
     if(curUid!==_lastNotifUid){
       _lastNotifUid=curUid;
-      if(user){startNotifListener();}
-      else{stopNotifListener();}
+      if(user){startNotifListener();startMsgUnreadListener();}
+      else{stopNotifListener();stopMsgUnreadListener();}
     }
   };
 
@@ -18728,6 +18800,8 @@ window.addEventListener('load', function(){
     if(typeof coStep!=="undefined"&&coStep>0)return false;
     if(typeof _checkoutCart!=="undefined"&&_checkoutCart&&_checkoutCart.length>0)return false;
     if(view==="shop"||view==="feed")return true;
+    // ── ໜ້າໂປຣໄຟລ໌ທຸກແບບ (ຂອງຕົນເອງ, ຄົນອື່ນ, ຮ້ານຄ້າ) ──
+    if(view==="profile"||view==="userProfile"||view==="shopProfile")return true;
     // ທຸກ tab ຂອງ admin/shop/superAdmin (ທຸກ aTab)
     if(view==="admin")return true;
     return false;

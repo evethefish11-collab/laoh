@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v490 -->
+<!-- LaoH Marketplace v492 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2370,7 +2370,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.9.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.9.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4766,7 +4766,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.9.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.9.2")
   );
 
   // Icon style helper
@@ -6649,7 +6649,7 @@ function buildUserProfile(uid){
 
           // submit
           mod.appendChild(el("button",{className:"btn btn-p",onclick:function(){
-            if(!rv.prodId){toast("ກະລຸນາເລືອກສິນຄ້າ");return;}
+            if(!isReviewerAcct&&!rv.prodId){toast("ກະລຸນາເລືອກສິນຄ້າ");return;}
             if(!rv.caption){toast("ກະລຸນາໃສ່ຄຳເຫັນ");return;}
             rv.id=Date.now();
             saveReview(rv);
@@ -7197,7 +7197,12 @@ function sendAdminChatMsg(forUid,sender,text,imageUrl){
   if(!db)return;
   const msg={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),uid:String(forUid),sender:sender,text:text||"",imageUrl:imageUrl||null,at:Date.now(),read:false};
   db.collection("adminChats").doc(msg.id).set(msg).catch(function(){});
-  // ── ไม่สร้างแจ้งเตือนกระดิ่งทั่วไปอีกต่อไป (ย้ายไปนับรวมที่ปุ่ม "📨 ข้อความ" แทน ตามที่กำหนดใหม่) ──
+  // ── สร้างรายการแจ้งเตือนเฉพาะฝั่งซุปเปอร์แอดมินเท่านั้น (ลูกค้าส่งหาแอดมิน) ตามที่กำหนดใหม่ — ฝั่งลูกค้ายังคงไม่มีรายการแจ้งเตือนที่กระดิ่ง มีแค่ตัวเลขรวมที่ปุ่ม "📨 ข้อความ" เหมือนเดิม ──
+  if(sender==="customer"){
+    const custUser=users.find(function(u){return u.id===forUid;});
+    const n={id:Date.now()+"nc",toUid:null,toRole:"admin",type:"adminChat",title:"💬 "+(_lang==="lo"?"ຂໍ້ຄວາມໃໝ່ຈາກລູກຄ້າ":"New message from customer"),body:(custUser&&(custUser.name||custUser.username))||"ລູກຄ້າ",orderId:null,targetId:String(forUid),targetType:"adminChat",at:new Date().toISOString(),read:false};
+    try{db.collection("notifications").doc(n.id).set(n);}catch(e){}
+  }
 }
 // ── หน้าต่างแชท ใช้ร่วมกันทั้งฝั่งลูกค้า (forUid=ตัวเอง) และฝั่งแอดมิน (forUid=ลูกค้าที่เลือกดู) ──
 // ══════════════════════════════════════════════════════════════
@@ -16793,9 +16798,11 @@ function buildAdminTab(){
         listWrap.innerHTML="";
         // ── รวมเป็นรายชื่อลูกค้าแยกตาม uid เอาข้อความล่าสุดของแต่ละคน (ไม่แสดงถ้าไม่มีข้อความเลย) ──
         const byUid={};
+        const unreadByUid={};
         snap.docs.forEach(function(d){
           const m=d.data();
           if(!byUid[m.uid]||m.at>byUid[m.uid].at)byUid[m.uid]=m;
+          if(m.sender==="customer"&&!m.read)unreadByUid[m.uid]=(unreadByUid[m.uid]||0)+1;
         });
         const convos=Object.keys(byUid).map(function(uid){return {uid:uid,last:byUid[uid]};}).sort(function(a,b){return b.last.at-a.last.at;});
         if(convos.length===0){
@@ -16804,6 +16811,7 @@ function buildAdminTab(){
         }
         convos.forEach(function(c){
           const cu=users.find(function(u){return String(u.id)===String(c.uid);});
+          const unreadCnt=unreadByUid[c.uid]||0;
           const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 12px",background:"#fff",borderRadius:"12px",marginBottom:"8px",boxShadow:"0 1px 4px rgba(0,0,0,.06)",cursor:"pointer"},
             onclick:function(){showAdminChatModal(c.uid);}
           });
@@ -16815,6 +16823,7 @@ function buildAdminTab(){
           info.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1A2B5F"}},cu?(cu.name||cu.username):("UID "+c.uid)));
           info.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},(c.last.sender==="admin"?"👤 Admin: ":"")+(c.last.text||(c.last.imageUrl?"📷 ຮູບພາບ":""))));
           row.appendChild(info);
+          if(unreadCnt>0)row.appendChild(el("span",{style:{background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"20px",height:"20px",fontSize:".68rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px",flexShrink:"0"}},unreadCnt>99?"99+":String(unreadCnt)));
           row.appendChild(el("div",{style:{fontSize:".65rem",color:"#aaa",flexShrink:"0"}},new Date(c.last.at).toLocaleDateString("lo-LA",{day:"2-digit",month:"2-digit"})));
           listWrap.appendChild(row);
         });

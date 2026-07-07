@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v486 -->
+<!-- LaoH Marketplace v490 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -899,8 +899,15 @@ function startMsgUnreadListener(){
     }
   }
   try{
-    const l1=db.collection("adminChats").where("uid","==",String(user.id)).onSnapshot(function(snap){
-      adminUnread=snap.docs.filter(function(d){const m=d.data();return m.sender==="admin"&&!m.read;}).length;
+    const isAdminAcct=user.role==="admin";
+    const adminChatsQuery=isAdminAcct
+      ? db.collection("adminChats") // ── ฝั่งแอดมิน: ต้องดูทุกการสนทนา ไม่ใช่แค่ของ uid ตัวเอง เพราะ adminChats ผูกกับรหัสลูกค้าเสมอ ไม่ใช่รหัสแอดมิน ──
+      : db.collection("adminChats").where("uid","==",String(user.id));
+    const l1=adminChatsQuery.onSnapshot(function(snap){
+      adminUnread=snap.docs.filter(function(d){
+        const m=d.data();
+        return isAdminAcct?(m.sender==="customer"&&!m.read):(m.sender==="admin"&&!m.read);
+      }).length;
       recompute();
     },function(){});
     const l2=db.collection("directMessages").where("receiverId","==",String(user.id)).onSnapshot(function(snap){
@@ -2363,7 +2370,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.8.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.9.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4759,7 +4766,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.8.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.9.0")
   );
 
   // Icon style helper
@@ -4833,8 +4840,8 @@ function buildNav(){
     user ? null : langBtn, loginBtn, translateIconBtn,
     (user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")) ? el("button",{className:"ibt",style:{position:"relative"},onclick:function(){showNotifModal();}},
       "🔔",
-      el("span",{id:"notif-badge",style:{display:_notifUnread>0?"flex":"none",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},
-        _notifUnread>99?"99+":String(_notifUnread||""))
+      el("span",{id:"notif-badge",style:{display:(_notifUnread+_msgUnread)>0?"flex":"none",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},
+        (_notifUnread+_msgUnread)>99?"99+":String((_notifUnread+_msgUnread)||""))
     ) : null,
     profileBtn, cartBtn
   );
@@ -4880,8 +4887,8 @@ function buildNav(){
         translateIconBtn,
         el("button",{className:"ibt",style:{position:"relative"},onclick:function(){showNotifModal();}},
           "🔔",
-          el("span",{id:"notif-badge",style:{display:_notifUnread>0?"flex":"none",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},
-            _notifUnread>99?"99+":String(_notifUnread||""))
+          el("span",{id:"notif-badge",style:{display:(_notifUnread+_msgUnread)>0?"flex":"none",position:"absolute",top:"-2px",right:"-2px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"14px",height:"14px",fontSize:".55rem",fontWeight:"800",alignItems:"center",justifyContent:"center",padding:"0 2px"}},
+            (_notifUnread+_msgUnread)>99?"99+":String((_notifUnread+_msgUnread)||""))
         )
       )
     );
@@ -5087,7 +5094,7 @@ function buildShopProfile(shopId){
     // back button
     el("button",{
       style:{position:"absolute",top:"12px",left:"12px",background:"rgba(255,255,255,0.25)",border:"none",borderRadius:"50%",width:"34px",height:"34px",color:"#fff",fontSize:"1.1rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-      onclick:()=>{const pv=prevView||"shop";prevView="shop";view=pv;render();}
+      onclick:()=>{const pv=prevView||"shop";prevView="shop";view=pv;fShop=null;render();}
     },"←"),
     // LaoH Certified badge top-right only
     sh.isLao?el("div",{style:{position:"absolute",top:"10px",right:"12px",background:"rgba(255,255,255,.92)",borderRadius:"20px",padding:"3px 8px",display:"flex",alignItems:"center",gap:"4px",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}},
@@ -7248,7 +7255,14 @@ function showAdminChatModal(forUid){
           msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".8rem",padding:"30px 0"}},_lang==="lo"?"ຍັງບໍ່ມີຂໍ້ຄວາມ":"No messages yet"));
         } else {
           const msgs=snap.docs.map(function(d){return d.data();}).sort(function(a,b){return (a.at||0)-(b.at||0);});
-          msgs.forEach(function(m){msgArea.appendChild(bubble(m));});
+          msgs.forEach(function(m){
+            msgArea.appendChild(bubble(m));
+            // ── ทำเครื่องหมายว่าอ่านแล้ว ถ้าเป็นข้อความจากอีกฝั่งหนึ่ง (จุดที่ตกหล่นไปก่อนหน้านี้) ──
+            const isFromOtherSide=isAdminSide?(m.sender==="customer"):(m.sender==="admin");
+            if(isFromOtherSide&&!m.read){
+              db.collection("adminChats").doc(m.id).update({read:true}).catch(function(){});
+            }
+          });
           msgArea.scrollTop=msgArea.scrollHeight;
         }
       },function(err){
@@ -7465,11 +7479,16 @@ function showMessagesListModal(){
     el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},_lang==="lo"?"ສອບຖາມ/ແຈ້ງບັນຫາ":"Support & inquiries")
   ));
   listWrap.appendChild(adminRow);
+  const adminBadgeSlot=el("div",null);
+  adminRow.appendChild(adminBadgeSlot);
   const friends=getMutualFriends();
   if(friends.length===0){
     listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".78rem",padding:"20px 0"}},_lang==="lo"?"ຍັງບໍ່ມີໝູ່ທີ່ຕິດຕາມກັນທັງສອງຝ່າຍ":"No mutual friends yet"));
   } else {
-    friends.forEach(function(f){
+    const friendsWrap=el("div",null);
+    listWrap.appendChild(friendsWrap);
+    friendsWrap.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".75rem",padding:"10px 0"}},_lang==="lo"?"ກຳລັງໂຫຼດ...":"Loading..."));
+    function buildFriendRow(f,unreadCount){
       const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 12px",background:"#fff",borderRadius:"12px",marginBottom:"8px",cursor:"pointer",boxShadow:"0 1px 4px rgba(0,0,0,.06)"},
         onclick:function(){closeOv();setTimeout(function(){showDirectChatModal(f.id);},80);}
       });
@@ -7480,8 +7499,50 @@ function showMessagesListModal(){
       row.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
         el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},f.name||f.username||"ໝູ່")
       ));
-      listWrap.appendChild(row);
-    });
+      if(unreadCount>0){
+        row.appendChild(el("span",{style:{background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"20px",height:"20px",fontSize:".68rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px",flexShrink:"0"}},unreadCount>99?"99+":String(unreadCount)));
+      }
+      return row;
+    }
+    // ── ดึงข้อมูลบทสนทนาทั้งหมดของเรา (ทั้งที่ส่งและที่รับ) มาคำนวณ "ยังไม่อ่านกี่ข้อความ" และ "เวลาล่าสุด" ต่อคน ──
+    if(db){
+      Promise.all([
+        db.collection("directMessages").where("receiverId","==",String(user.id)).get(),
+        db.collection("directMessages").where("senderId","==",String(user.id)).get()
+      ]).then(function(results){
+        const byConvo={};
+        results.forEach(function(snap){
+          snap.docs.forEach(function(d){
+            const m=d.data();
+            if(!byConvo[m.convoId])byConvo[m.convoId]={lastAt:0,unread:0};
+            if(m.at>byConvo[m.convoId].lastAt)byConvo[m.convoId].lastAt=m.at;
+            if(String(m.receiverId)===String(user.id)&&!m.read)byConvo[m.convoId].unread++;
+          });
+        });
+        const friendsWithMeta=friends.map(function(f){
+          const cid=getConvoId(user.id,f.id);
+          const meta=byConvo[cid]||{lastAt:0,unread:0};
+          return {f:f,lastAt:meta.lastAt,unread:meta.unread};
+        }).sort(function(a,b){return b.lastAt-a.lastAt;});
+        friendsWrap.innerHTML="";
+        friendsWithMeta.forEach(function(fm){friendsWrap.appendChild(buildFriendRow(fm.f,fm.unread));});
+      }).catch(function(){
+        friendsWrap.innerHTML="";
+        friends.forEach(function(f){friendsWrap.appendChild(buildFriendRow(f,0));});
+      });
+    } else {
+      friendsWrap.innerHTML="";
+      friends.forEach(function(f){friendsWrap.appendChild(buildFriendRow(f,0));});
+    }
+  }
+  // ── นับข้อความยังไม่อ่านของแชทแอดมิน แสดงเป็นตัวเลขแดงบนแถวแอดมินเช่นกัน ──
+  if(db){
+    db.collection("adminChats").where("uid","==",String(user.id)).get().then(function(snap){
+      const cnt=snap.docs.filter(function(d){const m=d.data();return m.sender==="admin"&&!m.read;}).length;
+      if(cnt>0){
+        adminBadgeSlot.appendChild(el("span",{style:{background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"20px",height:"20px",fontSize:".68rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px",flexShrink:"0"}},cnt>99?"99+":String(cnt)));
+      }
+    }).catch(function(){});
   }
   showOv(mod,null);
 }
@@ -8032,12 +8093,12 @@ function showProduct(p){
           }
         },"🔗 "+(_lang==="lo"?"ລິ້ງ":"Link"));
         if(!(user&&user.role==="c"&&!user.isShopViewer))wrap.appendChild(copyLinkBtn);
-        // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) ──
+        // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) — วงกลมไอคอนอย่างเดียว เหมือนปุ่มแชร์ ──
         if(user&&user.role==="c"&&!user.isShopViewer){
           const sendFriendBtn=el("button",{
-            style:{position:"absolute",bottom:"10px",right:"96px",background:"rgba(0,0,0,.55)",border:"none",borderRadius:"20px",padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px",color:"#fff",fontSize:".65rem",fontWeight:"700",fontFamily:"inherit"},
+            style:{position:"absolute",bottom:"10px",right:"52px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)",fontSize:"1.1rem"},
             onclick:function(e){e.stopPropagation();openSendToFriendPicker("product",p.id);}
-          },"📨 "+(_lang==="lo"?"ສົ່ງໝູ່":"Send"));
+          },"📨");
           wrap.appendChild(sendFriendBtn);
         }
         if(imgs.length>1){

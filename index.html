@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v478 -->
+<!-- LaoH Marketplace v480 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2331,7 +2331,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.7.8")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.8.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3066,18 +3066,20 @@ function buildFeedPage(){
     sa.appendChild(sbEl);
     const sl=document.createElement("div"); sl.className="feed-action-label"; sl.textContent="ສົ່ງຕໍ່";
     sa.appendChild(sl); sidebar.appendChild(sa);
-    // ── Copy Link button ──
-    const saCopy=document.createElement("div"); saCopy.className="feed-action";
-    const sbCopy=document.createElement("button"); sbCopy.className="feed-action-btn-sm";
-    sbCopy.textContent="🔗";
-    sbCopy.onclick=function(){
-      const rvUrl=location.origin+location.pathname+"?rv="+rv.id;
-      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(rvUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
-      else{try{const ta=document.createElement("textarea");ta.value=rvUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
-    };
-    saCopy.appendChild(sbCopy);
-    const slCopy=document.createElement("div"); slCopy.className="feed-action-label"; slCopy.textContent="ລິ້ງ";
-    saCopy.appendChild(slCopy); sidebar.appendChild(saCopy);
+    // ── Copy Link button (ซ่อนสำหรับบัญชีลูกค้าจริงเท่านั้น — ร้านค้า/แอดมิน/staff ยังเห็น) ──
+    if(!(user&&user.role==="c"&&!user.isShopViewer)){
+      const saCopy=document.createElement("div"); saCopy.className="feed-action";
+      const sbCopy=document.createElement("button"); sbCopy.className="feed-action-btn-sm";
+      sbCopy.textContent="🔗";
+      sbCopy.onclick=function(){
+        const rvUrl=location.origin+location.pathname+"?rv="+rv.id;
+        if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(rvUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+        else{try{const ta=document.createElement("textarea");ta.value=rvUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+      };
+      saCopy.appendChild(sbCopy);
+      const slCopy=document.createElement("div"); slCopy.className="feed-action-label"; slCopy.textContent="ລິ້ງ";
+      saCopy.appendChild(slCopy); sidebar.appendChild(saCopy);
+    }
     // Save button (เฉพาะบัญชีลูกค้า)
     const saveBtn1=buildSaveSidebarBtn(rv.id,"review",rv);
     if(saveBtn1)sidebar.appendChild(saveBtn1);
@@ -3227,18 +3229,20 @@ function buildFeedPage(){
     const slShare=document.createElement("div"); slShare.className="feed-action-label"; slShare.textContent="ສົ່ງຕໍ່";
     saShare.appendChild(slShare); sidebar.appendChild(saShare);
 
-    // Copy Link
-    const saLink=document.createElement("div"); saLink.className="feed-action";
-    const sbLink=document.createElement("button"); sbLink.className="feed-action-btn-sm";
-    sbLink.textContent="🔗";
-    sbLink.onclick=function(){
-      const postUrl=location.origin+location.pathname+"?post="+post.id;
-      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(postUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
-      else{try{const ta=document.createElement("textarea");ta.value=postUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
-    };
-    saLink.appendChild(sbLink);
-    const slLink=document.createElement("div"); slLink.className="feed-action-label"; slLink.textContent="ລິ້ງ";
-    saLink.appendChild(slLink); sidebar.appendChild(saLink);
+    // Copy Link (ซ่อนสำหรับบัญชีลูกค้าจริงเท่านั้น — ร้านค้า/แอดมิน/staff ยังเห็น)
+    if(!(user&&user.role==="c"&&!user.isShopViewer)){
+      const saLink=document.createElement("div"); saLink.className="feed-action";
+      const sbLink=document.createElement("button"); sbLink.className="feed-action-btn-sm";
+      sbLink.textContent="🔗";
+      sbLink.onclick=function(){
+        const postUrl=location.origin+location.pathname+"?post="+post.id;
+        if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(postUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+        else{try{const ta=document.createElement("textarea");ta.value=postUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+      };
+      saLink.appendChild(sbLink);
+      const slLink=document.createElement("div"); slLink.className="feed-action-label"; slLink.textContent="ລິ້ງ";
+      saLink.appendChild(slLink); sidebar.appendChild(saLink);
+    }
 
     // Save button (เฉพาะบัญชีลูกค้า)
     const saveBtn2=buildSaveSidebarBtn(post.id,"shoppost",post);
@@ -4723,7 +4727,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.7.8")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.8.0")
   );
 
   // Icon style helper
@@ -5220,18 +5224,20 @@ function buildShopProfile(shopId){
           rdShareA2.appendChild(rdShareBtn2);
           const rdShareL2=document.createElement("div"); rdShareL2.className="feed-action-label"; rdShareL2.textContent="ສົ່ງຕໍ່";
           rdShareA2.appendChild(rdShareL2); rdSidebar2.appendChild(rdShareA2);
-          // Copy link
-          const rdLinkA2=document.createElement("div"); rdLinkA2.className="feed-action";
-          const rdLinkBtn2=document.createElement("button"); rdLinkBtn2.className="feed-action-btn-sm";
-          rdLinkBtn2.textContent="🔗";
-          rdLinkBtn2.onclick=function(){
-            const linkUrl2=location.origin+location.pathname+(isPostItem?"?post=":"?rv=")+vItem.id;
-            if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(linkUrl2).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
-            else{try{const ta2=document.createElement("textarea");ta2.value=linkUrl2;ta2.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta2);ta2.select();document.execCommand("copy");document.body.removeChild(ta2);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
-          };
-          rdLinkA2.appendChild(rdLinkBtn2);
-          const rdLinkL2=document.createElement("div"); rdLinkL2.className="feed-action-label"; rdLinkL2.textContent="ລິ້ງ";
-          rdLinkA2.appendChild(rdLinkL2); rdSidebar2.appendChild(rdLinkA2);
+          // Copy link (ซ่อนสำหรับบัญชีลูกค้าจริงเท่านั้น — ร้านค้า/แอดมิน/staff ยังเห็น)
+          if(!(user&&user.role==="c"&&!user.isShopViewer)){
+            const rdLinkA2=document.createElement("div"); rdLinkA2.className="feed-action";
+            const rdLinkBtn2=document.createElement("button"); rdLinkBtn2.className="feed-action-btn-sm";
+            rdLinkBtn2.textContent="🔗";
+            rdLinkBtn2.onclick=function(){
+              const linkUrl2=location.origin+location.pathname+(isPostItem?"?post=":"?rv=")+vItem.id;
+              if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(linkUrl2).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+              else{try{const ta2=document.createElement("textarea");ta2.value=linkUrl2;ta2.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta2);ta2.select();document.execCommand("copy");document.body.removeChild(ta2);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+            };
+            rdLinkA2.appendChild(rdLinkBtn2);
+            const rdLinkL2=document.createElement("div"); rdLinkL2.className="feed-action-label"; rdLinkL2.textContent="ລິ້ງ";
+            rdLinkA2.appendChild(rdLinkL2); rdSidebar2.appendChild(rdLinkA2);
+          }
           // Save button (เฉพาะบัญชีลูกค้า) — จุดที่ตกหล่นไปก่อนหน้านี้
           const saveBtn4=buildSaveSidebarBtn(vItem.id,isPostItem?"shoppost":"review",vItem);
           if(saveBtn4)rdSidebar2.appendChild(saveBtn4);
@@ -5564,7 +5570,7 @@ function buildShopProfile(shopId){
     // Upload/share SVG icon (same style as feed icons)
     shareIconBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B6B3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
     avatarRow.appendChild(shareIconBtn);
-    avatarRow.appendChild(copyShopBtn);
+    if(!(user&&user.role==="c"&&!user.isShopViewer))avatarRow.appendChild(copyShopBtn);
     if(followBtn){
       followBtn.style.position="absolute";
       followBtn.style.top="8px";
@@ -6342,6 +6348,16 @@ function buildUserProfile(uid){
       }
     )
     );
+    (function(){
+      const msgBtn=custQuickBtn("📨",_lang==="lo"?"ຂໍ້ຄວາມ":"Messages",null,function(){showMessagesListModal();});
+      quickRow.appendChild(msgBtn);
+      getUnreadMsgCount(function(count){
+        if(count>0){
+          const badge=el("span",{style:{position:"absolute",top:"4px",right:"6px",background:"#C0392B",color:"#fff",borderRadius:"50%",minWidth:"16px",height:"16px",fontSize:".6rem",fontWeight:"800",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}},count>99?"99+":String(count));
+          msgBtn.appendChild(badge);
+        }
+      });
+    })();
     return wrap;
   })():null;
   // ── (ปุ่มเพิ่มรีวิว/รีวิวของฉัน ย้ายมาจากหน้าโปรไฟล์ของฉัน — เห็นเฉพาะเจ้าของบัญชี) ──
@@ -7146,18 +7162,37 @@ function buildShop(){
 // ผูกกับ uid ของลูกค้าแต่ละคน (1 ลูกค้า = 1 บทสนทนากับแอดมิน)
 function sendAdminChatMsg(forUid,sender,text,imageUrl){
   if(!db)return;
-  const msg={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),uid:String(forUid),sender:sender,text:text||"",imageUrl:imageUrl||null,at:Date.now()};
+  const msg={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),uid:String(forUid),sender:sender,text:text||"",imageUrl:imageUrl||null,at:Date.now(),read:false};
   db.collection("adminChats").doc(msg.id).set(msg).catch(function(){});
-  // แจ้งเตือนฝั่งตรงข้าม
-  if(sender==="customer"){
-    const n={id:Date.now()+"nc",toUid:null,toRole:"admin",type:"adminChat",title:"💬 ຂໍ້ຄວາມໃໝ່ຈາກລູກຄ້າ",body:(user&&(user.name||user.username))||"ລູກຄ້າ",orderId:null,targetId:String(forUid),targetType:"adminChat",at:new Date().toISOString(),read:false};
-    try{db.collection("notifications").doc(n.id).set(n);}catch(e){}
-  } else {
-    const n2={id:Date.now()+"na",toUid:String(forUid),toRole:null,type:"adminChat",title:"💬 Admin ຕອບຂໍ້ຄວາມແລ້ວ",body:text||"📷 ຮູບພາບ",orderId:null,targetId:String(forUid),targetType:"adminChat",at:new Date().toISOString(),read:false};
-    try{db.collection("notifications").doc(n2.id).set(n2);}catch(e){}
-  }
+  // ── ไม่สร้างแจ้งเตือนกระดิ่งทั่วไปอีกต่อไป (ย้ายไปนับรวมที่ปุ่ม "📨 ข้อความ" แทน ตามที่กำหนดใหม่) ──
 }
 // ── หน้าต่างแชท ใช้ร่วมกันทั้งฝั่งลูกค้า (forUid=ตัวเอง) และฝั่งแอดมิน (forUid=ลูกค้าที่เลือกดู) ──
+// ══════════════════════════════════════════════════════════════
+// ── ระบบข้อความระหว่างลูกค้า-ลูกค้า (ต้องติดตามกันทั้ง 2 ฝ่าย/Mutual Follow) ──
+// ══════════════════════════════════════════════════════════════
+// โครงสร้าง: directMessages/{msgId} = {id, convoId, senderId, receiverId, text, imageUrl, sharedItem:{type,id}, at, read}
+function getConvoId(uidA,uidB){
+  const arr=[String(uidA),String(uidB)].sort();
+  return arr[0]+"_"+arr[1];
+}
+function isMutualFriend(otherUid){
+  if(!user||!otherUid)return false;
+  const other=users.find(function(u){return u.id===otherUid;});
+  if(!other)return false;
+  const iFollowThem=(user.followingUsers||[]).includes(otherUid);
+  const theyFollowMe=(other.followingUsers||[]).includes(user.id);
+  return iFollowThem&&theyFollowMe;
+}
+function getMutualFriends(){
+  if(!user)return [];
+  return users.filter(function(u){return u.id!==user.id&&isMutualFriend(u.id);});
+}
+function sendDirectMsg(toUid,text,imageUrl,sharedItem){
+  if(!db||!user)return;
+  const convoId=getConvoId(user.id,toUid);
+  const msg={id:Date.now()+"_"+Math.random().toString(36).slice(2,7),convoId:convoId,senderId:String(user.id),receiverId:String(toUid),text:text||"",imageUrl:imageUrl||null,sharedItem:sharedItem||null,at:Date.now(),read:false};
+  db.collection("directMessages").doc(msg.id).set(msg).catch(function(){});
+}
 function showAdminChatModal(forUid){
   const isAdminSide=user&&user.role==="admin";
   const custUser=users.find(function(u){return u.id===forUid;});
@@ -7227,6 +7262,202 @@ function showAdminChatModal(forUid){
   inputRow.appendChild(sendBtn);
   mod.appendChild(inputRow);
   showOv(mod,function(){if(unsub)try{unsub();}catch(e){}closeOv();});
+}
+
+// ── ห้องแชท 1 ต่อ 1 ระหว่างลูกค้า-ลูกค้า (ต้องติดตามกันทั้ง 2 ฝ่าย) รองรับข้อความ/รูป/การ์ดสินค้า-โพสต์ที่แชร์กัน ──
+function showDirectChatModal(otherUid){
+  const otherUser=users.find(function(u){return u.id===otherUid;});
+  const convoId=getConvoId(user.id,otherUid);
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{padding:"0",display:"flex",flexDirection:"column",height:"78vh",maxWidth:"440px"}});
+  mod.appendChild(el("div",{style:{padding:"12px 16px",borderBottom:"1px solid #E8F5EE",display:"flex",alignItems:"center",gap:"10px"}},
+    el("button",{style:{background:"#F0F7F2",border:"none",borderRadius:"50%",width:"30px",height:"30px",cursor:"pointer",fontSize:"1rem"},onclick:closeOv},"✕"),
+    el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},"📨 "+(otherUser?(otherUser.name||otherUser.username):"ໝູ່"))
+  ));
+  const msgArea=el("div",{style:{flex:"1",overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:"8px",background:"#F8FCF8"}});
+  mod.appendChild(msgArea);
+  function openSharedItem(shared){
+    if(!shared)return;
+    closeOv();
+    setTimeout(function(){
+      if(shared.type==="product"){
+        const p=prods.find(function(x){return x.id===shared.id;});
+        if(p)showProduct(p);
+      } else if(shared.type==="review"){
+        const rv=getReviews().find(function(x){return x.id===shared.id;});
+        if(rv)showReviewDetail("review",rv);
+      } else if(shared.type==="shoppost"){
+        const post=getShopPosts().find(function(x){return x.id===shared.id;});
+        if(post)showReviewDetail("post",post);
+      }
+    },80);
+  }
+  function bubble(m){
+    const mine=String(m.senderId)===String(user.id);
+    const row=el("div",{style:{display:"flex",justifyContent:mine?"flex-end":"flex-start"}});
+    const bub=el("div",{style:{maxWidth:"75%",background:mine?"#1B6B3A":"#fff",color:mine?"#fff":"#1A2B5F",borderRadius:"14px",padding:"8px 12px",boxShadow:"0 1px 4px rgba(0,0,0,.08)",fontSize:".82rem"}});
+    if(m.imageUrl)bub.appendChild(el("img",{src:m.imageUrl,style:{maxWidth:"100%",borderRadius:"8px",marginBottom:(m.text||m.sharedItem)?"5px":"0",display:"block",cursor:"pointer"},onclick:function(){window.open(m.imageUrl,"_blank");}}));
+    if(m.sharedItem){
+      const sd=m.sharedItem;
+      let sTitle="",sImg=null,sPrice=null;
+      if(sd.type==="product"){const p=prods.find(function(x){return x.id===sd.id;});if(p){sTitle=p.name;sImg=(p.img&&isUrl(p.img))?p.img:null;sPrice=p.price;}}
+      else if(sd.type==="review"){const rv=getReviews().find(function(x){return x.id===sd.id;});if(rv){sTitle=rv.caption||"📸 ຮີວິວ";sImg=rv.mediaType==="video"?null:rv.mediaUrl;}}
+      else if(sd.type==="shoppost"){const post=getShopPosts().find(function(x){return x.id===sd.id;});if(post){sTitle=post.caption||post.text||"📸 ໂພສ";sImg=post.mediaType==="video"?null:(post.mediaUrl||(post.imgs&&post.imgs[0]));}}
+      const shareCard=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",background:mine?"rgba(255,255,255,.15)":"#F0F7F2",borderRadius:"10px",padding:"7px",cursor:"pointer",marginBottom:m.text?"5px":"0"},onclick:function(){openSharedItem(sd);}});
+      const sThumb=el("div",{style:{width:"40px",height:"40px",borderRadius:"7px",overflow:"hidden",flexShrink:"0",background:"#ddd",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem"}});
+      if(sImg)sThumb.appendChild(el("img",{src:sImg,style:{width:"100%",height:"100%",objectFit:"cover"},alt:""}));
+      else sThumb.textContent=sd.type==="product"?"🛍":"📸";
+      shareCard.appendChild(sThumb);
+      const sInfo=el("div",{style:{flex:"1",minWidth:"0"}});
+      sInfo.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"700",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},sTitle));
+      if(sPrice!=null)sInfo.appendChild(el("div",{style:{fontSize:".7rem",fontWeight:"700",color:mine?"#fff":"#1B6B3A"}},"₭"+fmt(sPrice)));
+      shareCard.appendChild(sInfo);
+      bub.appendChild(shareCard);
+    }
+    if(m.text)bub.appendChild(el("div",{style:{whiteSpace:"pre-wrap",wordBreak:"break-word"}},m.text));
+    bub.appendChild(el("div",{style:{fontSize:".6rem",opacity:".6",marginTop:"3px",textAlign:"right"}},new Date(m.at).toLocaleTimeString("lo-LA",{hour:"2-digit",minute:"2-digit"})));
+    row.appendChild(bub);
+    return row;
+  }
+  let unsub=null;
+  if(db){
+    unsub=db.collection("directMessages").where("convoId","==",convoId)
+      .onSnapshot(function(snap){
+        msgArea.innerHTML="";
+        if(snap.empty){
+          msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".8rem",padding:"30px 0"}},_lang==="lo"?"ຍັງບໍ່ມີຂໍ້ຄວາມ":"No messages yet"));
+        } else {
+          const msgs=snap.docs.map(function(d){return d.data();}).sort(function(a,b){return (a.at||0)-(b.at||0);});
+          msgs.forEach(function(m){
+            msgArea.appendChild(bubble(m));
+            // ── ทำเครื่องหมายว่าอ่านแล้ว ถ้าเป็นข้อความที่ส่งถึงเรา ──
+            if(String(m.receiverId)===String(user.id)&&!m.read){
+              db.collection("directMessages").doc(m.id).update({read:true}).catch(function(){});
+            }
+          });
+          msgArea.scrollTop=msgArea.scrollHeight;
+        }
+      },function(err){
+        msgArea.innerHTML="";
+        msgArea.appendChild(el("div",{style:{textAlign:"center",color:"#c0392b",fontSize:".78rem",padding:"20px 0"}},"⚠ "+(err&&err.message?err.message:"Load error")));
+      });
+  }
+  const inputRow=el("div",{style:{display:"flex",gap:"8px",padding:"10px 12px",borderTop:"1px solid #E8F5EE",alignItems:"center"}});
+  const fileInp=document.createElement("input");fileInp.type="file";fileInp.accept="image/*";fileInp.style.display="none";
+  const attachBtn=el("button",{type:"button",style:{background:"#F0F7F2",border:"none",borderRadius:"50%",width:"36px",height:"36px",fontSize:"1.1rem",cursor:"pointer",flexShrink:"0"},onclick:function(){fileInp.click();}},"📷");
+  const txtInp=document.createElement("input");
+  txtInp.type="text";txtInp.placeholder=_lang==="lo"?"ພິມຂໍ້ຄວາມ...":"Type a message...";
+  txtInp.style.cssText="flex:1;border:1.5px solid #C8E6D4;border-radius:20px;padding:9px 14px;font-size:.82rem;font-family:inherit;outline:none;";
+  const sendBtn=el("button",{type:"button",style:{background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",color:"#fff",fontSize:"1rem",cursor:"pointer",flexShrink:"0"}},"➤");
+  function doSend(){
+    const txt=(txtInp.value||"").trim();
+    if(!txt)return;
+    sendDirectMsg(otherUid,txt,null,null);
+    txtInp.value="";
+  }
+  sendBtn.onclick=doSend;
+  txtInp.onkeydown=function(e){if(e.key==="Enter")doSend();};
+  fileInp.onchange=function(e){
+    const f=e.target.files[0];if(!f)return;
+    resizeImage(f,900,900,0.8,function(resized){
+      toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...");
+      uploadImage(resized,"laoh/directChat").then(function(url){
+        sendDirectMsg(otherUid,null,url,null);
+      }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");});
+    });
+    fileInp.value="";
+  };
+  inputRow.appendChild(fileInp);
+  inputRow.appendChild(attachBtn);
+  inputRow.appendChild(txtInp);
+  inputRow.appendChild(sendBtn);
+  mod.appendChild(inputRow);
+  showOv(mod,function(){if(unsub)try{unsub();}catch(e){}closeOv();});
+}
+
+// ── รายชื่อ "แอดมิน" (ปักหมุด) + เพื่อนที่ติดตามกันทั้ง 2 ฝ่าย ──
+function showMessagesListModal(){
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},"📨 "+(_lang==="lo"?"ຂໍ້ຄວາມ":"Messages")));
+  mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",marginBottom:"14px",lineHeight:"1.5"}},
+    _lang==="lo"?"ລາຍຊື່ນີ້ມາຈາກບັນຊີທີ່ຕິດຕາມກັນທັງສອງຝ່າຍ (ທ່ານຕິດຕາມເຂົາ ແລະ ເຂົາຕິດຕາມທ່ານກັບ)":"This list comes from accounts that follow each other (mutual follow)"
+  ));
+  const listWrap=el("div",null);
+  mod.appendChild(listWrap);
+  const adminRow=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 12px",background:"#F0F7F2",borderRadius:"12px",marginBottom:"8px",cursor:"pointer",border:"1.5px solid #C8E6D4"},
+    onclick:function(){closeOv();setTimeout(function(){showAdminChatModal(user.id);},80);}
+  });
+  adminRow.appendChild(el("div",{style:{width:"38px",height:"38px",borderRadius:"50%",background:"#1B6B3A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:"0"}},"🛡️"));
+  adminRow.appendChild(el("div",{style:{flex:"1"}},
+    el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1A2B5F"}},_lang==="lo"?"Admin ລາວເຮັດ":"LaoH Admin"),
+    el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},_lang==="lo"?"ສອບຖາມ/ແຈ້ງບັນຫາ":"Support & inquiries")
+  ));
+  listWrap.appendChild(adminRow);
+  const friends=getMutualFriends();
+  if(friends.length===0){
+    listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".78rem",padding:"20px 0"}},_lang==="lo"?"ຍັງບໍ່ມີໝູ່ທີ່ຕິດຕາມກັນທັງສອງຝ່າຍ":"No mutual friends yet"));
+  } else {
+    friends.forEach(function(f){
+      const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 12px",background:"#fff",borderRadius:"12px",marginBottom:"8px",cursor:"pointer",boxShadow:"0 1px 4px rgba(0,0,0,.06)"},
+        onclick:function(){closeOv();setTimeout(function(){showDirectChatModal(f.id);},80);}
+      });
+      const av=el("div",{style:{width:"38px",height:"38px",borderRadius:"50%",overflow:"hidden",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1rem",color:"#fff",flexShrink:"0"}});
+      if(f.avatar&&isUrl(f.avatar))av.appendChild(el("img",{src:f.avatar,style:{width:"100%",height:"100%",objectFit:"cover"},alt:""}));
+      else av.textContent="👤";
+      row.appendChild(av);
+      row.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
+        el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},f.name||f.username||"ໝູ່")
+      ));
+      listWrap.appendChild(row);
+    });
+  }
+  showOv(mod,null);
+}
+
+// ── นับข้อความยังไม่อ่านรวม (แอดมิน+เพื่อน) สำหรับตัวเลขแดงที่ปุ่ม 📨 ข้อความ ──
+function getUnreadMsgCount(cb){
+  if(!db||!user){cb(0);return;}
+  let total=0;let pending=2;
+  function done(){pending--;if(pending===0)cb(total);}
+  db.collection("adminChats").where("uid","==",String(user.id)).get().then(function(snap){
+    snap.docs.forEach(function(d){const m=d.data();if(m.sender==="admin"&&!m.read)total++;});
+    done();
+  }).catch(done);
+  db.collection("directMessages").where("receiverId","==",String(user.id)).get().then(function(snap){
+    snap.docs.forEach(function(d){const m=d.data();if(!m.read)total++;});
+    done();
+  }).catch(done);
+}
+
+// ── ป๊อบอัพเลือกเพื่อน (mutual follow) เพื่อส่งสินค้า/โพสต์/รีวิวเข้าไปในแชท — ส่งแล้วอยู่หน้าเดิม ไม่ย้ายไปหน้าแชท ──
+function openSendToFriendPicker(itemType,itemId){
+  if(!user||user.role!=="c"||user.isShopViewer){toast(_lang==="lo"?"ສະເພາະບັນຊີລູກຄ້າເທົ່ານັ້ນ":"Customers only");return;}
+  const friends=getMutualFriends();
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"12px"}},"📨 "+(_lang==="lo"?"ສົ່ງໃຫ້ໝູ່":"Send to Friend")));
+  if(friends.length===0){
+    mod.appendChild(el("div",{style:{textAlign:"center",color:"#aaa",fontSize:".8rem",padding:"20px 0"}},_lang==="lo"?"ຍັງບໍ່ມີໝູ່ທີ່ຕິດຕາມກັນທັງສອງຝ່າຍ":"No mutual friends yet"));
+  } else {
+    const listWrap=el("div",{style:{maxHeight:"50vh",overflowY:"auto"}});
+    friends.forEach(function(f){
+      const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 8px",borderRadius:"10px",cursor:"pointer"},
+        onclick:function(){
+          sendDirectMsg(f.id,null,null,{type:itemType,id:itemId});
+          toast(_lang==="lo"?"✅ ສົ່ງແລ້ວ":"✅ Sent");
+          closeOv();
+        }
+      });
+      const av=el("div",{style:{width:"34px",height:"34px",borderRadius:"50%",overflow:"hidden",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".9rem",color:"#fff",flexShrink:"0"}});
+      if(f.avatar&&isUrl(f.avatar))av.appendChild(el("img",{src:f.avatar,style:{width:"100%",height:"100%",objectFit:"cover"},alt:""}));
+      else av.textContent="👤";
+      row.appendChild(av);
+      row.appendChild(el("div",{style:{fontSize:".83rem",fontWeight:"600",color:"#1A2B5F"}},f.name||f.username||"ໝູ່"));
+      listWrap.appendChild(row);
+    });
+    mod.appendChild(listWrap);
+  }
+  showOv(mod,null);
 }
 
 function buildShopFooter(){
@@ -7517,23 +7748,36 @@ function buildReviewDetailItemContent(itemType,itemData){
   const rdShareL=document.createElement("div"); rdShareL.className="feed-action-label"; rdShareL.textContent="ສົ່ງຕໍ່";
   rdShareA.appendChild(rdShareL); rdSidebar.appendChild(rdShareA);
 
-  // Copy link
-  const rdLinkA=document.createElement("div"); rdLinkA.className="feed-action";
-  const rdLinkBtn=document.createElement("button"); rdLinkBtn.className="feed-action-btn-sm";
-  rdLinkBtn.textContent="🔗";
-  rdLinkBtn.onclick=function(){
-    const linkUrl=location.origin+location.pathname+(isPost?"?post=":"?rv=")+itemData.id;
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(linkUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
-    else{try{const ta=document.createElement("textarea");ta.value=linkUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
-  };
-  rdLinkA.appendChild(rdLinkBtn);
-  const rdLinkL=document.createElement("div"); rdLinkL.className="feed-action-label"; rdLinkL.textContent="ລິ້ງ";
-  rdLinkA.appendChild(rdLinkL); rdSidebar.appendChild(rdLinkA);
+  // Copy link (ซ่อนสำหรับบัญชีลูกค้าจริงเท่านั้น — ร้านค้า/แอดมิน/staff ยังเห็น)
+  if(!(user&&user.role==="c"&&!user.isShopViewer)){
+    const rdLinkA=document.createElement("div"); rdLinkA.className="feed-action";
+    const rdLinkBtn=document.createElement("button"); rdLinkBtn.className="feed-action-btn-sm";
+    rdLinkBtn.textContent="🔗";
+    rdLinkBtn.onclick=function(){
+      const linkUrl=location.origin+location.pathname+(isPost?"?post=":"?rv=")+itemData.id;
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(linkUrl).then(function(){toast("🔗 ຄັດລອກລິ້ງ ✓");}).catch(function(){});}
+      else{try{const ta=document.createElement("textarea");ta.value=linkUrl;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}catch(e){}toast("🔗 ຄັດລອກລິ້ງ ✓");}
+    };
+    rdLinkA.appendChild(rdLinkBtn);
+    const rdLinkL=document.createElement("div"); rdLinkL.className="feed-action-label"; rdLinkL.textContent="ລິ້ງ";
+    rdLinkA.appendChild(rdLinkL); rdSidebar.appendChild(rdLinkA);
+  }
 
   // Comment (วางคอมเมนต์ทับวิดีโอมุมล่างซ้าย + ปุ่มเปิด/ปิดช่องพิมพ์ เหมือนกับ Feed ทุกอย่าง)
   // Save button (เฉพาะบัญชีลูกค้า)
   const saveBtn3=buildSaveSidebarBtn(itemData.id,isPost?"shoppost":"review",itemData);
   if(saveBtn3)rdSidebar.appendChild(saveBtn3);
+  // ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า)
+  if(user&&user.role==="c"&&!user.isShopViewer){
+    const saSendFriend=document.createElement("div"); saSendFriend.className="feed-action";
+    const sbSendFriend=document.createElement("button"); sbSendFriend.className="feed-action-btn-sm";
+    sbSendFriend.textContent="📨";
+    sbSendFriend.onclick=function(e){e.stopPropagation();openSendToFriendPicker(isPost?"shoppost":"review",itemData.id);};
+    saSendFriend.appendChild(sbSendFriend);
+    const slSendFriend=document.createElement("div"); slSendFriend.className="feed-action-label"; slSendFriend.textContent=_lang==="lo"?"ສົ່ງໝູ່":"Send";
+    saSendFriend.appendChild(slSendFriend);
+    rdSidebar.appendChild(saSendFriend);
+  }
   rdSidebar.appendChild(buildCommentSidebarBtn(itemData.id,isPost?"post":"review",ownerUid,title,mediaBox,true));
   // ปรับตำแหน่งคอมเมนต์ให้ลงมาใกล้ขอบล่างวิดีโอ เฉพาะ popup นี้เท่านั้น (mediaBox ไม่มีแถบข้อมูลด้านล่างซ้อนทับเหมือน Feed จึงมีช่องว่างเยอะเกินไปถ้าใช้ค่าเดิม)
   const rdCmtsEl=mediaBox.querySelector(".rv-cmts");
@@ -7715,7 +7959,15 @@ function showProduct(p){
             doCopy(shareUrl2);
           }
         },"🔗 "+(_lang==="lo"?"ລິ້ງ":"Link"));
-        wrap.appendChild(copyLinkBtn);
+        if(!(user&&user.role==="c"&&!user.isShopViewer))wrap.appendChild(copyLinkBtn);
+        // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) ──
+        if(user&&user.role==="c"&&!user.isShopViewer){
+          const sendFriendBtn=el("button",{
+            style:{position:"absolute",bottom:"10px",right:"96px",background:"rgba(0,0,0,.55)",border:"none",borderRadius:"20px",padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px",color:"#fff",fontSize:".65rem",fontWeight:"700",fontFamily:"inherit"},
+            onclick:function(e){e.stopPropagation();openSendToFriendPicker("product",p.id);}
+          },"📨 "+(_lang==="lo"?"ສົ່ງໝູ່":"Send"));
+          wrap.appendChild(sendFriendBtn);
+        }
         if(imgs.length>1){
           // Arrow buttons
           const arrowStyle="position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;z-index:5;line-height:1;";

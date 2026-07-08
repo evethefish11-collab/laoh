@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v501 -->
+<!-- LaoH Marketplace v502 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2327,42 +2327,26 @@ function openVoiceoverStudio(videoFile,onComplete){
   balanceSection.appendChild(musicSlider);
   controlBox.appendChild(balanceSection);
   // 4) ปุ่มเสร็จสิ้น
+  let mixedBlobReady=null;
+  // ── ตั้งเวลาจำกัด 20 วินาที กันไม่ให้ค้างตลอดไปถ้าขั้นตอนถอดรหัสเสียงค้าง (พบปัญหานี้ใน Safari บางรุ่นกับไฟล์ที่ MediaRecorder สร้างขึ้น) ──
+  function withTimeout(promise,ms,label){
+    return new Promise(function(resolve,reject){
+      const timer=setTimeout(function(){reject(new Error("TIMEOUT_"+label+": ໃຊ້ເວລາດົນເກີນໄປ ("+(ms/1000)+"s) — ອາດເປັນຍ້ອນ browser ນີ້ຖອດລະຫັດໄຟລ໌ສຽງທີ່ອັດໄວ້ບໍ່ໄດ້"));},ms);
+      promise.then(function(v){clearTimeout(timer);resolve(v);},function(e){clearTimeout(timer);reject(e);});
+    });
+  }
+  // ── ຂັ້ນທີ 1: ປຸ່ມ "ແລ້ວໆ" — ປະມວນຜົນຢ່າງດຽວ (ຜະສົມສຽງ) ຍັງບໍ່ອັບໂຫຼດຫຍັງເລີຍ ──
   const doneBtn=el("button",{style:{width:"100%",padding:"14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"800",fontSize:".9rem",cursor:"pointer",fontFamily:"inherit"},
     onclick:function(){
       if(!recordedBlob){toast(_lang==="lo"?"ກະລຸນາອັດສຽງພາກກ່ອນ":"Please record your voice-over first");return;}
       doneBtn.disabled=true;doneBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງປະມວນຜົນ...":"Processing...");
+      uploadBtn.style.display="none";
       const dur=videoDuration||5;
-      // ── ตั้งเวลาจำกัด 20 วินาที กันไม่ให้ค้างตลอดไปถ้าขั้นตอนถอดรหัสเสียงค้าง (พบปัญหานี้ใน Safari บางรุ่นกับไฟล์ที่ MediaRecorder สร้างขึ้น) ──
-      function withTimeout(promise,ms,label){
-        return new Promise(function(resolve,reject){
-          const timer=setTimeout(function(){reject(new Error("TIMEOUT_"+label+": ໃຊ້ເວລາດົນເກີນໄປ ("+(ms/1000)+"s) — ອາດເປັນຍ້ອນ browser ນີ້ຖອດລະຫັດໄຟລ໌ສຽງທີ່ອັດໄວ້ບໍ່ໄດ້"));},ms);
-          promise.then(function(v){clearTimeout(timer);resolve(v);},function(e){clearTimeout(timer);reject(e);});
-        });
-      }
       withTimeout(mixVoiceAndMusic(recordedBlob,selectedTrack?selectedTrack.url:null,musicStart,dur,voiceVol,selectedTrack?musicVol:0),20000,"MIX").then(function(mixedBlob){
-        toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
-        // ── ຕ້ອງແປງ videoFile ເປັນ base64 ກ່ອນ (uploadVideoToStorage ຕ້ອງການ base64 ບໍ່ແມ່ນ blob: URL) — ຈຸດນີ້ແມ່ນສາເຫດທີ່ແທ້ຈິງທີ່ເຮັດໃຫ້ຄ້າງ ──
-        return new Promise(function(resolve,reject){
-          const videoReader=new FileReader();
-          videoReader.onload=function(ve){resolve(ve.target.result);};
-          videoReader.onerror=reject;
-          videoReader.readAsDataURL(videoFile);
-        }).then(function(videoBase64){
-          return uploadVideoToStorage(videoBase64,Date.now()+".mp4");
-        }).then(function(videoUploadedUrl){
-          return {mixedBlob:mixedBlob,videoUploadedUrl:videoUploadedUrl};
-        });
-      }).then(function(res){
-        toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດສຽງພາກ...":"Uploading voice-over...");
-        const reader=new FileReader();
-        reader.onload=function(e){
-          uploadAudio(e.target.result,Date.now()+"_vo.wav").then(function(audioUrl){
-            URL.revokeObjectURL(videoUrl);
-            overlay.remove();
-            onComplete({mediaUrl:res.videoUploadedUrl,voiceoverUrl:audioUrl});
-          }).catch(function(){toast("⚠ ອັບໂຫຼດສຽງບໍ່ສຳເລັດ");doneBtn.disabled=false;doneBtn.textContent="✅ "+(_lang==="lo"?"ແລ້ວໆ":"Done");});
-        };
-        reader.readAsDataURL(res.mixedBlob);
+        mixedBlobReady=mixedBlob;
+        doneBtn.style.display="none";
+        uploadBtn.style.display="block";
+        toast("✅ "+(_lang==="lo"?"ພ້ອມແລ້ວ — ກົດອັບໂຫຼດໄດ້ເລີຍ":"Ready — tap Upload to continue"));
       }).catch(function(err){
         console.error(err);
         const errMsg=err&&err.message?err.message:String(err);
@@ -2372,6 +2356,42 @@ function openVoiceoverStudio(videoFile,onComplete){
     }
   },"✅ "+(_lang==="lo"?"ແລ້ວໆ":"Done"));
   controlBox.appendChild(doneBtn);
+  // ── ຂັ້ນທີ 2: ປຸ່ມ "ອັບໂຫຼດ" — ໂຜ່ຂຶ້ນມາຫຼັງຈາກປະມວນຜົນສຳເລັດເທົ່ານັ້ນ ຖ້າຄ້າງຈະຮູ້ວ່າຄ້າງທີ່ຂັ້ນຕອນອັບໂຫຼດ ບໍ່ແມ່ນຂັ້ນຕອນປະມວນຜົນ ──
+  const uploadBtn=el("button",{style:{width:"100%",padding:"14px",background:"#0F5C2E",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"800",fontSize:".9rem",cursor:"pointer",fontFamily:"inherit",display:"none"},
+    onclick:function(){
+      if(!mixedBlobReady){toast("⚠ ຍັງບໍ່ພ້ອມ");return;}
+      uploadBtn.disabled=true;uploadBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
+      // ── ตุ้องแปลง videoFile เป็น base64 ก่อน (uploadVideoToStorage ต้องการ base64 ไม่ใช่ blob: URL) ──
+      new Promise(function(resolve,reject){
+        const videoReader=new FileReader();
+        videoReader.onload=function(ve){resolve(ve.target.result);};
+        videoReader.onerror=reject;
+        videoReader.readAsDataURL(videoFile);
+      }).then(function(videoBase64){
+        return uploadVideoToStorage(videoBase64,Date.now()+".mp4");
+      }).then(function(videoUploadedUrl){
+        uploadBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດສຽງພາກ...":"Uploading voice-over...");
+        return new Promise(function(resolve,reject){
+          const reader=new FileReader();
+          reader.onload=function(e){resolve(e.target.result);};
+          reader.onerror=reject;
+          reader.readAsDataURL(mixedBlobReady);
+        }).then(function(audioBase64){
+          return uploadAudio(audioBase64,Date.now()+"_vo.wav");
+        }).then(function(audioUrl){
+          URL.revokeObjectURL(videoUrl);
+          overlay.remove();
+          onComplete({mediaUrl:videoUploadedUrl,voiceoverUrl:audioUrl});
+        });
+      }).catch(function(err){
+        console.error(err);
+        const errMsg=err&&err.message?err.message:String(err);
+        toast("⚠ "+errMsg);
+        uploadBtn.disabled=false;uploadBtn.textContent="📤 "+(_lang==="lo"?"ອັບໂຫຼດ":"Upload");
+      });
+    }
+  },"📤 "+(_lang==="lo"?"ອັບໂຫຼດ":"Upload"));
+  controlBox.appendChild(uploadBtn);
   // ── ต้องโหลดวิดีโอต้นฉบับให้ครบก่อนเริ่ม (รอ metadata) ──
   document.body.appendChild(overlay);
 }
@@ -2663,7 +2683,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5067,7 +5087,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.2")
   );
 
   // Icon style helper

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v499 -->
+<!-- LaoH Marketplace v500 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2109,25 +2109,47 @@ function audioBufferToWavBlob(buffer){
 // ── ผสมเสียงพากย์ (Blob) + เพลงประกอบช่วงที่เลือกไว้ (URL+จุดเริ่ม+ความยาว) เข้าเป็นไฟล์เดียว ──
 async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,musicVol){
   const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx)throw new Error("STEP_VOICE_DECODE: AudioContext not supported on this browser");
   const ctx=new AudioCtx();
-  const voiceBuf=await ctx.decodeAudioData(await voiceBlob.arrayBuffer());
+  let voiceBuf;
+  try{
+    const voiceArrBuf=await voiceBlob.arrayBuffer();
+    voiceBuf=await new Promise(function(resolve,reject){
+      // ── ใช้ทั้งแบบ Promise และแบบ callback เผื่อ Safari รุ่นเก่าไม่รองรับ Promise-based decodeAudioData ──
+      const maybePromise=ctx.decodeAudioData(voiceArrBuf,resolve,reject);
+      if(maybePromise&&maybePromise.then)maybePromise.then(resolve).catch(reject);
+    });
+  }catch(e){throw new Error("STEP_VOICE_DECODE: "+(e&&e.message?e.message:String(e)));}
   let musicBuf=null;
   if(musicUrl){
-    const resp=await fetch(musicUrl);
-    musicBuf=await ctx.decodeAudioData(await resp.arrayBuffer());
+    let musicArrBuf;
+    try{
+      const resp=await fetch(musicUrl);
+      if(!resp.ok)throw new Error("HTTP "+resp.status);
+      musicArrBuf=await resp.arrayBuffer();
+    }catch(e){throw new Error("STEP_MUSIC_FETCH: "+(e&&e.message?e.message:String(e)));}
+    try{
+      musicBuf=await new Promise(function(resolve,reject){
+        const maybePromise=ctx.decodeAudioData(musicArrBuf,resolve,reject);
+        if(maybePromise&&maybePromise.then)maybePromise.then(resolve).catch(reject);
+      });
+    }catch(e){throw new Error("STEP_MUSIC_DECODE: "+(e&&e.message?e.message:String(e)));}
   }
   const sr=voiceBuf.sampleRate;
-  const offlineCtx=new OfflineAudioContext(2,Math.ceil(duration*sr),sr);
-  const vSrc=offlineCtx.createBufferSource();vSrc.buffer=voiceBuf;
-  const vGain=offlineCtx.createGain();vGain.gain.value=voiceVol;
-  vSrc.connect(vGain).connect(offlineCtx.destination);vSrc.start(0);
-  if(musicBuf){
-    const mSrc=offlineCtx.createBufferSource();mSrc.buffer=musicBuf;
-    const mGain=offlineCtx.createGain();mGain.gain.value=musicVol;
-    mSrc.connect(mGain).connect(offlineCtx.destination);
-    mSrc.start(0,Math.min(musicStart,Math.max(0,musicBuf.duration-0.1)),duration);
-  }
-  const rendered=await offlineCtx.startRendering();
+  let rendered;
+  try{
+    const offlineCtx=new OfflineAudioContext(2,Math.ceil(duration*sr),sr);
+    const vSrc=offlineCtx.createBufferSource();vSrc.buffer=voiceBuf;
+    const vGain=offlineCtx.createGain();vGain.gain.value=voiceVol;
+    vSrc.connect(vGain).connect(offlineCtx.destination);vSrc.start(0);
+    if(musicBuf){
+      const mSrc=offlineCtx.createBufferSource();mSrc.buffer=musicBuf;
+      const mGain=offlineCtx.createGain();mGain.gain.value=musicVol;
+      mSrc.connect(mGain).connect(offlineCtx.destination);
+      mSrc.start(0,Math.min(musicStart,Math.max(0,musicBuf.duration-0.1)),duration);
+    }
+    rendered=await offlineCtx.startRendering();
+  }catch(e){throw new Error("STEP_RENDER: "+(e&&e.message?e.message:String(e)));}
   try{ctx.close();}catch(e){}
   return audioBufferToWavBlob(rendered);
 }
@@ -2336,7 +2358,8 @@ function openVoiceoverStudio(videoFile,onComplete){
         reader.readAsDataURL(res.mixedBlob);
       }).catch(function(err){
         console.error(err);
-        toast("⚠ "+(_lang==="lo"?"ເກີດຂໍ້ຜິດພາດ ລອງໃໝ່":"Something went wrong, please try again"));
+        const errMsg=err&&err.message?err.message:String(err);
+        toast("⚠ "+errMsg);
         doneBtn.disabled=false;doneBtn.textContent="✅ "+(_lang==="lo"?"ແລ້ວໆ":"Done");
       });
     }
@@ -2633,7 +2656,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.9.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5037,7 +5060,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.9.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.0")
   );
 
   // Icon style helper

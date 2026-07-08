@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v492 -->
+<!-- LaoH Marketplace v496 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2083,6 +2083,247 @@ async function uploadAudio(base64Data, filename){
   return uploadFile(base64Data, "laoh/audiobooks/"+(filename||Date.now()+".mp3"), "audio/mpeg");
 }
 
+// ══════════════════════════════════════════════════════════════
+// ── Phase 3: ระบบพากย์เสียงทับวิดีโอ + เพลงประกอบ (ผสมเสียง 2 แทร็กในเบราว์เซอร์ ไม่ต้องพึ่งเซิร์ฟเวอร์) ──
+// ══════════════════════════════════════════════════════════════
+// ── แปลง AudioBuffer เป็นไฟล์ WAV (PCM 16-bit) มาตรฐาน ──
+function audioBufferToWavBlob(buffer){
+  const numCh=buffer.numberOfChannels,sr=buffer.sampleRate,len=buffer.length*numCh*2+44;
+  const ab=new ArrayBuffer(len),view=new DataView(ab);
+  function wStr(o,s){for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i));}
+  let off=0;
+  wStr(0,"RIFF");view.setUint32(4,len-8,true);wStr(8,"WAVE");wStr(12,"fmt ");
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,numCh,true);
+  view.setUint32(24,sr,true);view.setUint32(28,sr*numCh*2,true);view.setUint16(32,numCh*2,true);view.setUint16(34,16,true);
+  wStr(36,"data");view.setUint32(40,len-44,true);
+  off=44;
+  const chans=[];for(let c=0;c<numCh;c++)chans.push(buffer.getChannelData(c));
+  for(let i=0;i<buffer.length;i++){
+    for(let c=0;c<numCh;c++){
+      let s=Math.max(-1,Math.min(1,chans[c][i]));
+      view.setInt16(off,s<0?s*0x8000:s*0x7FFF,true);off+=2;
+    }
+  }
+  return new Blob([ab],{type:"audio/wav"});
+}
+// ── ผสมเสียงพากย์ (Blob) + เพลงประกอบช่วงที่เลือกไว้ (URL+จุดเริ่ม+ความยาว) เข้าเป็นไฟล์เดียว ──
+async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,musicVol){
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  const ctx=new AudioCtx();
+  const voiceBuf=await ctx.decodeAudioData(await voiceBlob.arrayBuffer());
+  let musicBuf=null;
+  if(musicUrl){
+    const resp=await fetch(musicUrl);
+    musicBuf=await ctx.decodeAudioData(await resp.arrayBuffer());
+  }
+  const sr=voiceBuf.sampleRate;
+  const offlineCtx=new OfflineAudioContext(2,Math.ceil(duration*sr),sr);
+  const vSrc=offlineCtx.createBufferSource();vSrc.buffer=voiceBuf;
+  const vGain=offlineCtx.createGain();vGain.gain.value=voiceVol;
+  vSrc.connect(vGain).connect(offlineCtx.destination);vSrc.start(0);
+  if(musicBuf){
+    const mSrc=offlineCtx.createBufferSource();mSrc.buffer=musicBuf;
+    const mGain=offlineCtx.createGain();mGain.gain.value=musicVol;
+    mSrc.connect(mGain).connect(offlineCtx.destination);
+    mSrc.start(0,Math.min(musicStart,Math.max(0,musicBuf.duration-0.1)),duration);
+  }
+  const rendered=await offlineCtx.startRendering();
+  try{ctx.close();}catch(e){}
+  return audioBufferToWavBlob(rendered);
+}
+// ── เล่นวิดีโอ(ปิดเสียง)+ไฟล์เสียงพากย์พร้อมกัน แบบซิงค์ — รอทั้ง 2 ไฟล์พร้อมก่อนค่อยเล่น ──
+function playSyncedVoiceover(videoEl,audioEl){
+  videoEl.muted=true;videoEl.loop=true;
+  audioEl.loop=true;
+  let vReady=false,aReady=false;
+  function tryStart(){
+    if(vReady&&aReady){
+      videoEl.currentTime=0;audioEl.currentTime=0;
+      videoEl.play().catch(function(){});
+      audioEl.play().catch(function(){});
+    }
+  }
+  videoEl.addEventListener("canplay",function(){vReady=true;tryStart();},{once:true});
+  audioEl.addEventListener("canplay",function(){aReady=true;tryStart();},{once:true});
+  if(videoEl.readyState>=3)vReady=true;
+  if(audioEl.readyState>=3)aReady=true;
+  tryStart();
+}
+// ── หน้าจอสตูดิโอพากย์เสียง: วิดีโอตัวอย่างเต็มจอ + ปุ่มอัดเสียง + เลือกเพลง+ตัดช่วง + ปรับสมดุลเสียง ──
+function openVoiceoverStudio(videoFile,onComplete){
+  const videoUrl=URL.createObjectURL(videoFile);
+  const overlay=el("div",{style:{position:"fixed",inset:"0",background:"#000",zIndex:"10001",display:"flex",flexDirection:"column"}});
+  const closeBtn=el("button",{style:{position:"absolute",top:"12px",right:"12px",zIndex:"10",background:"rgba(255,255,255,.2)",border:"none",borderRadius:"50%",width:"34px",height:"34px",color:"#fff",fontSize:"1.1rem",cursor:"pointer"},
+    onclick:function(){if(confirm(_lang==="lo"?"ອອກ​ໂດຍບໍ່ບັນທຶກ?":"Exit without saving?")){URL.revokeObjectURL(videoUrl);overlay.remove();}}
+  },"✕");
+  overlay.appendChild(closeBtn);
+  // ── วิดีโอตัวอย่าง เต็มสัดส่วนจริง ──
+  const vidBox=el("div",{style:{flex:"1",minHeight:"0",display:"flex",alignItems:"center",justifyContent:"center",background:"#000",overflow:"hidden"}});
+  const previewVid=document.createElement("video");
+  previewVid.src=videoUrl;previewVid.muted=true;previewVid.loop=true;previewVid.playsInline=true;previewVid.autoplay=true;
+  previewVid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;";
+  vidBox.appendChild(previewVid);
+  overlay.appendChild(vidBox);
+  previewVid.play().catch(function(){});
+  // ── สถานะ ──
+  let videoDuration=0;
+  let recordedBlob=null;
+  let selectedTrack=null;
+  let musicStart=0;
+  let voiceVol=1,musicVol=0.4;
+  previewVid.onloadedmetadata=function(){videoDuration=previewVid.duration||0;};
+  // ── ส่วนควบคุมด้านล่าง ──
+  const controlBox=el("div",{style:{background:"#111",padding:"14px",display:"flex",flexDirection:"column",gap:"14px",maxHeight:"55vh",overflowY:"auto"}});
+  overlay.appendChild(controlBox);
+  // 1) ปุ่มอัดเสียง
+  const recSection=el("div",{style:{textAlign:"center"}});
+  const recStatus=el("div",{style:{color:"#fff",fontSize:".8rem",marginBottom:"8px"}},_lang==="lo"?"ກົດເພື່ອອັດສຽງພາກ":"Tap to record voice-over");
+  const waveBar=el("div",{style:{display:"flex",justifyContent:"center",alignItems:"center",gap:"3px",height:"24px",marginBottom:"8px"}});
+  const waveBars=[];for(let i=0;i<12;i++){const b=el("div",{style:{width:"3px",height:"4px",background:"#1B6B3A",borderRadius:"2px",transition:"height .1s"}});waveBars.push(b);waveBar.appendChild(b);}
+  recSection.appendChild(recStatus);recSection.appendChild(waveBar);
+  const recBtn=el("button",{style:{width:"60px",height:"60px",borderRadius:"50%",background:"#C0392B",border:"3px solid #fff",cursor:"pointer",fontSize:"1.4rem",color:"#fff"}},"🎤");
+  recSection.appendChild(recBtn);
+  const recPreviewRow=el("div",{style:{marginTop:"8px",display:"none",flexDirection:"column",alignItems:"center",gap:"6px"}});
+  recSection.appendChild(recPreviewRow);
+  controlBox.appendChild(recSection);
+  let mediaRecorder=null,recChunks=[],recStream=null,waveInterval=null;
+  recBtn.onclick=function(){
+    if(mediaRecorder&&mediaRecorder.state==="recording"){
+      mediaRecorder.stop();
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      recStream=stream;
+      recChunks=[];
+      mediaRecorder=new MediaRecorder(stream);
+      mediaRecorder.ondataavailable=function(e){if(e.data.size>0)recChunks.push(e.data);};
+      mediaRecorder.onstop=function(){
+        recordedBlob=new Blob(recChunks,{type:"audio/webm"});
+        stream.getTracks().forEach(function(t){t.stop();});
+        clearInterval(waveInterval);
+        waveBars.forEach(function(b){b.style.height="4px";});
+        recBtn.textContent="🎤";recBtn.style.background="#C0392B";
+        recStatus.textContent=_lang==="lo"?"✅ ອັດແລ້ວ — ຟັງກ່ອນ ຫຼື ອັດໃໝ່":"✅ Recorded — preview or re-record";
+        recPreviewRow.style.display="flex";
+        recPreviewRow.innerHTML="";
+        const pv=document.createElement("audio");pv.src=URL.createObjectURL(recordedBlob);pv.controls=true;pv.style.cssText="width:220px;height:32px;";
+        recPreviewRow.appendChild(pv);
+      };
+      mediaRecorder.start();
+      recBtn.textContent="⏹";recBtn.style.background="#555";
+      recStatus.textContent=_lang==="lo"?"🔴 ກຳລັງອັດ... ກົດອີກຄັ້ງເພື່ອຢຸດ":"🔴 Recording... tap again to stop";
+      recPreviewRow.style.display="none";
+      waveInterval=setInterval(function(){waveBars.forEach(function(b){b.style.height=(4+Math.random()*20)+"px";});},120);
+    }).catch(function(){toast(_lang==="lo"?"⚠ ບໍ່ສາມາດເຂົ້າໄມໂຄຣໂຟນໄດ້":"⚠ Microphone access denied");});
+  };
+  // 2) เลือกเพลงประกอบ
+  const musicSection=el("div",null);
+  musicSection.appendChild(el("div",{style:{color:"#fff",fontSize:".8rem",fontWeight:"700",marginBottom:"8px"}},"🎵 "+(_lang==="lo"?"ເລືອກເພງປະກອບ (ບໍ່ບັງຄັບ)":"Choose background music (optional)")));
+  const trackListWrap=el("div",{style:{display:"flex",flexDirection:"column",gap:"6px",maxHeight:"140px",overflowY:"auto"}});
+  musicSection.appendChild(trackListWrap);
+  const trimSection=el("div",{style:{display:"none",marginTop:"10px",background:"#222",borderRadius:"10px",padding:"10px"}});
+  musicSection.appendChild(trimSection);
+  controlBox.appendChild(musicSection);
+  if(db){
+    db.collection("bgMusic").orderBy("at","desc").get().then(function(snap){
+      trackListWrap.innerHTML="";
+      if(snap.empty){
+        trackListWrap.appendChild(el("div",{style:{color:"#888",fontSize:".76rem"}},_lang==="lo"?"ຍັງບໍ່ມີເພງໃນຄັງ":"No tracks available yet"));
+        return;
+      }
+      snap.docs.forEach(function(d){
+        const t=d.data();
+        const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"8px 10px",background:selectedTrack&&selectedTrack.id===t.id?"#1B6B3A":"#222",borderRadius:"10px",cursor:"pointer"},
+          onclick:function(){
+            selectedTrack=t;musicStart=0;
+            Array.from(trackListWrap.children).forEach(function(r){r.style.background="#222";});
+            row.style.background="#1B6B3A";
+            showTrimUI(t);
+          }
+        });
+        row.appendChild(el("div",{style:{color:"#fff",fontSize:".8rem",flex:"1"}},"🎵 "+t.name));
+        trackListWrap.appendChild(row);
+      });
+    }).catch(function(){});
+  }
+  function showTrimUI(track){
+    trimSection.style.display="block";
+    trimSection.innerHTML="";
+    trimSection.appendChild(el("div",{style:{color:"#ccc",fontSize:".72rem",marginBottom:"6px"}},_lang==="lo"?"ລາກເລືອກຈຸດເລີ່ມເພງ:":"Drag to choose where the music starts:"));
+    const previewAudio=document.createElement("audio");previewAudio.src=track.url;previewAudio.style.display="none";
+    trimSection.appendChild(previewAudio);
+    const slider=document.createElement("input");
+    slider.type="range";slider.min="0";slider.max="100";slider.value="0";slider.style.width="100%";
+    trimSection.appendChild(slider);
+    const timeLabel=el("div",{style:{color:"#aaa",fontSize:".7rem",marginTop:"4px"}},"0:00");
+    trimSection.appendChild(timeLabel);
+    previewAudio.onloadedmetadata=function(){
+      slider.oninput=function(){
+        const pct=Number(slider.value)/100;
+        musicStart=pct*Math.max(0,previewAudio.duration-(videoDuration||5));
+        timeLabel.textContent=Math.floor(musicStart/60)+":"+String(Math.floor(musicStart%60)).padStart(2,"0");
+      };
+    };
+    const previewBtn=el("button",{style:{marginTop:"8px",padding:"7px 14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"8px",fontSize:".76rem",cursor:"pointer",fontFamily:"inherit"},
+      onclick:function(){
+        previewAudio.currentTime=musicStart;
+        previewAudio.style.display="none";
+        previewAudio.play().catch(function(){});
+        setTimeout(function(){previewAudio.pause();},Math.min(5000,(videoDuration||5)*1000));
+      }
+    },"▶ "+(_lang==="lo"?"ຟັງຊ່ວງທີ່ເລືອກ":"Preview selection"));
+    trimSection.appendChild(previewBtn);
+    const removeBtn=el("button",{style:{marginTop:"8px",marginLeft:"8px",padding:"7px 14px",background:"none",color:"#C0392B",border:"1px solid #C0392B",borderRadius:"8px",fontSize:".76rem",cursor:"pointer",fontFamily:"inherit"},
+      onclick:function(){selectedTrack=null;trimSection.style.display="none";Array.from(trackListWrap.children).forEach(function(r){r.style.background="#222";});}
+    },_lang==="lo"?"ບໍ່ໃຊ້ເພງ":"Remove music");
+    trimSection.appendChild(removeBtn);
+  }
+  // 3) ปรับสมดุลเสียง
+  const balanceSection=el("div",null);
+  balanceSection.appendChild(el("div",{style:{color:"#fff",fontSize:".8rem",fontWeight:"700",marginBottom:"6px"}},"🎚️ "+(_lang==="lo"?"ສົມດຸນສຽງ":"Volume balance")));
+  balanceSection.appendChild(el("div",{style:{color:"#aaa",fontSize:".72rem"}},_lang==="lo"?"ສຽງພາກ":"Voice"));
+  const voiceSlider=document.createElement("input");voiceSlider.type="range";voiceSlider.min="0";voiceSlider.max="100";voiceSlider.value="100";voiceSlider.style.width="100%";
+  voiceSlider.oninput=function(){voiceVol=Number(voiceSlider.value)/100;};
+  balanceSection.appendChild(voiceSlider);
+  balanceSection.appendChild(el("div",{style:{color:"#aaa",fontSize:".72rem"}},_lang==="lo"?"ເພງປະກອບ":"Music"));
+  const musicSlider=document.createElement("input");musicSlider.type="range";musicSlider.min="0";musicSlider.max="100";musicSlider.value="40";musicSlider.style.width="100%";
+  musicSlider.oninput=function(){musicVol=Number(musicSlider.value)/100;};
+  balanceSection.appendChild(musicSlider);
+  controlBox.appendChild(balanceSection);
+  // 4) ปุ่มเสร็จสิ้น
+  const doneBtn=el("button",{style:{width:"100%",padding:"14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"800",fontSize:".9rem",cursor:"pointer",fontFamily:"inherit"},
+    onclick:function(){
+      if(!recordedBlob){toast(_lang==="lo"?"ກະລຸນາອັດສຽງພາກກ່ອນ":"Please record your voice-over first");return;}
+      doneBtn.disabled=true;doneBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງປະມວນຜົນ...":"Processing...");
+      const dur=videoDuration||5;
+      mixVoiceAndMusic(recordedBlob,selectedTrack?selectedTrack.url:null,musicStart,dur,voiceVol,selectedTrack?musicVol:0).then(function(mixedBlob){
+        toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
+        return uploadVideoToStorage(videoUrl,Date.now()+".mp4").then(function(videoUploadedUrl){
+          return {mixedBlob:mixedBlob,videoUploadedUrl:videoUploadedUrl};
+        });
+      }).then(function(res){
+        toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດສຽງພາກ...":"Uploading voice-over...");
+        const reader=new FileReader();
+        reader.onload=function(e){
+          uploadAudio(e.target.result,Date.now()+"_vo.wav").then(function(audioUrl){
+            URL.revokeObjectURL(videoUrl);
+            overlay.remove();
+            onComplete({mediaUrl:res.videoUploadedUrl,voiceoverUrl:audioUrl});
+          }).catch(function(){toast("⚠ ອັບໂຫຼດສຽງບໍ່ສຳເລັດ");doneBtn.disabled=false;doneBtn.textContent="✅ "+(_lang==="lo"?"ແລ້ວໆ":"Done");});
+        };
+        reader.readAsDataURL(res.mixedBlob);
+      }).catch(function(err){
+        console.error(err);
+        toast("⚠ "+(_lang==="lo"?"ເກີດຂໍ້ຜິດພາດ ລອງໃໝ່":"Something went wrong, please try again"));
+        doneBtn.disabled=false;doneBtn.textContent="✅ "+(_lang==="lo"?"ແລ້ວໆ":"Done");
+      });
+    }
+  },"✅ "+(_lang==="lo"?"ແລ້ວໆ":"Done"));
+  controlBox.appendChild(doneBtn);
+  // ── ต้องโหลดวิดีโอต้นฉบับให้ครบก่อนเริ่ม (รอ metadata) ──
+  document.body.appendChild(overlay);
+}
+
 async function uploadSlip(base64Data, orderId){
   return uploadFile(base64Data, "laoh/slips/"+orderId+".jpg", "image/jpeg");
 }
@@ -2370,7 +2611,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.9.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v4.9.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2928,8 +3169,10 @@ function buildFeedPage(){
       vid.setAttribute("webkit-playsinline","");
       vid.controls=false;
       vid.style.cssText="width:100%;height:100%;object-fit:cover;cursor:pointer;";
+      // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
+      const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
       // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว ──
-      vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
+      vid.onvolumechange=function(){if(!voiceoverAudio)window._feedSoundOn=!vid.muted;};
       var vidPlaying=false;
       var feedVidCtrlTimer=null;
       function showFeedVidControlsTemporarily(){
@@ -2938,6 +3181,12 @@ function buildFeedPage(){
         feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
       }
       function tryPlayFeedVid(){
+        if(voiceoverAudio){
+          playSyncedVoiceover(vid,voiceoverAudio);
+          if(!window._feedSoundOn)voiceoverAudio.muted=true;else voiceoverAudio.muted=false;
+          vidPlaying=true;
+          return;
+        }
         vid.play().then(function(){
           vidPlaying=true;
           // ປົດສຽງທັນທີຫຼັງຈາກຫຼີ້ນຕິດແລ້ວ (browser ຍອມງ່າຍກວ່າການຫຼີ້ນມີສຽງຕັ້ງແຕ່ຕົ້ນ)
@@ -2953,7 +3202,7 @@ function buildFeedPage(){
       };
       // ── ไม่เล่นทันทีตอนสร้าง (วิดีโอที่ยังไม่เลื่อนมาเห็นจะเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) — ให้ IntersectionObserver ด้านล่างเป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
       vid._tryPlayFeedVid=tryPlayFeedVid;
-      vid._setFeedVidPaused=function(){vidPlaying=false;};
+      vid._setFeedVidPaused=function(){vidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
       media.appendChild(vid);
     } else if(rv.mediaUrl){
       const img=document.createElement("img");
@@ -4766,7 +5015,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.9.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v4.9.6")
   );
 
   // Icon style helper
@@ -6465,7 +6714,7 @@ function buildUserProfile(uid){
       const addBtn=reviewableItems.length===0?null:el("button",{style:{width:"100%",padding:"10px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
         onclick:function(){
           const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",at:Date.now()};
-          const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+          const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
           mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
           mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📸 "+(_lang==="lo"?"ເພີ່ມຮີວິວ":"Add Review")));
 
@@ -6639,7 +6888,34 @@ function buildUserProfile(uid){
                 toast("⚠️ ວິດີໂອຕ້ອງບໍ່ເກີນ 90 ວິນາທີ (ຕອນນີ້: "+Math.round(tmpVid.duration)+"s)");
                 fiVid.value="";return;
               }
-              handleMedia(file,true);
+              // ── Phase 2: ໜ້າຈໍເລືອກເສັ້ນທາງ ກ່ອນອັບໂຫຼດວິດີໂອ (overlay ທັບໄວ້ ບໍ່ໄດ້ໃຊ້ showOv ເພື່ອບໍ່ໃຫ້ຟອມ Add Review ເບື້ອງຫຼັງຫາຍໄປ) ──
+              const routeOverlay=el("div",{style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.6)",zIndex:"10000",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}});
+              const routeBox=el("div",{style:{background:"#fff",borderRadius:"16px",padding:"20px",maxWidth:"360px",width:"100%"},onclick:function(ev){ev.stopPropagation();}});
+              routeBox.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"14px",textAlign:"center"}},_lang==="lo"?"ເລືອກແບບວິດີໂອ":"Choose video type"));
+              routeBox.appendChild(el("button",{style:{width:"100%",padding:"14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
+                onclick:function(){routeOverlay.remove();handleMedia(file,true);}
+              },"📹 "+(_lang==="lo"?"ອັບໂຫຼດແບບເຕັມ (ມີສຽງຕົ້ນສະບັບ)":"Full upload (original audio)")));
+              routeBox.appendChild(el("button",{style:{width:"100%",padding:"14px",background:"#F0F7F2",color:"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"12px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit"},
+                onclick:function(){
+                  routeOverlay.remove();
+                  openVoiceoverStudio(file,function(result){
+                    rv.mediaUrl=result.mediaUrl;
+                    rv.mediaType="video";
+                    rv.voiceoverUrl=result.voiceoverUrl;
+                    prevDiv.innerHTML="";
+                    const v=document.createElement("video");v.src=rv.mediaUrl;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;
+                    prevDiv.appendChild(v);
+                    prevDiv.appendChild(el("div",{style:{fontSize:".68rem",color:"#1B6B3A",fontWeight:"700",marginTop:"4px"}},"🎙️ "+(_lang==="lo"?"ມີສຽງພາກແລ້ວ":"Voice-over added")));
+                    toast("✅ "+(_lang==="lo"?"ພ້ອມແລ້ວ":"Ready"));
+                  });
+                }
+              },"🎙️ "+(_lang==="lo"?"ພາກສຽງໃໝ່":"New voice-over")));
+              const routeCancelBtn=el("button",{style:{width:"100%",padding:"10px",background:"none",color:"#888",border:"none",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit",marginTop:"6px"},
+                onclick:function(){routeOverlay.remove();fiVid.value="";}
+              },_lang==="lo"?"ຍົກເລີກ":"Cancel");
+              routeBox.appendChild(routeCancelBtn);
+              routeOverlay.appendChild(routeBox);
+              document.body.appendChild(routeOverlay);
             };
             tmpVid.src=blobUrl;
           };
@@ -10457,7 +10733,37 @@ function buildRiderDashboard(){
               toast("⚠️ ວິດີໂອຕ້ອງບໍ່ເກີນ 90 ວິນາທີ (ຕອນນີ້: "+Math.round(tmpV.duration)+"s)");
               mediaInp.value="";return;
             }
-            doShopProcess();
+            // ── Phase 2: ໜ້າຈໍເລືອກເສັ້ນທາງ ກ່ອນອັບໂຫຼດວິດີໂອ (overlay ທັບໄວ້ ບໍ່ໄດ້ໃຊ້ showOv ເພື່ອບໍ່ໃຫ້ຟອມ Add Post ເບື້ອງຫຼັງຫາຍໄປ) ──
+            const routeOverlay=el("div",{style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.6)",zIndex:"10000",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}});
+            const routeBox=el("div",{style:{background:"#fff",borderRadius:"16px",padding:"20px",maxWidth:"360px",width:"100%"},onclick:function(ev){ev.stopPropagation();}});
+            routeBox.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"14px",textAlign:"center"}},_lang==="lo"?"ເລືອກແບບວິດີໂອ":"Choose video type"));
+            routeBox.appendChild(el("button",{style:{width:"100%",padding:"14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
+              onclick:function(){routeOverlay.remove();doShopProcess();}
+            },"📹 "+(_lang==="lo"?"ອັບໂຫຼດແບບເຕັມ (ມີສຽງຕົ້ນສະບັບ)":"Full upload (original audio)")));
+            routeBox.appendChild(el("button",{style:{width:"100%",padding:"14px",background:"#F0F7F2",color:"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"12px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit"},
+              onclick:function(){
+                routeOverlay.remove();
+                openVoiceoverStudio(file,function(result){
+                  npost.mediaUrl=result.mediaUrl;
+                  npost.mediaType="video";
+                  npost.voiceoverUrl=result.voiceoverUrl;
+                  mediaPreview.innerHTML="";
+                  const v=document.createElement("video");v.src=npost.mediaUrl;v.style.cssText="width:100%;max-height:200px;object-fit:cover;";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;
+                  mediaPreview.appendChild(v);
+                  const cl2=document.createElement("button");cl2.style.cssText="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.7rem;";cl2.textContent="✕";
+                  cl2.onclick=function(e2){e2.stopPropagation();npost.mediaUrl=null;npost.mediaType="image";npost.voiceoverUrl=null;mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);};
+                  mediaPreview.appendChild(cl2);
+                  mediaPreview.appendChild(el("div",{style:{position:"absolute",bottom:"6px",left:"6px",background:"rgba(27,107,58,.85)",color:"#fff",fontSize:".65rem",fontWeight:"700",padding:"3px 8px",borderRadius:"8px"}},"🎙️ "+(_lang==="lo"?"ມີສຽງພາກແລ້ວ":"Voice-over added")));
+                  toast("✅ "+(_lang==="lo"?"ພ້ອມແລ້ວ":"Ready"));
+                });
+              }
+            },"🎙️ "+(_lang==="lo"?"ພາກສຽງໃໝ່":"New voice-over")));
+            const routeCancelBtn=el("button",{style:{width:"100%",padding:"10px",background:"none",color:"#888",border:"none",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit",marginTop:"6px"},
+              onclick:function(){routeOverlay.remove();mediaInp.value="";}
+            },_lang==="lo"?"ຍົກເລີກ":"Cancel");
+            routeBox.appendChild(routeCancelBtn);
+            routeOverlay.appendChild(routeBox);
+            document.body.appendChild(routeOverlay);
           };
           tmpV.onerror=function(){doShopProcess();};
           tmpV.src=blobUrl;
@@ -12025,7 +12331,7 @@ function buildAdmin(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library"];
   return el("div",{style:{padding:"14px 14px 60px"}},
     el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}},
       el("div",{style:{fontSize:"1.3rem",fontWeight:"900"}},isNarrator?"🎙️ Narrator Dashboard":(_lang==="lo"?"⚙️ ແດຊບອດ":"⚙️ Dashboard")),
@@ -12261,8 +12567,8 @@ function buildAdminTab(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order"];
-  const superAdminTabMap={0:5,1:40,2:7,3:8,4:9,5:15,6:4,7:10,8:11,9:12,10:13,11:14,12:30};
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library"];
+  const superAdminTabMap={0:5,1:40,2:7,3:8,4:9,5:15,6:4,7:10,8:11,9:12,10:13,11:14,12:30,13:41};
   const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:31,7:20,8:32};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
@@ -16831,6 +17137,80 @@ function buildAdminTab(){
     }
     return section;
   }
+  if(effectiveTab===41){
+    const section=el("div",null);
+    section.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",marginBottom:"10px"}},"🎵 "+(_lang==="lo"?"ເພງປະກອບ (ສຳລັບພາກສຽງທັບວິດີໂອ)":"Music Library (for voice-over videos)")));
+    // ── ฟอร์มอัปโหลดเพลงใหม่ ──
+    const uploadBox=el("div",{style:{background:"#F0F7F2",borderRadius:"14px",padding:"14px",marginBottom:"16px"}});
+    const nameInp=document.createElement("input");
+    nameInp.type="text";nameInp.placeholder=_lang==="lo"?"ຊື່ເພງ...":"Track name...";
+    nameInp.style.cssText="width:100%;border:1.5px solid #C8E6D4;border-radius:10px;padding:9px 12px;font-size:.85rem;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box;";
+    uploadBox.appendChild(nameInp);
+    const fileInp=document.createElement("input");
+    fileInp.type="file";fileInp.accept="audio/*";
+    fileInp.style.cssText="width:100%;font-size:.8rem;margin-bottom:10px;";
+    uploadBox.appendChild(fileInp);
+    const uploadBtn=el("button",{style:{width:"100%",padding:"10px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit"},
+      onclick:function(){
+        const f=fileInp.files[0];
+        const trackName=(nameInp.value||"").trim();
+        if(!trackName){toast(_lang==="lo"?"ກະລຸນາໃສ່ຊື່ເພງ":"Please enter a track name");return;}
+        if(!f){toast(_lang==="lo"?"ກະລຸນາເລືອກໄຟລ໌ສຽງ":"Please select an audio file");return;}
+        const reader=new FileReader();
+        reader.onload=function(e){
+          toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...");
+          uploadAudio(e.target.result,Date.now()+"_"+f.name).then(function(url){
+            const track={id:Date.now(),name:trackName,url:url,at:Date.now()};
+            if(db){db.collection("bgMusic").doc(String(track.id)).set(track).catch(function(){});}
+            toast(_lang==="lo"?"✅ ອັບໂຫຼດສຳເລັດ":"✅ Uploaded");
+            nameInp.value="";fileInp.value="";
+            drawTrackList();
+          }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");});
+        };
+        reader.readAsDataURL(f);
+      }
+    },"⬆️ "+(_lang==="lo"?"ອັບໂຫຼດເພງ":"Upload Track"));
+    uploadBox.appendChild(uploadBtn);
+    section.appendChild(uploadBox);
+    // ── รายชื่อเพลงที่มีอยู่แล้ว ──
+    const listWrap2=el("div",null);
+    section.appendChild(listWrap2);
+    function drawTrackList(){
+      listWrap2.innerHTML="";
+      listWrap2.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".8rem",padding:"14px 0"}},_lang==="lo"?"ກຳລັງໂຫຼດ...":"Loading..."));
+      if(!db)return;
+      db.collection("bgMusic").orderBy("at","desc").get().then(function(snap){
+        listWrap2.innerHTML="";
+        if(snap.empty){
+          listWrap2.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".82rem",padding:"20px 0"}},_lang==="lo"?"ຍັງບໍ່ມີເພງ":"No tracks yet"));
+          return;
+        }
+        snap.docs.forEach(function(d){
+          const t=d.data();
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",background:"#fff",borderRadius:"12px",marginBottom:"8px",boxShadow:"0 1px 4px rgba(0,0,0,.06)"}});
+          row.appendChild(el("div",{style:{fontSize:"1.2rem",flexShrink:"0"}},"🎵"));
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontWeight:"700",fontSize:".83rem",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},t.name));
+          const audioEl=document.createElement("audio");audioEl.src=t.url;audioEl.controls=true;audioEl.style.cssText="width:100%;height:32px;margin-top:4px;";
+          info.appendChild(audioEl);
+          row.appendChild(info);
+          const delBtn=el("button",{style:{background:"rgba(200,0,0,.1)",border:"none",borderRadius:"8px",padding:"6px 10px",color:"#C62828",cursor:"pointer",fontSize:".75rem",fontFamily:"inherit",flexShrink:"0"},
+            onclick:function(){
+              if(!confirm(_lang==="lo"?"ລຶບເພງນີ້?":"Delete this track?"))return;
+              db.collection("bgMusic").doc(String(t.id)).delete().then(function(){toast("🗑 "+(_lang==="lo"?"ລຶບແລ້ວ":"Deleted"));drawTrackList();}).catch(function(){toast("⚠ ລຶບບໍ່ສຳເລັດ");});
+            }
+          },"🗑");
+          row.appendChild(delBtn);
+          listWrap2.appendChild(row);
+        });
+      }).catch(function(){
+        listWrap2.innerHTML="";
+        listWrap2.appendChild(el("div",{style:{textAlign:"center",color:"#c00",fontSize:".8rem",padding:"20px 0"}},"⚠ ໂຫຼດຂໍ້ມູນບໍ່ສຳເລັດ"));
+      });
+    }
+    drawTrackList();
+    return section;
+  }
   if(effectiveTab===30){
     if(!window._adminOrderDraft){
       window._adminOrderDraft={
@@ -18866,6 +19246,8 @@ window.addEventListener('load', function(){
   // ── ກວດສອບວ່າ PTR ເປີດໃຊ້ໃນ view ນີ້ ຫຼື ບໍ່ ──
   function ptrAllowed(){
     if(typeof view==="undefined")return false;
+    // ── ຫ້າມ pull-to-refresh ຖ້າມີ popup/modal ເປີດຄ້າງຢູ່ເທິງໜ້າຈໍ (ບໍ່ວ່າຈະເປັນປ໊ອບອັບໃດກໍ່ຕາມ) — ເພາະການເປີດ modal ບໍ່ໄດ້ປ່ຽນ view ພື້ນຫຼັງ ລະບົບ Refresh ຈຶ່ງຍັງເຮັດວຽກຢູ່ໂດຍບໍ່ຕັ້ງໃຈ ──
+    if(document.getElementById("ov"))return false;
     // ຖ້າກຳລັງ checkout ຢູ່ ຫ້າມ pull-to-refresh ເດັດຂາດ
     if(typeof coStep!=="undefined"&&coStep>0)return false;
     if(typeof _checkoutCart!=="undefined"&&_checkoutCart&&_checkoutCart.length>0)return false;

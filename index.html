@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v502 -->
+<!-- LaoH Marketplace v503 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2175,8 +2175,14 @@ function playSyncedVoiceover(videoEl,audioEl){
 function openVoiceoverStudio(videoFile,onComplete){
   const videoUrl=URL.createObjectURL(videoFile);
   const overlay=el("div",{style:{position:"fixed",inset:"0",background:"#000",zIndex:"10001",display:"flex",flexDirection:"column"}});
+  // ── ดันข้อความแจ้งเตือน (Toast) ให้อยู่เหนือหน้าจอสตูดิโอนี้เท่านั้น เพราะปกติ Toast อยู่ชั้นต่ำกว่าป๊อบอัพทั่วไป ทำให้ก่อนหน้านี้ข้อความ error ถูกบังจนมองไม่เห็นเลย — ไม่แตะ CSS กลางของ .toast ที่ใช้ทั้งเว็บ แค่ปรับชั่วคราวเฉพาะตอนสตูดิโอนี้เปิดอยู่ ──
+  let toastEl=document.getElementById("_toast_el");
+  if(!toastEl){toastEl=document.createElement("div");toastEl.id="_toast_el";toastEl.className="toast";document.body.appendChild(toastEl);}
+  const prevToastZIndex=toastEl.style.zIndex;
+  toastEl.style.zIndex="10002";
+  function restoreToastZIndex(){toastEl.style.zIndex=prevToastZIndex;}
   const closeBtn=el("button",{style:{position:"absolute",top:"12px",right:"12px",zIndex:"10",background:"rgba(255,255,255,.2)",border:"none",borderRadius:"50%",width:"34px",height:"34px",color:"#fff",fontSize:"1.1rem",cursor:"pointer"},
-    onclick:function(){if(confirm(_lang==="lo"?"ອອກ​ໂດຍບໍ່ບັນທຶກ?":"Exit without saving?")){URL.revokeObjectURL(videoUrl);overlay.remove();}}
+    onclick:function(){if(confirm(_lang==="lo"?"ອອກ​ໂດຍບໍ່ບັນທຶກ?":"Exit without saving?")){URL.revokeObjectURL(videoUrl);restoreToastZIndex();overlay.remove();}}
   },"✕");
   overlay.appendChild(closeBtn);
   // ── วิดีโอตัวอย่าง เต็มสัดส่วนจริง ──
@@ -2380,6 +2386,7 @@ function openVoiceoverStudio(videoFile,onComplete){
           return uploadAudio(audioBase64,Date.now()+"_vo.wav");
         }).then(function(audioUrl){
           URL.revokeObjectURL(videoUrl);
+          restoreToastZIndex();
           overlay.remove();
           onComplete({mediaUrl:videoUploadedUrl,voiceoverUrl:audioUrl});
         });
@@ -2683,7 +2690,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5087,7 +5094,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.3")
   );
 
   // Icon style helper

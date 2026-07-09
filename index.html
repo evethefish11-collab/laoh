@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v503 -->
+<!-- LaoH Marketplace v505 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2135,7 +2135,8 @@ async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,
       });
     }catch(e){throw new Error("STEP_MUSIC_DECODE: "+(e&&e.message?e.message:String(e)));}
   }
-  const sr=voiceBuf.sampleRate;
+  // ── ลดอัตราตัวอย่างเสียงลงเหลือ 16kHz (เพียงพอสำหรับเสียงพูดฟังชัดเจน) แทนที่จะใช้ค่าดั้งเดิมจากไมโครโฟน (มักสูงถึง 44.1kHz/48kHz) — ช่วยลดขนาดไฟล์เสียงสุดท้ายลงได้มาก ทำให้อัปโหลดวิดีโอความยาวมากขึ้นได้โดยไม่ติดขีดจำกัดขนาดไฟล์ ──
+  const sr=16000;
   let rendered;
   try{
     const offlineCtx=new OfflineAudioContext(2,Math.ceil(duration*sr),sr);
@@ -2157,18 +2158,20 @@ async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,
 function playSyncedVoiceover(videoEl,audioEl){
   videoEl.muted=true;videoEl.loop=true;
   audioEl.loop=true;
-  let vReady=false,aReady=false;
-  function tryStart(){
-    if(vReady&&aReady){
-      videoEl.currentTime=0;audioEl.currentTime=0;
-      videoEl.play().catch(function(){});
-      audioEl.play().catch(function(){});
-    }
+  function doPlay(){
+    videoEl.play().catch(function(){});
+    audioEl.play().catch(function(){});
   }
-  videoEl.addEventListener("canplay",function(){vReady=true;tryStart();},{once:true});
-  audioEl.addEventListener("canplay",function(){aReady=true;tryStart();},{once:true});
-  if(videoEl.readyState>=3)vReady=true;
-  if(audioEl.readyState>=3)aReady=true;
+  // ── ถ้าทั้ง 2 ไฟล์พร้อมเล่นอยู่แล้ว (เช่น กดหยุด/กดเล่นซ้ำ) ให้เล่นต่อจากตำแหน่งเดิมเลย ไม่รีเซ็ตกลับไปวินาทีที่ 0 ──
+  if(videoEl.readyState>=3&&audioEl.readyState>=3){
+    doPlay();
+    return;
+  }
+  // ── ครั้งแรกที่ยังโหลดไม่เสร็จ ต้องรอให้พร้อมทั้งคู่ก่อน (จะเริ่มจากวินาทีที่ 0 โดยธรรมชาติเพราะยังไม่เคยเล่นมาก่อน) ──
+  let vReady=videoEl.readyState>=3,aReady=audioEl.readyState>=3;
+  function tryStart(){if(vReady&&aReady)doPlay();}
+  if(!vReady)videoEl.addEventListener("canplay",function(){vReady=true;tryStart();},{once:true});
+  if(!aReady)audioEl.addEventListener("canplay",function(){aReady=true;tryStart();},{once:true});
   tryStart();
 }
 // ── หน้าจอสตูดิโอพากย์เสียง: วิดีโอตัวอย่างเต็มจอ + ปุ่มอัดเสียง + เลือกเพลง+ตัดช่วง + ปรับสมดุลเสียง ──
@@ -2690,7 +2693,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3275,7 +3278,7 @@ function buildFeedPage(){
       }
       vid.onclick=function(e){
         e.stopPropagation();
-        if(vidPlaying){vid.pause();vidPlaying=false;}
+        if(vidPlaying){vid.pause();if(voiceoverAudio)voiceoverAudio.pause();vidPlaying=false;}
         else{tryPlayFeedVid();}
         showFeedVidControlsTemporarily();
       };
@@ -3480,8 +3483,10 @@ function buildFeedPage(){
         vid.setAttribute("webkit-playsinline","");
         vid.controls=false;
         vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;cursor:pointer;";
+        // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
+        const voiceoverAudio=post.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=post.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
         // ── ใช้ตัวจดจำเสียงตัวเดียวกับ buildReviewCard เพื่อให้ทุกวิดีโอใน Feed (ทั้งโพสต์ร้านค้าและรีวิว) ใช้การตั้งค่าเดียวกันต่อเนื่องกัน ──
-        vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
+        vid.onvolumechange=function(){if(!voiceoverAudio)window._feedSoundOn=!vid.muted;};
         var vidPlaying=false;
         var feedVidCtrlTimer=null;
         function showFeedVidControlsTemporarily(){
@@ -3490,6 +3495,12 @@ function buildFeedPage(){
           feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
         }
         function tryPlayFeedVid(){
+          if(voiceoverAudio){
+            playSyncedVoiceover(vid,voiceoverAudio);
+            voiceoverAudio.muted=!window._feedSoundOn;
+            vidPlaying=true;
+            return;
+          }
           vid.play().then(function(){
             vidPlaying=true;
             if(window._feedSoundOn)vid.muted=false;
@@ -3498,13 +3509,13 @@ function buildFeedPage(){
         }
         vid.onclick=function(e){
           e.stopPropagation();
-          if(vidPlaying){vid.pause();vidPlaying=false;}
+          if(vidPlaying){vid.pause();if(voiceoverAudio)voiceoverAudio.pause();vidPlaying=false;}
           else{tryPlayFeedVid();}
           showFeedVidControlsTemporarily();
         };
         // ── ไม่เล่นทันทีตอนสร้าง — ให้ IntersectionObserver ของ Feed (ตัวเดียวกับที่ใช้กับ buildReviewCard) เป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
         vid._tryPlayFeedVid=tryPlayFeedVid;
-        vid._setFeedVidPaused=function(){vidPlaying=false;};
+        vid._setFeedVidPaused=function(){vidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
         mediaWrap.appendChild(vid);
       } else {
         const img=document.createElement("img");
@@ -5094,7 +5105,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.5")
   );
 
   // Icon style helper
@@ -5508,7 +5519,9 @@ function buildShopProfile(shopId){
           const itemEl=el("div",{className:"feed-item",style:{background:"#0a0a0a",display:"flex",flexDirection:"column"}});
           const mediaArea=el("div",{style:{flex:"1",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}});
           const v2=document.createElement("video");v2.src=vItem.mediaUrl;v2.preload="metadata";v2.controls=false;v2.muted=true;v2.playsInline=true;v2.setAttribute("playsinline","");v2.setAttribute("webkit-playsinline","");v2.style.cssText="max-width:100%;max-height:100%;cursor:pointer;";
-          v2.onvolumechange=function(){window._shopVidSoundOn=!v2.muted;};
+          // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
+          const voiceoverAudio=vItem.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=vItem.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
+          v2.onvolumechange=function(){if(!voiceoverAudio)window._shopVidSoundOn=!v2.muted;};
           var v2Playing=false;
           var v2CtrlTimer=null;
           function showV2ControlsTemporarily(){
@@ -5517,6 +5530,12 @@ function buildShopProfile(shopId){
             v2CtrlTimer=setTimeout(function(){v2.controls=false;},2500);
           }
           function tryPlayV2(){
+            if(voiceoverAudio){
+              playSyncedVoiceover(v2,voiceoverAudio);
+              voiceoverAudio.muted=!window._shopVidSoundOn;
+              v2Playing=true;
+              return;
+            }
             v2.play().then(function(){
               v2Playing=true;
               if(window._shopVidSoundOn)v2.muted=false;
@@ -5525,13 +5544,13 @@ function buildShopProfile(shopId){
           }
           v2.onclick=function(e){
             e.stopPropagation();
-            if(v2Playing){v2.pause();v2Playing=false;}
+            if(v2Playing){v2.pause();if(voiceoverAudio)voiceoverAudio.pause();v2Playing=false;}
             else{tryPlayV2();}
             showV2ControlsTemporarily();
           };
           // ── ไม่เล่นทันทีตอนสร้าง (จะให้ตอน scroll ไปเห็น/เปิด viewer เป็นคนสั่งเล่นแทน ป้องกัน video ที่ยังไม่เห็นเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) ──
           v2._tryPlayV2=tryPlayV2;
-          v2._setV2Paused=function(){v2Playing=false;};
+          v2._setV2Paused=function(){v2Playing=false;if(voiceoverAudio)voiceoverAudio.pause();};
           mediaArea.appendChild(v2);
           itemEl.appendChild(mediaArea);
           const vmInfo=el("div",{style:{padding:"12px 14px",background:"#111",color:"#fff"}});
@@ -8184,8 +8203,10 @@ function buildReviewDetailItemContent(itemType,itemData){
       const vid=document.createElement("video");
       vid.src=mediaUrl;vid.preload="auto";vid.loop=true;vid.muted=true;vid.controls=false;vid.playsInline=true;vid.setAttribute("playsinline","");
       vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;cursor:pointer;";
+      // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
+      const voiceoverAudio=itemData.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=itemData.voiceoverUrl;a.preload="auto";a.style.display="none";document.body.appendChild(a);return a;})():null;
       // ── ใช้ตัวจดจำเสียงร่วมกับ Feed/หน้าวิดีโอรีวิวร้านค้า (window._feedSoundOn) ให้ทำงานเหมือนกันทุกที่ ──
-      vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
+      vid.onvolumechange=function(){if(!voiceoverAudio)window._feedSoundOn=!vid.muted;};
       var rvVidPlaying=false;
       var rvVidCtrlTimer=null;
       function showRvVidControlsTemporarily(){
@@ -8194,6 +8215,12 @@ function buildReviewDetailItemContent(itemType,itemData){
         rvVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
       }
       function tryPlayRvVid(){
+        if(voiceoverAudio){
+          playSyncedVoiceover(vid,voiceoverAudio);
+          voiceoverAudio.muted=!window._feedSoundOn;
+          rvVidPlaying=true;
+          return;
+        }
         vid.play().then(function(){
           rvVidPlaying=true;
           if(window._feedSoundOn)vid.muted=false;
@@ -8202,12 +8229,12 @@ function buildReviewDetailItemContent(itemType,itemData){
       }
       vid.onclick=function(e){
         e.stopPropagation();
-        if(rvVidPlaying){vid.pause();rvVidPlaying=false;}
+        if(rvVidPlaying){vid.pause();if(voiceoverAudio)voiceoverAudio.pause();rvVidPlaying=false;}
         else{tryPlayRvVid();}
         showRvVidControlsTemporarily();
       };
       vid._tryPlayFeedVid=tryPlayRvVid;
-      vid._setFeedVidPaused=function(){rvVidPlaying=false;};
+      vid._setFeedVidPaused=function(){rvVidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
       mediaBox.appendChild(vid);
     } else {
       mediaBox.appendChild(el("img",{src:mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"},alt:""}));

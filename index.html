@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v506 -->
+<!-- LaoH Marketplace v507 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2107,6 +2107,55 @@ function audioBufferToWavBlob(buffer){
   return new Blob([ab],{type:"audio/wav"});
 }
 // ── ผสมเสียงพากย์ (Blob) + เพลงประกอบช่วงที่เลือกไว้ (URL+จุดเริ่ม+ความยาว) เข้าเป็นไฟล์เดียว ──
+// ── บีบอัดวิดีโอให้เล็กลง (ใช้เฉพาะในเส้นทาง "พากย์เสียงใหม่" เท่านั้น ไม่กระทบเส้นทาง "อัปโหลดแบบเต็ม") — เล่นวิดีโอต้นฉบับแล้ววาดลง Canvas ขนาดเล็กลง จับภาพแบบเรียลไทม์เป็นไฟล์วิดีโอใหม่ ──
+function compressVideoToBlob(videoFile,maxWidth,onProgress){
+  return new Promise(function(resolve,reject){
+    const url=URL.createObjectURL(videoFile);
+    const video=document.createElement("video");
+    video.src=url;video.muted=true;video.playsInline=true;video.setAttribute("playsinline","");
+    video.onloadedmetadata=function(){
+      if(!video.videoWidth||!video.videoHeight){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: ບໍ່ສາມາດອ່ານຂະໜາດວິດີໂອໄດ້"));return;}
+      const scale=Math.min(1,maxWidth/video.videoWidth);
+      const w=Math.max(2,Math.round(video.videoWidth*scale/2)*2);
+      const h=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
+      const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext("2d");
+      if(!canvas.captureStream){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: browser ນີ້ບໍ່ຮອງຮັບການບີບອັດວິດີໂອ"));return;}
+      const stream=canvas.captureStream(30);
+      const mimeCandidates=["video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+      let chosenMime="";
+      for(let i=0;i<mimeCandidates.length;i++){
+        if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(mimeCandidates[i])){chosenMime=mimeCandidates[i];break;}
+      }
+      let recorder;
+      try{
+        recorder=chosenMime?new MediaRecorder(stream,{mimeType:chosenMime,videoBitsPerSecond:1500000}):new MediaRecorder(stream);
+      }catch(e){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: "+(e&&e.message?e.message:String(e))));return;}
+      const chunks=[];
+      recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
+      recorder.onstop=function(){
+        URL.revokeObjectURL(url);
+        if(chunks.length===0){reject(new Error("STEP_COMPRESS: ບໍ່ໄດ້ຂໍ້ມູນວິດີໂອທີ່ບີບອັດແລ້ວ"));return;}
+        resolve(new Blob(chunks,{type:chosenMime||"video/webm"}));
+      };
+      recorder.onerror=function(e){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: "+(e&&e.error&&e.error.message?e.error.message:"Recorder error")));};
+      let drawing=true;
+      function drawFrame(){
+        if(!drawing)return;
+        try{ctx.drawImage(video,0,0,w,h);}catch(e){}
+        if(onProgress&&video.duration)onProgress(Math.min(1,video.currentTime/video.duration));
+        requestAnimationFrame(drawFrame);
+      }
+      video.onended=function(){drawing=false;setTimeout(function(){try{recorder.stop();}catch(e){}},150);};
+      video.onplay=function(){
+        try{recorder.start();}catch(e){reject(new Error("STEP_COMPRESS: "+(e&&e.message?e.message:String(e))));return;}
+        drawFrame();
+      };
+      video.play().catch(function(e){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: "+(e&&e.message?e.message:String(e))));});
+    };
+    video.onerror=function(){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: ໂຫຼດວິດີໂອຕົ້ນສະບັບບໍ່ສຳເລັດ"));};
+  });
+}
 async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,musicVol){
   const AudioCtx=window.AudioContext||window.webkitAudioContext;
   if(!AudioCtx)throw new Error("STEP_VOICE_DECODE: AudioContext not supported on this browser");
@@ -2341,6 +2390,7 @@ function openVoiceoverStudio(videoFile,onComplete){
   controlBox.appendChild(balanceSection);
   // 4) ปุ่มเสร็จสิ้น
   let mixedBlobReady=null;
+  let compressedVideoReady=null;
   // ── ตั้งเวลาจำกัด 20 วินาที กันไม่ให้ค้างตลอดไปถ้าขั้นตอนถอดรหัสเสียงค้าง (พบปัญหานี้ใน Safari บางรุ่นกับไฟล์ที่ MediaRecorder สร้างขึ้น) ──
   function withTimeout(promise,ms,label){
     return new Promise(function(resolve,reject){
@@ -2348,15 +2398,21 @@ function openVoiceoverStudio(videoFile,onComplete){
       promise.then(function(v){clearTimeout(timer);resolve(v);},function(e){clearTimeout(timer);reject(e);});
     });
   }
-  // ── ຂັ້ນທີ 1: ປຸ່ມ "ແລ້ວໆ" — ປະມວນຜົນຢ່າງດຽວ (ຜະສົມສຽງ) ຍັງບໍ່ອັບໂຫຼດຫຍັງເລີຍ ──
+  // ── ຂັ້ນທີ 1: ປຸ່ມ "ແລ້ວໆ" — ປະມວນຜົນສຽງ + ບີບອັດວິດີໂອ ຍັງບໍ່ອັບໂຫຼດຫຍັງເລີຍ ──
   const doneBtn=el("button",{style:{width:"100%",padding:"14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"800",fontSize:".9rem",cursor:"pointer",fontFamily:"inherit"},
     onclick:function(){
       if(!recordedBlob&&!selectedTrack){toast(_lang==="lo"?"ກະລຸນາອັດສຽງພາກ ຫຼື ເລືອກເພງຢ່າງໃດຢ່າງໜຶ່ງ":"Please record a voice-over or choose a music track (at least one)");return;}
-      doneBtn.disabled=true;doneBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງປະມວນຜົນ...":"Processing...");
+      doneBtn.disabled=true;doneBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງປະມວນຜົນສຽງ...":"Processing audio...");
       uploadBtn.style.display="none";
       const dur=videoDuration||5;
       withTimeout(mixVoiceAndMusic(recordedBlob,selectedTrack?selectedTrack.url:null,musicStart,dur,voiceVol,selectedTrack?musicVol:0),20000,"MIX").then(function(mixedBlob){
         mixedBlobReady=mixedBlob;
+        doneBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງບີບອັດວິດີໂອ... 0%":"Compressing video... 0%");
+        return withTimeout(compressVideoToBlob(videoFile,720,function(pct){
+          doneBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງບີບອັດວິດີໂອ... ":"Compressing video... ")+Math.round(pct*100)+"%";
+        }),Math.max(30000,dur*3000),"COMPRESS");
+      }).then(function(compressedBlob){
+        compressedVideoReady=compressedBlob;
         doneBtn.style.display="none";
         uploadBtn.style.display="block";
         toast("✅ "+(_lang==="lo"?"ພ້ອມແລ້ວ — ກົດອັບໂຫຼດໄດ້ເລີຍ":"Ready — tap Upload to continue"));
@@ -2372,14 +2428,14 @@ function openVoiceoverStudio(videoFile,onComplete){
   // ── ຂັ້ນທີ 2: ປຸ່ມ "ອັບໂຫຼດ" — ໂຜ່ຂຶ້ນມາຫຼັງຈາກປະມວນຜົນສຳເລັດເທົ່ານັ້ນ ຖ້າຄ້າງຈະຮູ້ວ່າຄ້າງທີ່ຂັ້ນຕອນອັບໂຫຼດ ບໍ່ແມ່ນຂັ້ນຕອນປະມວນຜົນ ──
   const uploadBtn=el("button",{style:{width:"100%",padding:"14px",background:"#0F5C2E",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"800",fontSize:".9rem",cursor:"pointer",fontFamily:"inherit",display:"none"},
     onclick:function(){
-      if(!mixedBlobReady){toast("⚠ ຍັງບໍ່ພ້ອມ");return;}
+      if(!mixedBlobReady||!compressedVideoReady){toast("⚠ ຍັງບໍ່ພ້ອມ");return;}
       uploadBtn.disabled=true;uploadBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
-      // ── ตุ้องแปลง videoFile เป็น base64 ก่อน (uploadVideoToStorage ต้องการ base64 ไม่ใช่ blob: URL) ──
+      // ── ใช้ไฟล์วิดีโอที่บีบอัดแล้ว (compressedVideoReady) แทนไฟล์ต้นฉบับ (videoFile) — ต้องแปลงเป็น base64 ก่อน (uploadVideoToStorage ต้องการ base64 ไม่ใช่ blob) ──
       new Promise(function(resolve,reject){
         const videoReader=new FileReader();
         videoReader.onload=function(ve){resolve(ve.target.result);};
         videoReader.onerror=reject;
-        videoReader.readAsDataURL(videoFile);
+        videoReader.readAsDataURL(compressedVideoReady);
       }).then(function(videoBase64){
         return uploadVideoToStorage(videoBase64,Date.now()+".mp4");
       }).then(function(videoUploadedUrl){
@@ -2697,7 +2753,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.0.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5109,7 +5165,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.0.7")
   );
 
   // Icon style helper

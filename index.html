@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v517 -->
+<!-- LaoH Marketplace v518 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2208,23 +2208,29 @@ async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,
   return audioBufferToWavBlob(rendered);
 }
 // ── เล่นวิดีโอ(ปิดเสียง)+ไฟล์เสียงพากย์พร้อมกัน แบบซิงค์ — รอทั้ง 2 ไฟล์พร้อมก่อนค่อยเล่น ──
-function playSyncedVoiceover(videoEl,audioEl){
+function playSyncedVoiceover(videoEl,audioEl,dbg){
+  dbg=dbg||function(){};
   videoEl.muted=true;videoEl.loop=true;
   audioEl.loop=true;
   function doPlay(){
-    videoEl.play().catch(function(){});
-    audioEl.play().catch(function(){});
+    dbg("play() vRS="+videoEl.readyState+" aRS="+audioEl.readyState);
+    videoEl.play().then(function(){dbg("v OK aRS="+audioEl.readyState);}).catch(function(e){dbg("v FAIL:"+e.message);});
+    audioEl.play().then(function(){dbg("a OK");}).catch(function(e){dbg("a FAIL:"+e.message+" src="+(audioEl.src?"yes":"NO"));});
   }
   // ── ถ้าทั้ง 2 ไฟล์พร้อมเล่นอยู่แล้ว (เช่น กดหยุด/กดเล่นซ้ำ) ให้เล่นต่อจากตำแหน่งเดิมเลย ไม่รีเซ็ตกลับไปวินาทีที่ 0 ──
   if(videoEl.readyState>=3&&audioEl.readyState>=3){
+    dbg("both ready, playing");
     doPlay();
     return;
   }
   // ── ครั้งแรกที่ยังโหลดไม่เสร็จ ต้องรอให้พร้อมทั้งคู่ก่อน (จะเริ่มจากวินาทีที่ 0 โดยธรรมชาติเพราะยังไม่เคยเล่นมาก่อน) ──
+  dbg("waiting vRS="+videoEl.readyState+" aRS="+audioEl.readyState);
   let vReady=videoEl.readyState>=3,aReady=audioEl.readyState>=3;
-  function tryStart(){if(vReady&&aReady)doPlay();}
-  if(!vReady)videoEl.addEventListener("canplay",function(){vReady=true;tryStart();},{once:true});
-  if(!aReady)audioEl.addEventListener("canplay",function(){aReady=true;tryStart();},{once:true});
+  function tryStart(){dbg("check v="+vReady+" a="+aReady);if(vReady&&aReady)doPlay();}
+  if(!vReady)videoEl.addEventListener("canplay",function(){vReady=true;dbg("v canplay");tryStart();},{once:true});
+  if(!aReady)audioEl.addEventListener("canplay",function(){aReady=true;dbg("a canplay");tryStart();},{once:true});
+  videoEl.addEventListener("error",function(){dbg("v ERROR ev");},{once:true});
+  audioEl.addEventListener("error",function(){dbg("a ERROR ev src="+(audioEl.src?"set":"EMPTY"));},{once:true});
   tryStart();
 }
 // ── หน้าจอสตูดิโอพากย์เสียง: วิดีโอตัวอย่างเต็มจอ + ปุ่มอัดเสียง + เลือกเพลง+ตัดช่วง + ปรับสมดุลเสียง ──
@@ -2753,7 +2759,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.1.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.1.8")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3314,6 +3320,10 @@ function buildFeedPage(){
       // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
       const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
       vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
+      // ── [ชั่วคราว] ตัวแสดงสถานะบนหน้าจอ เพื่อหาสาเหตุที่แท้จริง — จะเอาออกทีหลังเมื่อแก้ปัญหาเสร็จแล้ว ──
+      const dbgBox=voiceoverAudio?el("div",{style:{position:"absolute",top:"6px",left:"6px",zIndex:"999",background:"rgba(255,0,0,.85)",color:"#fff",fontSize:".6rem",padding:"3px 6px",borderRadius:"6px",maxWidth:"90%",pointerEvents:"none"}},"init"):null;
+      if(dbgBox)media.appendChild(dbgBox);
+      function dbg(msg){if(dbgBox)dbgBox.textContent=msg;}
       // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว (เฉพาะวิดีโอที่ไม่มีเสียงพากย์ — วิดีโอที่มีเสียงพากย์ใช้ปุ่มควบคุมเสียงแยกต่างหากแทน ไม่พึ่งตัวควบคุมวิดีโอเลย) ──
       if(!voiceoverAudio)vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
       var vidPlaying=false;
@@ -3325,8 +3335,9 @@ function buildFeedPage(){
         feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
       }
       function tryPlayFeedVid(){
+        dbg("tryPlay called");
         if(voiceoverAudio){
-          playSyncedVoiceover(vid,voiceoverAudio);
+          playSyncedVoiceover(vid,voiceoverAudio,dbg);
           vidPlaying=true;
           return;
         }
@@ -5238,7 +5249,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.1.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.1.8")
   );
 
   // Icon style helper

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v512 -->
+<!-- LaoH Marketplace v513 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2753,7 +2753,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.1.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.1.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3305,12 +3305,12 @@ function buildFeedPage(){
     if(rv.mediaType==="video"&&rv.mediaUrl){
       const vid=document.createElement("video");
       vid.src=rv.mediaUrl;
-      vid.preload="metadata";
+      vid.preload="auto";
       vid.loop=true; vid.muted=true; // ເລີ່ມແບບປິດສຽງກ່ອນສະເໝີ ຮັບປະກັນເລີ່ມຫຼີ້ນສຳເລັດ
       vid.setAttribute("playsinline","");
       vid.setAttribute("webkit-playsinline","");
       vid.controls=false;
-      vid.style.cssText="width:100%;height:100%;object-fit:cover;cursor:pointer;";
+      vid.style.cssText="width:100%;height:100%;object-fit:cover;cursor:pointer;background:#000;display:block;";
       // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
       const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
       vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
@@ -3558,7 +3558,7 @@ function buildFeedPage(){
       if(post.mediaType==="video"){
         const vid=document.createElement("video");
         vid.src=post.mediaUrl;
-        vid.preload="metadata";
+        vid.preload="auto";
         vid.loop=true; vid.muted=true; // ເລີ່ມແບບປິດສຽງກ່ອນສະເໝີ ຮັບປະກັນເລີ່ມຫຼີ້ນສຳເລັດ
         vid.setAttribute("playsinline","");
         vid.setAttribute("webkit-playsinline","");
@@ -5226,7 +5226,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.1.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.1.3")
   );
 
   // Icon style helper

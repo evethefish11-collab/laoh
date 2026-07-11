@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v519 -->
+<!-- LaoH Marketplace v521 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2743,7 +2743,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.1.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.2.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3304,10 +3304,6 @@ function buildFeedPage(){
       // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
       const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
       vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
-      // ── [ชั่วคราว] ตัวแสดงสถานะบนหน้าจอ เพื่อหาสาเหตุที่แท้จริง — จะเอาออกทีหลังเมื่อแก้ปัญหาเสร็จแล้ว ──
-      const dbgBox=voiceoverAudio?el("div",{style:{position:"absolute",top:"6px",left:"6px",zIndex:"999",background:"rgba(255,0,0,.85)",color:"#fff",fontSize:".6rem",padding:"3px 6px",borderRadius:"6px",maxWidth:"90%",pointerEvents:"none"}},"init"):null;
-      if(dbgBox)media.appendChild(dbgBox);
-      function dbg(msg){if(dbgBox)dbgBox.textContent=msg;}
       // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว (เฉพาะวิดีโอที่ไม่มีเสียงพากย์ — วิดีโอที่มีเสียงพากย์ใช้ปุ่มควบคุมเสียงแยกต่างหากแทน ไม่พึ่งตัวควบคุมวิดีโอเลย) ──
       if(!voiceoverAudio)vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
       var vidPlaying=false;
@@ -3319,9 +3315,8 @@ function buildFeedPage(){
         feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
       }
       function tryPlayFeedVid(){
-        dbg("tryPlay called");
         if(voiceoverAudio){
-          playSyncedVoiceover(vid,voiceoverAudio,dbg);
+          playSyncedVoiceover(vid,voiceoverAudio);
           vidPlaying=true;
           return;
         }
@@ -5233,7 +5228,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.1.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.2.1")
   );
 
   // Icon style helper
@@ -8521,7 +8516,13 @@ function buildReviewDetailItemContent(itemType,itemData){
 
 function showReviewDetail(itemType,itemData){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",overflow:"hidden",maxWidth:"420px"}});
-  mod.appendChild(el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"));
+  mod.appendChild(el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:function(){
+    // ── หยุดและทำลายไฟล์เสียงพากย์ทิ้งด้วย ถ้ามี (จุดที่ตกหล่นไปก่อนหน้านี้ ทำให้เสียงค้างเล่นต่อในเบื้องหลังหลังปิดป๊อบอัพ) ──
+    const vEl2=content.querySelector("video");
+    const aEl2=vEl2&&vEl2._voiceoverAudioEl;
+    if(aEl2){try{aEl2.pause();aEl2.remove();}catch(e2){}}
+    closeOv();
+  }},"✕"));
   const content=buildReviewDetailItemContent(itemType,itemData);
   mod.appendChild(content);
   // ── ต่อ DOM ให้ visible ก่อน แล้วค่อยสั่งเล่น (บาง browser ไม่ init เสียงถูกต้องถ้าสั่ง play()/unmute ตอนยังไม่ได้ attach เข้า document) ──

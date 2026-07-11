@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v521 -->
+<!-- LaoH Marketplace v523 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2743,7 +2743,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.2.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.2.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3304,16 +3304,8 @@ function buildFeedPage(){
       // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
       const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
       vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
-      // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว (เฉพาะวิดีโอที่ไม่มีเสียงพากย์ — วิดีโอที่มีเสียงพากย์ใช้ปุ่มควบคุมเสียงแยกต่างหากแทน ไม่พึ่งตัวควบคุมวิดีโอเลย) ──
-      if(!voiceoverAudio)vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
+      // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว ──
       var vidPlaying=false;
-      var feedVidCtrlTimer=null;
-      function showFeedVidControlsTemporarily(){
-        if(voiceoverAudio)return; // ── วิดีโอที่มีเสียงพากย์ ไม่ต้องโชว์ปุ่มควบคุมของเบราว์เซอร์เลย ใช้ปุ่มเสียงแยกต่างหากแทน ──
-        vid.controls=true;
-        clearTimeout(feedVidCtrlTimer);
-        feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
-      }
       function tryPlayFeedVid(){
         if(voiceoverAudio){
           playSyncedVoiceover(vid,voiceoverAudio);
@@ -3325,13 +3317,12 @@ function buildFeedPage(){
           // ປົດສຽງທັນທີຫຼັງຈາກຫຼີ້ນຕິດແລ້ວ (browser ຍອມງ່າຍກວ່າການຫຼີ້ນມີສຽງຕັ້ງແຕ່ຕົ້ນ)
           if(window._feedSoundOn)vid.muted=false;
           retryUnmuteIfNeeded(vid,function(){return window._feedSoundOn;});
-        }).catch(function(){vid.controls=true;});
+        }).catch(function(){});
       }
       vid.onclick=function(e){
         e.stopPropagation();
         if(vidPlaying){vid.pause();if(voiceoverAudio)voiceoverAudio.pause();vidPlaying=false;}
         else{tryPlayFeedVid();}
-        showFeedVidControlsTemporarily();
       };
       // ── ไม่เล่นทันทีตอนสร้าง (วิดีโอที่ยังไม่เลื่อนมาเห็นจะเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) — ให้ IntersectionObserver ด้านล่างเป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
       vid._tryPlayFeedVid=tryPlayFeedVid;
@@ -3504,21 +3495,26 @@ function buildFeedPage(){
     // Save button (เฉพาะบัญชีลูกค้า)
     const saveBtn1=buildSaveSidebarBtn(rv.id,"review",rv);
     if(saveBtn1)sidebar.appendChild(saveBtn1);
-    // ── ปุ่มเปิด/ปิดเสียงพากย์ (เฉพาะวิดีโอที่มีเสียงพากย์) — แยกต่างหากจากตัวควบคุมวิดีโอโดยสิ้นเชิง ──
-    if(rv.voiceoverUrl){
+    // ── ปุ่มเปิด/ปิดเสียง (ทุกวิดีโอ ไม่ว่าจะมีเสียงพากย์หรือไม่) — แยกต่างหากจากตัวควบคุมวิดีโอโดยสิ้นเชิง ──
+    if(rv.mediaType==="video"&&rv.mediaUrl){
       const saSound=document.createElement("div"); saSound.className="feed-action";
       const sbSound=document.createElement("button"); sbSound.className="feed-action-btn-sm";
       function refreshSoundIcon(){
         const v=media.querySelector("video");
-        const a=v&&v._voiceoverAudioEl;
-        sbSound.textContent=(a&&a.muted)?"🔇":"🔊";
+        if(!v){sbSound.textContent="🔊";return;}
+        const a=v._voiceoverAudioEl;
+        const isMuted=a?a.muted:v.muted;
+        sbSound.textContent=isMuted?"🔇":"🔊";
       }
       refreshSoundIcon();
       sbSound.onclick=function(e){
         e.stopPropagation();
         const v=media.querySelector("video");
-        const a=v&&v._voiceoverAudioEl;
-        if(a){a.muted=!a.muted;refreshSoundIcon();}
+        if(!v)return;
+        const a=v._voiceoverAudioEl;
+        if(a){a.muted=!a.muted;}
+        else{v.muted=!v.muted;window._feedSoundOn=!v.muted;}
+        refreshSoundIcon();
       };
       saSound.appendChild(sbSound);
       const slSound=document.createElement("div"); slSound.className="feed-action-label"; slSound.textContent=_lang==="lo"?"ສຽງ":"Sound";
@@ -3526,6 +3522,16 @@ function buildFeedPage(){
     }
     // Comment button
     sidebar.appendChild(buildCommentSidebarBtn(rv.id,"review",rv.uid,rv.userName||"Review",item,true));
+    // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) ──
+    if(user&&user.role==="c"&&!user.isShopViewer){
+      const saSendFriend1=document.createElement("div"); saSendFriend1.className="feed-action";
+      const sbSendFriend1=document.createElement("button"); sbSendFriend1.className="feed-action-btn-sm";
+      sbSendFriend1.textContent="📨";
+      sbSendFriend1.onclick=function(e){e.stopPropagation();openSendToFriendPicker("review",rv.id);};
+      saSendFriend1.appendChild(sbSendFriend1);
+      const slSendFriend1=document.createElement("div"); slSendFriend1.className="feed-action-label"; slSendFriend1.textContent=_lang==="lo"?"ສົ່ງໝູ່":"Send";
+      saSendFriend1.appendChild(slSendFriend1); sidebar.appendChild(saSendFriend1);
+    }
     item.appendChild(sidebar);
 
     scroll.appendChild(item);
@@ -3557,16 +3563,8 @@ function buildFeedPage(){
         // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
         const voiceoverAudio=post.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=post.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
         vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
-        // ── ใช้ตัวจดจำเสียงตัวเดียวกับ buildReviewCard เพื่อให้ทุกวิดีโอใน Feed (ทั้งโพสต์ร้านค้าและรีวิว) ใช้การตั้งค่าเดียวกันต่อเนื่องกัน (เฉพาะวิดีโอที่ไม่มีเสียงพากย์ — ที่มีเสียงพากย์ใช้ปุ่มควบคุมเสียงแยกต่างหากแทน) ──
-        if(!voiceoverAudio)vid.onvolumechange=function(){window._feedSoundOn=!vid.muted;};
+        // ── ใช้ตัวจดจำเสียงตัวเดียวกับ buildReviewCard เพื่อให้ทุกวิดีโอใน Feed (ทั้งโพสต์ร้านค้าและรีวิว) ใช้การตั้งค่าเดียวกันต่อเนื่องกัน ──
         var vidPlaying=false;
-        var feedVidCtrlTimer=null;
-        function showFeedVidControlsTemporarily(){
-          if(voiceoverAudio)return;
-          vid.controls=true;
-          clearTimeout(feedVidCtrlTimer);
-          feedVidCtrlTimer=setTimeout(function(){vid.controls=false;},2500);
-        }
         function tryPlayFeedVid(){
           if(voiceoverAudio){
             playSyncedVoiceover(vid,voiceoverAudio);
@@ -3577,13 +3575,12 @@ function buildFeedPage(){
             vidPlaying=true;
             if(window._feedSoundOn)vid.muted=false;
             retryUnmuteIfNeeded(vid,function(){return window._feedSoundOn;});
-          }).catch(function(){vid.controls=true;});
+          }).catch(function(){});
         }
         vid.onclick=function(e){
           e.stopPropagation();
           if(vidPlaying){vid.pause();if(voiceoverAudio)voiceoverAudio.pause();vidPlaying=false;}
           else{tryPlayFeedVid();}
-          showFeedVidControlsTemporarily();
         };
         // ── ไม่เล่นทันทีตอนสร้าง — ให้ IntersectionObserver ของ Feed (ตัวเดียวกับที่ใช้กับ buildReviewCard) เป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
         vid._tryPlayFeedVid=tryPlayFeedVid;
@@ -3698,21 +3695,26 @@ function buildFeedPage(){
     const saveBtn2=buildSaveSidebarBtn(post.id,"shoppost",post);
     if(saveBtn2)sidebar.appendChild(saveBtn2);
 
-    // ── ปุ่มเปิด/ปิดเสียงพากย์ (เฉพาะวิดีโอที่มีเสียงพากย์) — แยกต่างหากจากตัวควบคุมวิดีโอโดยสิ้นเชิง ──
-    if(post.voiceoverUrl){
+    // ── ปุ่มเปิด/ปิดเสียง (ทุกวิดีโอ ไม่ว่าจะมีเสียงพากย์หรือไม่) — แยกต่างหากจากตัวควบคุมวิดีโอโดยสิ้นเชิง ──
+    if(post.mediaType==="video"&&post.mediaUrl){
       const saSound2=document.createElement("div"); saSound2.className="feed-action";
       const sbSound2=document.createElement("button"); sbSound2.className="feed-action-btn-sm";
       function refreshSoundIcon2(){
         const v=mediaWrap.querySelector("video");
-        const a=v&&v._voiceoverAudioEl;
-        sbSound2.textContent=(a&&a.muted)?"🔇":"🔊";
+        if(!v){sbSound2.textContent="🔊";return;}
+        const a=v._voiceoverAudioEl;
+        const isMuted=a?a.muted:v.muted;
+        sbSound2.textContent=isMuted?"🔇":"🔊";
       }
       refreshSoundIcon2();
       sbSound2.onclick=function(e){
         e.stopPropagation();
         const v=mediaWrap.querySelector("video");
-        const a=v&&v._voiceoverAudioEl;
-        if(a){a.muted=!a.muted;refreshSoundIcon2();}
+        if(!v)return;
+        const a=v._voiceoverAudioEl;
+        if(a){a.muted=!a.muted;}
+        else{v.muted=!v.muted;window._feedSoundOn=!v.muted;}
+        refreshSoundIcon2();
       };
       saSound2.appendChild(sbSound2);
       const slSound2=document.createElement("div"); slSound2.className="feed-action-label"; slSound2.textContent=_lang==="lo"?"ສຽງ":"Sound";
@@ -3722,6 +3724,17 @@ function buildFeedPage(){
     // Comment button
     const sh2=shops.find(function(s){return s.id===post.shopId;})||{};
     sidebar.appendChild(buildCommentSidebarBtn(post.id,"post",post.shopId,sh2.name||"Post",item,true));
+
+    // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) ──
+    if(user&&user.role==="c"&&!user.isShopViewer){
+      const saSendFriend2=document.createElement("div"); saSendFriend2.className="feed-action";
+      const sbSendFriend2=document.createElement("button"); sbSendFriend2.className="feed-action-btn-sm";
+      sbSendFriend2.textContent="📨";
+      sbSendFriend2.onclick=function(e){e.stopPropagation();openSendToFriendPicker("shoppost",post.id);};
+      saSendFriend2.appendChild(sbSendFriend2);
+      const slSendFriend2=document.createElement("div"); slSendFriend2.className="feed-action-label"; slSendFriend2.textContent=_lang==="lo"?"ສົ່ງໝູ່":"Send";
+      saSendFriend2.appendChild(slSendFriend2); sidebar.appendChild(saSendFriend2);
+    }
 
     item.appendChild(sidebar);
     scroll.appendChild(item);
@@ -5228,7 +5241,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.2.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.2.3")
   );
 
   // Icon style helper

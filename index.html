@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v529 -->
+<!-- LaoH Marketplace v536 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2666,6 +2666,27 @@ const T = {
     tagSale:'Best Seller', tagNew:'New', preorder:'📦 Pre-order', refund:'🔄 Refund',
     colorPick:'🎨 Color / Scent / Flavor', sizePick:'📏 Size',
     readyShip:'Ships in 24h', stock:'Items', stockLeft:'left'
+  },
+  zh: {
+    shop:'商店', cart:'购物车', track:'订单跟踪', login:'登录',
+    addCart:'🛒 加入购物车', checkout:'结账 →', total:'合计',
+    noProds:'未找到商品', cartEmpty:'购物车是空的', register:'注册 →',
+    member:'LaoH 会员', memberSub:'首次下单享受特别折扣',
+    howTo:'购买流程', howSteps:[
+      '选择商品 → 选择颜色和尺码',
+      '点击 🛒 加入购物车',
+      '点击结账 → 扫描二维码付款',
+      '发送付款凭证和收货信息',
+      '⚡ 现货：1-2天',
+      '📦 预订：5-7天（快速生产/邻近进口）',
+      '📦 预订：10-15天（定制/远距离进口）',
+      '🔄 3天内可退货'
+    ],
+    sizeGuide:'📏 尺码表', contact:'💬 WhatsApp 联系客服',
+    footer:'老挝人为老挝人打造',
+    tagSale:'畅销', tagNew:'新品', preorder:'📦 预订', refund:'🔄 可退款',
+    colorPick:'🎨 颜色 / 香味 / 口味', sizePick:'📏 尺码',
+    readyShip:'24小时内发货', stock:'库存', stockLeft:'件'
   }
 };
 function t(key){ return (T[_lang]||T.lo)[key]||(T.lo[key]||key); }
@@ -2754,7 +2775,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.2.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.3.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4829,7 +4850,7 @@ function showAddrModal(){
   var newLat=null; var newLng=null; var newFee=0;
   const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
   modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-  modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")));
+  modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":(_lang==="zh"?"📍 收货地址":"📍 Delivery Address"))));
   // list
   const listWrap=el("div",{style:{marginBottom:"10px"}});
   function refreshList(){
@@ -5254,7 +5275,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.2.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.3.6")
   );
 
   // Icon style helper
@@ -5291,8 +5312,9 @@ function buildNav(){
   const langBtn = (function(){
     const b=document.createElement("button");
     b.style.cssText="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:3px 9px;color:#fff;font-size:.65rem;font-weight:700;cursor:pointer;font-family:sans-serif;display:flex;align-items:center;gap:3px;";
-    b.innerHTML="🌐 "+(_lang==="lo"?"ລາວ":"EN");
-    b.onclick=function(){_lang=_lang==="lo"?"en":"lo";try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();};
+    b.innerHTML="🌐 "+(_lang==="lo"?"ລາວ":(_lang==="zh"?"中文":"EN"));
+    // ── ตั้งแต่ v530: เพิ่มภาษาจีนเป็นตัวเลือกที่ 3 (ลาว → อังกฤษ → จีน → วนกลับ) — ยังไม่มีข้อความแปลเป็นภาษาจีนจริงในระบบ (เป็นงานส่วนที่ 2 ที่ยังไม่ได้ทำ) เพราะงั้นตอนนี้เลือกจีนแล้วจะเห็นเป็นภาษาอังกฤษไปก่อน ไม่กระทบ/พังอะไร ──
+    b.onclick=function(){_lang=_lang==="lo"?"en":(_lang==="en"?"zh":"lo");try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();};
     return b;
   })();
 
@@ -5313,7 +5335,7 @@ function buildNav(){
 
   // Translate icon — shown next to profile avatar for shop/admin/staff/rider/narrator roles
   const translateIconBtn = (user&&(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff"))
-    ? el("button",{className:"ibt",style:{fontSize:"1rem"},onclick:()=>{laohTranslateShow();},title:_lang==="lo"?"ແປພາສາ":"Translate"},"🌐")
+    ? el("button",{className:"ibt",style:{fontSize:"1rem"},onclick:()=>{laohTranslateShow();},title:_lang==="lo"?"ແປພາສາ":(_lang==="zh"?"翻译":"Translate")},"🌐")
     : null;
 
   // Login button — shown when NOT logged in
@@ -5321,7 +5343,7 @@ function buildNav(){
     ? el("button",{
         style:{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.4)",borderRadius:"20px",padding:"3px 10px",color:"#fff",fontSize:".65rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
         onclick:()=>showAuth()
-      },(_lang==="lo"?"ເຂົ້າ":"Login"))
+      },(_lang==="lo"?"ເຂົ້າ":(_lang==="zh"?"登录":"Login")))
     : null;
 
   const rightDiv = el("div",{style:{display:"flex",gap:"5px",alignItems:"center"}},
@@ -5343,7 +5365,7 @@ function buildNav(){
       (function(){
         const inp=el("input",{
           id:"nav-search-inp",type:"text",
-          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":"Search products or shops...",
+          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":(_lang==="zh"?"搜索商品或店铺...":"Search products or shops..."),
           value:fSearch,
           style:{width:"100%",padding:"7px 12px 7px 32px",border:"1px solid rgba(255,255,255,.35)",borderRadius:"30px",fontSize:".78rem",color:"#fff",background:"rgba(255,255,255,.12)",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}
         });
@@ -5389,7 +5411,7 @@ function buildNav(){
       (function(){
         const inp=el("input",{
           id:"nav-search-inp",type:"text",
-          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":"Search products or shops...",
+          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":(_lang==="zh"?"搜索商品或店铺...":"Search products or shops..."),
           value:fSearch,
           style:{width:"100%",padding:"7px 12px 7px 32px",border:"1px solid rgba(255,255,255,.35)",borderRadius:"30px",fontSize:".78rem",color:"#fff",background:"rgba(255,255,255,.12)",outline:"none",fontFamily:"inherit",boxSizing:"border-box"}
         });
@@ -5489,7 +5511,7 @@ function updateSearchResults(){
   if(hdr){
     hdr.textContent=q
       ?(_lang==="lo"?"🔍 ຜົນການຄົ້ນຫາ: ":"🔍 Results: ")+"\""+fSearch+"\" ("+fil.length+")"
-      :(fCat>0?"📦 "+CATS[fCat]:(_lang==="lo"?"🔥 ສິນຄ້າທັງໝົດ":"🔥 All Products"))+" ("+fil.length+")";
+      :(fCat>0?"📦 "+CATS[fCat]:(_lang==="lo"?"🔥 ສິນຄ້າທັງໝົດ":(_lang==="zh"?"🔥 全部商品":"🔥 All Products")))+" ("+fil.length+")";
   }
 
   // Re-render only the product grid
@@ -5499,7 +5521,7 @@ function updateSearchResults(){
   if(fil.length===0){
     const empty=el("div",{style:{textAlign:"center",padding:"32px",color:"#6B8F75",gridColumn:"1/-1"}},
       el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"🔍"),
-      el("div",null,_lang==="lo"?(_lang==="lo"?"ບໍ່ພົບສິນຄ້າ":"No products found"):"No products found")
+      el("div",null,_lang==="lo"?"ບໍ່ພົບສິນຄ້າ":(_lang==="zh"?"未找到商品":"No products found"))
     );
     grid.appendChild(empty);
   } else {
@@ -6398,7 +6420,7 @@ function buildUserProfile(uid){
     },
     {
       icon:"👥",
-      label:_lang==="lo"?"ຄວາມເປັນສ່ວນຕົວ ຜູ້ຕິດຕາມ":"Follower Privacy",
+      label:_lang==="lo"?"ຄວາມເປັນສ່ວນຕົວ ຜູ້ຕິດຕາມ":(_lang==="zh"?"关注者隐私":"Follower Privacy"),
       value:"",
       action:()=>{
         if(!user.privacy)user.privacy={};
@@ -6447,7 +6469,7 @@ function buildUserProfile(uid){
     },
     {
       icon:"📦",
-      label:_lang==="lo"?(_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":"My Orders"):"My Orders",
+      label:_lang==="lo"?"ຄຳສັ່ງຂອງຂ້ອຍ":(_lang==="zh"?"我的订单":"My Orders"),
       value:myO.length>0?String(myO.length):"",
       action:()=>{
         if(myO.length===0){
@@ -6455,7 +6477,7 @@ function buildUserProfile(uid){
             el("button",{className:"mcl",onclick:closeOv},"✕"),
             el("div",{style:{textAlign:"center",padding:"30px",color:"#6B8F75"}},
               el("div",{style:{fontSize:"2.5rem",marginBottom:"8px"}},"📦"),
-              el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":"No orders yet")
+              el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":(_lang==="zh"?"暂无订单":"No orders yet"))
             )
           ));
           return;
@@ -6478,13 +6500,13 @@ function buildUserProfile(uid){
     },
     {
       icon:"👤",
-      label:_lang==="lo"?"ແກ້ໄຂໂປຣໄຟລ໌":"Edit Profile",
+      label:_lang==="lo"?"ແກ້ໄຂໂປຣໄຟລ໌":(_lang==="zh"?"编辑个人资料":"Edit Profile"),
       value:"",
       action:()=>showEditProfile()
     },
     {
       icon:"📍",
-      label:_lang==="lo"?"ທີ່ຢູ່ຈັດສົ່ງ":"Delivery Addresses",
+      label:_lang==="lo"?"ທີ່ຢູ່ຈັດສົ່ງ":(_lang==="zh"?"收货地址":"Delivery Addresses"),
       value:(function(){const n=getSavedAddresses().length;return n>0?String(n):"";})(),
       action:function(){
         function buildAddrModal(){
@@ -6497,7 +6519,7 @@ function buildUserProfile(uid){
 
           const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
           modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-          modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")));
+          modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":(_lang==="zh"?"📍 收货地址":"📍 Delivery Address"))));
 
           // ── list existing addresses ──────────────────────────────
           const listWrap=el("div",{style:{marginBottom:"12px"}});
@@ -6882,7 +6904,7 @@ function buildUserProfile(uid){
               el("button",{className:"mcl",onclick:closeOv},"✕"),
               el("div",{style:{textAlign:"center",padding:"30px",color:"#6B8F75"}},
                 el("div",{style:{fontSize:"2.5rem",marginBottom:"8px"}},"📦"),
-                el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":"No orders yet")
+                el("div",null,_lang==="lo"?"ຍັງບໍ່ມີຄຳສັ່ງ":(_lang==="zh"?"暂无订单":"No orders yet"))
               )
             )
           :(function(){
@@ -7516,9 +7538,9 @@ function buildShop(){
   if(!window._fIsLao)window._fIsLao=null; // null=all, true=lao, false=general
   const laoFilterRow=el("div",{style:{display:"flex",gap:"6px",marginBottom:"8px"}});
   [
-    {label:(_lang==="lo"?"🌏 ທັງໝົດ":"🌏 All"),val:null},
-    {label:(_lang==="lo"?"🇱🇦 ສິນຄ້າລາວ":"🇱🇦 Lao Products"),val:true},
-    {label:(_lang==="lo"?"🛍 ທົ່ວໄປ":"🛍 General"),val:false}
+    {label:(_lang==="lo"?"🌏 ທັງໝົດ":(_lang==="zh"?"🌏 全部":"🌏 All")),val:null},
+    {label:(_lang==="lo"?"🇱🇦 ສິນຄ້າລາວ":(_lang==="zh"?"🇱🇦 老挝产品":"🇱🇦 Lao Products")),val:true},
+    {label:(_lang==="lo"?"🛍 ທົ່ວໄປ":(_lang==="zh"?"🛍 综合商品":"🛍 General")),val:false}
   ].forEach(function(opt){
     const active=window._fIsLao===opt.val;
     const btn=el("button",{style:{flex:"1",padding:"6px 4px",borderRadius:"20px",border:"1.5px solid "+(active?"#1B6B3A":"#C8E6D4"),background:active?"#1B6B3A":"none",color:active?"#fff":"#1A2B5F",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}});
@@ -7530,9 +7552,9 @@ function buildShop(){
   // Stock availability filter for home page
   const homeStockRow=el("div",{style:{display:"flex",gap:"6px",marginBottom:"8px"}});
   [
-    {k:"all",   label:_lang==="lo"?"🛍 ທັງໝົດ":"🛍 All"},
-    {k:"ready", label:"⚡ "+(_lang==="lo"?"ພ້ອມສົ່ງ":"In Stock")},
-    {k:"pre",   label:"📦 "+(_lang==="lo"?"Pre-order":"Pre-order")},
+    {k:"all",   label:_lang==="lo"?"🛍 ທັງໝົດ":(_lang==="zh"?"🛍 全部":"🛍 All")},
+    {k:"ready", label:"⚡ "+(_lang==="lo"?"ພ້ອມສົ່ງ":(_lang==="zh"?"现货":"In Stock"))},
+    {k:"pre",   label:"📦 "+(_lang==="lo"?"Pre-order":(_lang==="zh"?"预订":"Pre-order"))},
   ].forEach(function(opt){
     const active=fAv===opt.k;
     const btn=el("button",{style:{flex:"1",padding:"6px 4px",borderRadius:"20px",border:"1.5px solid "+(active?"#1B6B3A":"#C8E6D4"),background:active?"#1B6B3A":"none",color:active?"#fff":"#1A2B5F",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}});
@@ -7561,7 +7583,7 @@ function buildShop(){
         ? (_lang==="lo"?"🔍 ຜົນການຄົ້ນຫາ: ":"🔍 Results: ")+"\""+fSearch+"\" ("+fil.length+")"
         : fShop!==null
           ? "🏪 "+(shops.find(s=>s.id===fShop)||{name:""}).name+" ("+fil.length+")"
-          : (fCat>0?"📦 "+catLabel(CATS[fCat]):(_lang==="lo"?"🔥 ສິນຄ້າທັງໝົດ":"🔥 All Products"))+" ("+fil.length+")"
+          : (fCat>0?"📦 "+catLabel(CATS[fCat]):(_lang==="lo"?"🔥 ສິນຄ້າທັງໝົດ":(_lang==="zh"?"🔥 全部商品":"🔥 All Products")))+" ("+fil.length+")"
     )
   );
 
@@ -7573,7 +7595,7 @@ function buildShop(){
         const inp=el("input",{
           id:"search-inp",
           type:"text",
-          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":"Search products or shops...",
+          placeholder:_lang==="lo"?"ຄົ້ນຫາສິນຄ້າ ຫຼື ຮ້ານຄ້າ...":(_lang==="zh"?"搜索商品或店铺...":"Search products or shops..."),
           value:fSearch,
           style:{width:"100%",padding:"11px 38px 11px 38px",border:"1.5px solid #C8E6D4",borderRadius:"40px",fontSize:".88rem",color:"#1A2B5F",background:"#F0F7F2",outline:"none",fontFamily:"inherit",boxSizing:"border-box"},
         });
@@ -8179,8 +8201,8 @@ function buildMemberBanner(){
       el("div",{style:{padding:"16px 16px 12px",display:"flex",alignItems:"center",gap:"12px"}},
         el("div",{style:{flex:"1"}},
           el("div",{style:{fontSize:"1rem",fontWeight:"900",color:"#fff",marginBottom:"3px"}},
-            (_lang==="lo"?"ສະໝັກສະມາຊິກ ":"Sign Up "),
-            el("em",{style:{color:"#4CAF88"}},_lang==="lo"?"ເພື່ອຮັບສ່ວນຫຼຸດພິເສດ":"for Special Discount")
+            (_lang==="lo"?"ສະໝັກສະມາຊິກ ":(_lang==="zh"?"注册":"Sign Up ")),
+            el("em",{style:{color:"#4CAF88"}},_lang==="lo"?"ເພື່ອຮັບສ່ວນຫຼຸດພິເສດ":(_lang==="zh"?"享受特别折扣":"for Special Discount"))
           ),
           el("div",{style:{fontSize:".78rem",color:"#9DD4B4"}},t("memberSub"))
         ),
@@ -8188,23 +8210,27 @@ function buildMemberBanner(){
           el("button",{onclick:()=>showAuth("register"),style:{background:"#25D366",color:"#fff",border:"none",padding:"9px 16px",borderRadius:"40px",fontSize:".8rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},
             t("register")),
           el("button",{onclick:function(){showShopApplyModal();},style:{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.4)",padding:"9px 14px",borderRadius:"40px",fontSize:".8rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},
-            "🏪 "+(_lang==="lo"?"ສະໝັກຮ້ານ":"Open Shop"))
+            "🏪 "+(_lang==="lo"?"ສະໝັກຮ້ານ":(_lang==="zh"?"开店":"Open Shop")))
         )
       ),
       // ── ส่วนล่าง: วิธีสั่งซื้อ + preorder info ──
       el("div",{style:{background:"rgba(0,0,0,.25)",padding:"10px 16px 14px",borderTop:"1px solid rgba(255,255,255,.1)"}},
         el("div",{style:{fontSize:".6rem",letterSpacing:".12em",textTransform:"uppercase",color:"#9DD4B4",marginBottom:"8px",fontWeight:"700"}},
-          _lang==="lo"?"ວິທີສັ່ງຊື້":"HOW TO ORDER"),
+          _lang==="lo"?"ວິທີສັ່ງຊື້":(_lang==="zh"?"购买流程":"HOW TO ORDER")),
         el("div",{style:{display:"flex",flexDirection:"column",gap:"5px",marginBottom:"10px"}},
           ...(_lang==="lo"?[
             ["1","ເລືອກສິນຄ້າ → ເພີ່ມໃສ່ກະຕ່າ"],
             ["2","ກົດ 🛒 ຊຳລະຜ່ານ QR"],
             ["3","ສົ່ງສລິບ + ທີ່ຢູ່ຈັດສົ່ງ"],
+          ]:(_lang==="zh"?[
+            ["1","选择商品 → 加入购物车"],
+            ["2","点击 🛒 → 扫描二维码付款"],
+            ["3","上传付款凭证 + 收货地址"],
           ]:[
             ["1","Pick a product → Add to Cart"],
             ["2","Tap 🛒 → pay via QR code"],
             ["3","Upload slip + delivery address"],
-          ]).map(([n,t2])=>el("div",{style:{display:"flex",gap:"8px",alignItems:"center",color:"rgba(255,255,255,.85)",fontSize:".74rem"}},
+          ])).map(([n,t2])=>el("div",{style:{display:"flex",gap:"8px",alignItems:"center",color:"rgba(255,255,255,.85)",fontSize:".74rem"}},
             el("span",{style:{background:"#1B6B3A",color:"#fff",width:"18px",height:"18px",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".6rem",fontWeight:"800",flexShrink:"0"}},n),
             t2
           ))
@@ -9367,7 +9393,7 @@ function renderCo(){
       // ── เลือกที่อยู่จัดส่ง ─────────────────────────────────────────
       el("div",{style:{background:"#F0F7F2",borderRadius:"11px",padding:"10px 12px",marginBottom:"10px"}},
         el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}},
-          el("div",{style:{fontWeight:"700",fontSize:".78rem",color:"#1A2B5F"}},(_lang==="lo"?(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":"📍 Delivery Address"):"📍 Delivery Address")),
+          el("div",{style:{fontWeight:"700",fontSize:".78rem",color:"#1A2B5F"}},(_lang==="lo"?"📍 ທີ່ຢູ່ຈັດສົ່ງ":(_lang==="zh"?"📍 收货地址":"📍 Delivery Address"))),
           el("button",{type:"button",style:{background:"none",border:"none",color:"#5D2D7A",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},
             onclick:function(){showAddrModal();}
           },(_lang==="lo"?"➕ ເພີ່ມ / ແກ້ໄຂ":"➕ Add / Edit"))
@@ -9375,7 +9401,7 @@ function renderCo(){
         savedAddrs.length===0
         ? el("div",{style:{textAlign:"center",padding:"8px 0"}},
             el("div",{style:{fontSize:".78rem",color:"#c00",marginBottom:"8px"}},(_lang==="lo"?"⚠️ ຍັງບໍ່ມີທີ່ຢູ່ — ເພີ່ມກ່ອນ":"⚠️ No address yet — add one first")),
-            el("button",{type:"button",className:"btn btn-p",style:{width:"100%"},onclick:function(){showAddrModal();}},(_lang==="lo"?"➕ ເພີ່ມທີ່ຢູ່ຈັດສົ່ງ":"➕ Add Delivery Address"))
+            el("button",{type:"button",className:"btn btn-p",style:{width:"100%"},onclick:function(){showAddrModal();}},(_lang==="lo"?"➕ ເພີ່ມທີ່ຢູ່ຈັດສົ່ງ":(_lang==="zh"?"➕ 添加收货地址":"➕ Add Delivery Address")))
           )
         : el("div",null,
             ...savedAddrs.map(function(a){
@@ -9539,7 +9565,7 @@ function renderCo(){
       // ── ปุ่มไปชำระเงิน ────────────────────────────────────────────
       el("button",{type:"button",className:"btn btn-p",style:{width:"100%",padding:"13px",fontSize:"1rem"},
         onclick:function(){
-          if(!coDl._addrId){toast((_lang==="lo"?"⚠️ ກະລຸນາເລືອກທີ່ຢູ່ຈັດສົ່ງກ່ອນ":"⚠️ Please select a delivery address first"));return;}
+          if(!coDl._addrId){toast((_lang==="lo"?"⚠️ ກະລຸນາເລືອກທີ່ຢູ່ຈັດສົ່ງກ່ອນ":(_lang==="zh"?"⚠️ 请先选择收货地址":"⚠️ Please select a delivery address first")));return;}
           coStep=2;renderCo();
         }
       },(_lang==="lo"?"ຕໍ່ໄປ: ຊຳລະເງິນ →":"Next: Payment →"))
@@ -9843,7 +9869,7 @@ _checkoutCart=null; selectedCartKeys.clear(); coStep=4; closeOv();
             console.error("OUTER CHECKOUT ERROR:", outerErr.message, outerErr.stack);
             toast("Error: "+outerErr.message);
           }
-        }},(_lang==="lo"?"✅ ຢືນຢັນຄຳສັ່ງ":"✅ Confirm Order"))
+        }},(_lang==="lo"?"✅ ຢືນຢັນຄຳສັ່ງ":(_lang==="zh"?"✅ 确认订单":"✅ Confirm Order")))
       )
     );
   } else {

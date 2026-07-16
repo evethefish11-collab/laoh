@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v552 -->
+<!-- LaoH Marketplace v553 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2783,7 +2783,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5294,7 +5294,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.3")
   );
 
   // Icon style helper
@@ -8760,7 +8760,29 @@ function buildReviewDetailItemContent(itemType,itemData){
 function showSavedMusicPlayer(musicName,musicUrl){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"24px",textAlign:"center",maxWidth:"340px"}});
   mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-  mod.appendChild(el("div",{style:{fontSize:"3rem",marginBottom:"10px"}},"🎵"));
+  // ── กล่องรูปคัฟเวอร์ (สี่เหลี่ยมจัตุรัส ใหญ่กว่าไอคอนโน้ตเพลง 3 เท่า) + ไอคอนโน้ตเพลงอยู่ด้านหน้า (ทับข้างบน) ──
+  const coverBox=el("div",{style:{width:"150px",height:"150px",margin:"0 auto 10px",borderRadius:"14px",background:"linear-gradient(135deg,#1B6B3A,#0F5C2E)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}});
+  coverBox.appendChild(el("div",{style:{fontSize:"3rem",position:"relative",zIndex:"1",textShadow:"0 2px 6px rgba(0,0,0,.5)"}},"🎵"));
+  mod.appendChild(coverBox);
+  // ── หารูปคัฟเวอร์ (ถ้ามี) มาเป็นพื้นหลังหลังไอคอน — ใช้ตัวจำที่เก็บไว้ร่วมกับแท็บเซฟ ──
+  (function(){
+    function applyCover(coverUrl){
+      if(!coverUrl)return;
+      coverBox.style.backgroundImage="url('"+coverUrl+"')";
+      coverBox.style.backgroundSize="cover";
+      coverBox.style.backgroundPosition="center";
+    }
+    if(window._bgMusicCoverCache&&window._bgMusicCoverCache[musicUrl]!==undefined){
+      applyCover(window._bgMusicCoverCache[musicUrl]);
+    } else if(db){
+      db.collection("bgMusic").where("url","==",musicUrl).limit(1).get().then(function(snap){
+        if(!window._bgMusicCoverCache)window._bgMusicCoverCache={};
+        const cover=(!snap.empty&&snap.docs[0].data().coverImg)?snap.docs[0].data().coverImg:null;
+        window._bgMusicCoverCache[musicUrl]=cover;
+        applyCover(cover);
+      }).catch(function(){});
+    }
+  })();
   const nameRow=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"14px"}});
   const popupSaveBtn=el("button",{style:{background:"#1a1a1a",border:"none",borderRadius:"50%",width:"40px",height:"40px",cursor:"pointer",padding:"0",flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center"},title:_lang==="lo"?"ບັນທຶກເພງ":"Save music",onclick:function(e){e.stopPropagation();toggleSaveMusic(musicName,musicUrl,popupSaveBtn,28);}});
   popupSaveBtn.innerHTML=bookmarkSvgSmall(isMusicSaved(musicUrl),28);
@@ -17823,6 +17845,29 @@ function buildAdminTab(){
               db.collection("bgMusic").doc(String(t.id)).delete().then(function(){toast("🗑 "+(_lang==="lo"?"ລຶບແລ້ວ":"Deleted"));drawTrackList();}).catch(function(){toast("⚠ ລຶບບໍ່ສຳເລັດ");});
             }
           },"🗑");
+          // ── ปุ่มแก้ไข/เพิ่มรูปคัฟเวอร์ให้เพลงที่มีอยู่แล้ว (ทั้งที่เคยอัปโหลดไว้ก่อนหน้านี้ และเปลี่ยนใจภายหลัง) ──
+          const coverEditInp=document.createElement("input");
+          coverEditInp.type="file";coverEditInp.accept="image/*";coverEditInp.style.display="none";
+          coverEditInp.onchange=function(){
+            const cf=coverEditInp.files[0];
+            if(!cf)return;
+            editCoverBtn.disabled=true;editCoverBtn.textContent="⏳";
+            const cr=new FileReader();
+            cr.onload=function(ce){
+              uploadFile(ce.target.result,"laoh/bgMusic/covers/"+Date.now()+"_"+cf.name,cf.type||"image/jpeg").then(function(coverUrl){
+                db.collection("bgMusic").doc(String(t.id)).update({coverImg:coverUrl}).then(function(){
+                  toast("✅ "+(_lang==="lo"?"ອັບເດດຮູບຄັບເວີແລ້ວ":"Cover image updated"));
+                  drawTrackList();
+                }).catch(function(){toast("⚠ ອັບເດດບໍ່ສຳເລັດ");editCoverBtn.disabled=false;editCoverBtn.textContent="🖼";});
+              }).catch(function(){toast("⚠ ອັບໂຫຼດຮູບບໍ່ສຳເລັດ");editCoverBtn.disabled=false;editCoverBtn.textContent="🖼";});
+            };
+            cr.readAsDataURL(cf);
+          };
+          const editCoverBtn=el("button",{style:{background:"rgba(27,107,58,.1)",border:"none",borderRadius:"8px",padding:"6px 10px",color:"#1B6B3A",cursor:"pointer",fontSize:".75rem",fontFamily:"inherit",flexShrink:"0"},title:_lang==="lo"?"ແກ້ໄຂຮູບຄັບເວີ":"Edit cover image",
+            onclick:function(){coverEditInp.click();}
+          },"🖼");
+          row.appendChild(editCoverBtn);
+          row.appendChild(coverEditInp);
           row.appendChild(delBtn);
           listWrap2.appendChild(row);
         });

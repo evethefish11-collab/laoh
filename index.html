@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v545 -->
+<!-- LaoH Marketplace v546 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2330,8 +2330,15 @@ function openVoiceoverStudio(videoFile,onComplete){
         trackListWrap.appendChild(el("div",{style:{color:"#888",fontSize:".76rem"}},_lang==="lo"?"ຍັງບໍ່ມີເພງໃນຄັງ":"No tracks available yet"));
         return;
       }
-      snap.docs.forEach(function(d){
-        const t=d.data();
+      // ── เพลงที่เคยเซฟไว้ (Part 4) ให้ขึ้นก่อนเพลงอื่นเสมอ พร้อมป้ายกำกับ ──
+      const savedUrls=new Set((user&&user.savedPosts||[]).filter(function(x){return x.type==="music";}).map(function(x){return x.musicUrl;}));
+      const allTracks=snap.docs.map(function(d){return d.data();});
+      allTracks.sort(function(a,b){
+        const aSaved=savedUrls.has(a.url)?1:0,bSaved=savedUrls.has(b.url)?1:0;
+        return bSaved-aSaved; // ที่เซฟไว้ (1) มาก่อนที่ยังไม่เซฟ (0) — ลำดับภายในกลุ่มเดียวกันคงเดิม (stable sort)
+      });
+      allTracks.forEach(function(t){
+        const isSaved=savedUrls.has(t.url);
         const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"8px 10px",background:selectedTrack&&selectedTrack.id===t.id?"#1B6B3A":"#222",borderRadius:"10px",cursor:"pointer"},
           onclick:function(){
             selectedTrack=t;musicStart=0;
@@ -2341,6 +2348,7 @@ function openVoiceoverStudio(videoFile,onComplete){
           }
         });
         row.appendChild(el("div",{style:{color:"#fff",fontSize:".8rem",flex:"1"}},"🎵 "+t.name));
+        if(isSaved)row.appendChild(el("div",{style:{fontSize:".62rem",color:"#FFD700",fontWeight:"700",flexShrink:"0"}},"🔖 "+(_lang==="lo"?"ບັນທຶກໄວ້":"Saved")));
         trackListWrap.appendChild(row);
       });
     }).catch(function(){});
@@ -2452,7 +2460,7 @@ function openVoiceoverStudio(videoFile,onComplete){
           URL.revokeObjectURL(videoUrl);
           restoreToastZIndex();
           overlay.remove();
-          onComplete({mediaUrl:videoUploadedUrl,voiceoverUrl:audioUrl});
+          onComplete({mediaUrl:videoUploadedUrl,voiceoverUrl:audioUrl,musicName:selectedTrack?selectedTrack.name:null,musicUrl:selectedTrack?selectedTrack.url:null});
         });
       }).catch(function(err){
         console.error(err);
@@ -2775,7 +2783,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.4.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.4.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3368,13 +3376,23 @@ function buildFeedPage(){
       media.innerHTML="<span style='font-size:4rem'>📸</span>";
     }
 
-    // overlay: stars + caption bottom left
+    // overlay: music row (if any) + stars + caption bottom left
     const overlay=document.createElement("div");
     overlay.style.cssText="position:absolute;bottom:0;left:0;right:0;padding:16px 12px 80px;background:linear-gradient(transparent,rgba(0,0,0,.7));";
+    if(rv.voiceoverMusicName){
+      const musicRow=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"5px"}});
+      const musicSaveBtn=el("button",{style:{background:"none",border:"none",cursor:"pointer",padding:"0",flexShrink:"0"},title:_lang==="lo"?"ບັນທຶກເພງ":"Save music",onclick:function(e){e.stopPropagation();toggleSaveMusic(rv.voiceoverMusicName,rv.voiceoverMusicUrl,musicSaveBtn);}});
+      musicSaveBtn.innerHTML=bookmarkSvgSmall(isMusicSaved(rv.voiceoverMusicUrl),16);
+      musicRow.appendChild(musicSaveBtn);
+      musicRow.appendChild(el("div",{style:{fontSize:".68rem",color:"rgba(255,255,255,.85)"}},"🎵 "+rv.voiceoverMusicName));
+      overlay.appendChild(musicRow);
+    }
     const stars=rv.stars>0?"⭐".repeat(rv.stars):"";
-    overlay.innerHTML=(stars?"<div style='font-size:.9rem;margin-bottom:4px'>"+stars+"</div>":"")+
+    const textBlock=el("div");
+    textBlock.innerHTML=(stars?"<div style='font-size:.9rem;margin-bottom:4px'>"+stars+"</div>":"")+
       "<div style='font-size:.8rem;color:rgba(255,255,255,.9);line-height:1.4;'>"+rv.caption+"</div>"+
       "<div style='font-size:.65rem;color:rgba(255,255,255,.6);margin-top:4px'>"+rv.userName+"</div>";
+    overlay.appendChild(textBlock);
     media.appendChild(overlay);
     item.appendChild(media);
 
@@ -5275,7 +5293,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.4.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.4.6")
   );
 
   // Icon style helper
@@ -6273,6 +6291,36 @@ function toggleSaveItem(itemId,itemType,itemData){
   if(user.id)saveToCloud("users",user.id,user);
 }
 // ── ปุ่มเซฟ สไตล์เดียวกับปุ่มไลก์/แชร์ในกลุ่ม sidebar ของ Feed — เห็นเฉพาะบัญชีลูกค้าเท่านั้น (ไม่ใช่ร้านค้า/โหมดดูร้าน) ──
+function bookmarkSvgSmall(saved,size){
+  // ── ไอคอนเดียวกับปุ่มเซฟโพสต์ (base64 เดียวกัน) แต่ปรับขนาดเล็กลงให้เหมาะกับพื้นที่แคบตามที่ขอ ──
+  const src=saved?"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAALxklEQVR42u1be3QU1R3+fndmkxCTQILUKhYQHz0HDpIq6MFXAKUFBLVAULECxUoRyeHZh1LdRDhHsPSEZzUhCuKjdWOPaD08rCUgqIBBBUENVQStyiObQGCT7O7M/fWPnezOzM6SYLM22zPfOZvdnbO5M/eb7/e8dwAXLly4cOHChQsXLly4cOHCRbuDmYmZFWZWv++Xz+dTUp28//kEiAjMLJIydjJVJ4RgZkbpK2u6TBw6ZlBeTk5vAJnGeZN1bgLAAOSxurr6o7VHP8r/cd9dxjUJIpLteTI1WeQZ7zjZ0PBQ5+zsIgAX1jedQUhqAAg6SyhCRGcbnTnHqG1hmM96MqsUmBm6roMl4+K883FBXh6YecdHNR89SET72ptENUnk0eDiYnGmsfGl8zp1GvPE6y9h1Vtv6F/6jzNYB4QCeDxAsDmBHbRFnGz7aDDv8QBhjTfMmI+P9c9o7fqX6N6fj79hxIBB/9y8c+c1AA63J4mUDJ9HRPrpQOCPWZmZ8woe/33wrQ/eSev8o16U370nPILY39hI+098i8GXXIE0IcDR2Zst0KQtiumU2DiN6foJgARDFQr2HDqI66/oh7JxU7jbhFtJD4eAYDC49/lX06/scemLpNA9LdfY4RRo3Fn9jXffvTwrM3OW9+V1+lt73k4bddMwWjNxBp/fJQ8AsO/wZ3zrshK8MGEasjudB8kSBGKLzVKUSXa0YzKOGsd1lhAkMHLlQvS9sDt2fnoAerAZOT+8CKdPHPWU/u1FXjP3kRF/Wr06j4jqmJmIiDuaCQsAcmCfPqMlWF21/Y1wWm5XZcnYSXx+lzxIAMfq/Zi4djn9u7kRPRfOgSKEsx0QAYYvjRdnPKMEQJDAqeNHMfrqQQwAJAhhLQxWPfTV8WMAkHvtgCt7AKizj9ahgkiXrKxL6psa2d9wirrmdUVuVjYA4GTDKYxaWkx7vzkCkZWDJl0DpB6jgM5Z8tbvigJSlagsmdkYkwGK6FrXRFqHj8ISUCQzEQNS15GZnoHTTY0YUerF+18fhprVGZqmgQTFh9xzdeEml6mCEJYm8hz0FW7nuSaFwKi1SYl0VUVTIIDC8iW0+/C/oOZ0gaaFgUhya42k9N3ulskHmwON1UiNd08qEChMV6zrEqOWL6DdX34OJTsnSh7AAJNptgk8kt1TtZYcxm4K2clLBpJlwpF5CIETgdM4cfokRGYWdE0zMXIWH05kze3iFOVsnpGTspk+st8dnTRKAQWKyNVKCSKC8KRB1/UIMcQOhNicYIvzN5PlxDc7ENhCIidZesn2gS0TZMmQbJBnTVFsTo+dxdmaGTr9nhPXDAqrnAImLMkaCk2Oi43ZtpBIdkVRvM9rzQeyXYGOAYmSY23JGZQtE3I0K06gGD6LmbLt92x7nbVu5mRIJjkmLESLIiiiMpPa2Gan5KC6hMHFRrwTT5xQdBTJClIgiMRNSDIgKN5pWaKtrRppId6sPLsVskNUMZtxnGJTLYi0TMjS9KP4FhTZTDQRQcxt7nBFB7a1bts7iIjkECedXRTbHL2FNP7uKofj2I4DpkQeGLkvbE1s7X7J0npuK4kJujIJ80OOT3jCqWDCUpqIShBliWyVBrehscBtLM3Y5lApNqpRDFdWVlJq+MC4TNcpJ7QTlCD5o8TZidVPkvkE1t8YCiwsLOSOTyAbrTmnqiMuEieIBmQv7SixIs0trPhEmwGQRimTxpjLCnJWS7SkS+zuIGEjmc8e8VtUT5asMU6/7WXCInkExsghoyFMiVtPZ0+KmVsnju1jkiPfqpoCtXB8sR/zd+a/CQtd4tgNsFQqpmqGEkRftvlGWx6oaRETTgEfaMzCrA6LyZKJWIcyzd7SsrXv44iKVzSDEVl341h0SSEFEqJWy+Zcj0DRZZ9WWi1MrdfH5mhsSaSJ4h1uTIEdvJ1lL+UoLouhqEkadHLrtZlzPOAELS126HXF/rFD54EiLqXg+D4eWd1Ui821SdlxOUrENZBlJY4cl6lUThUTNioNisujOb6l1aaOJ0Upjk/L2bkTY/7vFnfQzstyySOQOebJ2daFIU4cSVvVHycmm83KJ2r5TCBIlsQAFCWiwPaKwiKpCuTYqiUBIGbjPRZJqbWmMjsECTNRjl2eyAEigkdVweEQunftBgJCR7784gQAFBcXd/BuDDtsP6NYYUImkzbtvYr4MpvFt4gp8YpTvAIFETgcQoO/FkQi/NCEyWlaKLRn4u3jjxgbi2QHJlC2nlSTtRVFNkIUIgghwAxIY/8Mmwh3isaEGHlBTaPe3Xvi5oGDuGjchLTLL7w4+Oautx82iBNopz51UtdEKDoxsiUR9gTaSrKiKAiHgkBjABACIisbggiSZeu5ITMUIpxuDOC2IT/l0gdm6w0NDftee3PzwrEjR29tT/UluR8IMDOTpQSDtQox9xwMohVFQajhFC7K7coLfzmDPz/6DR5f/xfSPB5Ky8iAptvWmNmpmQCASJKiCAC1+bfecvcXO977vKqqSiUiLZVqYYrrYJkVaPouSIABhOr8+Fn+NfoL8x5VunbOJQAYduXVPGn54/JI3XGR1jk3sgfa0f+ZMhoAIrKQpfXvf43/0Pbd3N4bzJMXhYVImIJQtNsU+6wKBVooCHnmNC+4a4q2aUGpQhInl1aUz9y49c1VBfkDaN+KZ8UdPxmkh/y1ho8U1ijuoMKWw+u3b28mIsnc/stzIqnyYzCZ0wtGrBdjWLVHURBqOIkemdlyi3eJ/MM996kHDtZUz1lYPG72/b8uHzlk2MOlT5c9EGwO+l/xPqEsmThNo0CAw83NUBUlOl70hpiEH/t+LGlzFMn0gVYyrZ0WhSKnDtb5MTr/Wn3v8rVicP5AZdO2qjXXj7+9sJGVdxZXLPZUrK/gOb+a9uxs7/xx+2s+3TV3/ER122NL+bKcLjJ0sh6qUGONHFuHJqa3C1KLQBn1bpKckl1FURAONkMGzvCiX0zVXiteokhd9z/53DMzRgweOvuxedPruuUElerN1Y3PffBVk3fZMk+Ileob7x5z58aqLRXX9csXH65YJwoH3qAH62rBzBDRPYexFyH5EEkdlBHXJlAVFaFTJ9EruzNvLSnl3901WT1wsGbPvMe8Y6dPvK9iUVkZdrx/OPzn4lWByspKfVtJiYa6ujO53brJkjnT6kcOvfk3y59ZPaOpuanW98giZemUIk00NSFq0syQDHhUD5CqBEqA2Lw+YeRmEZOtxe1XDdL3rlhHN/a/WmzevvXpofcUjj8RCL63uKIi7dCePY2VpaVNMD2CUFJSIstLSho37v4suKisjGfeN3XtrEfnF+775OPdM8dOULcvXCav6JwnA/X1EEIgQ1FwrM6PsK5HHGI79wCT2D9gFQDOBAJLGoPN0nNbQUgZezN3unsE444CVkbfIJf89dkwM7O/rq5uxZqKIgDZK30rs6Z6vZler7fVG1rgLVAXVyzOLpw+PesHA/r13rh1Szkzc6Cpke9c8JCGofnca0ohY8hVetmGV3RmPgjA899sZf8+CVQAYOcH1XcwM897amkQN/XTMWyAvGzyGH373vd1Zub9NZ/snjJ35k0A0lf6fFnDi4rSz9VyJnm9GSt9K7MAdFn2dPmDx2tr/czMT732crjnhJHayIdnNjMzf3Ps29Xma0sFFRL69Ek7dOTIP5iZN+3awc9t+jtLKZmZefO2LeUZvXv3GF40PL2srCyzsLDwO0+swFugrtu87jwAnSbNnTn4QM2n77AJJ/y1NcvLyy8xnldOGTMmIsKoewt7VO/7sFILhU4xc/NXX3994Mnn19wPILuqqirD6/WmtZNJ0YYNG9KHFw1P73lt/16+19c/+vHBmld37H53xfTfzuobqepSgzvLpIwnxXMnz5px47wF84f3HXLdpQDS9+/fn9YWX3eu8Pl8is/nSwOQASAXQKbX61VTRnlOJFZXV3umTp3qAaBWVVV9L4/fM7MwHvdP7Uf9zSadyipw4cKFCxcuXLhw4cKFCxcuXLhw4eL/CP8BdszFOS8hddsAAAAASUVORK5CYII=":"data:image/png;base64,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";
+  const s=size||18;
+  return "<img src='"+src+"' style='width:"+s+"px;height:"+s+"px;object-fit:contain;display:block;' alt='save'>";
+}
+function isMusicSaved(musicUrl){
+  if(!user||!user.savedPosts||!musicUrl)return false;
+  return user.savedPosts.some(function(x){return x.id===musicUrl&&x.type==="music";});
+}
+function musicSavedIcon(musicUrl){ return isMusicSaved(musicUrl); }
+function toggleSaveMusic(musicName,musicUrl,btnEl){
+  if(!user){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບ":"Please login");return;}
+  if(!musicUrl)return;
+  if(!user.savedPosts)user.savedPosts=[];
+  const wasSaved=isMusicSaved(musicUrl);
+  if(wasSaved){
+    user.savedPosts=user.savedPosts.filter(function(x){return !(x.id===musicUrl&&x.type==="music");});
+    toast(_lang==="lo"?"ຍົກເລີກເຊັບແລ້ວ":"Removed from saved");
+  } else {
+    user.savedPosts.push({id:musicUrl,type:"music",at:Date.now(),musicName:musicName,musicUrl:musicUrl});
+    toast(_lang==="lo"?"🔖 ເຊັບເພງແລ້ວ":"🔖 Music saved");
+  }
+  const u=users.find(function(x){return x.id===user.id;});
+  if(u)u.savedPosts=[...user.savedPosts];
+  try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
+  if(user.id)saveToCloud("users",user.id,user);
+  if(btnEl)btnEl.innerHTML=bookmarkSvgSmall(isMusicSaved(musicUrl),16);
+}
+// ── ปุ่มเซฟ สไตล์เดียวกับปุ่มไลก์/แชร์ในกลุ่ม sidebar ของ Feed — เห็นเฉพาะบัญชีลูกค้าเท่านั้น (ไม่ใช่ร้านค้า/โหมดดูร้าน) ──
 function buildSaveSidebarBtn(itemId,itemType,itemData){
   if(!(user&&user.role==="c"&&!user.isShopViewer))return null;
   const sa=document.createElement("div"); sa.className="feed-action";
@@ -7224,6 +7272,8 @@ function buildUserProfile(uid){
                     rv.mediaUrl=result.mediaUrl;
                     rv.mediaType="video";
                     rv.voiceoverUrl=result.voiceoverUrl;
+                    rv.voiceoverMusicName=result.musicName||null;
+                    rv.voiceoverMusicUrl=result.musicUrl||null;
                     prevDiv.innerHTML="";
                     const v=document.createElement("video");v.src=rv.mediaUrl;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;
                     prevDiv.appendChild(v);
@@ -7268,7 +7318,8 @@ function buildUserProfile(uid){
   const savedRaw=isMe?(user.savedPosts||[]):[];
   const savedReviews=savedRaw.filter(function(s){return s.type==="review";}).map(function(s){return getReviews().find(function(rv){return rv.id===s.id;});}).filter(Boolean);
   const savedPostsArr=savedRaw.filter(function(s){return s.type==="shoppost";}).map(function(s){return getShopPosts().find(function(p){return p.id===s.id;});}).filter(Boolean);
-  const savedCombined=savedReviews.map(function(rv){return {type:"review",data:rv};}).concat(savedPostsArr.map(function(p){return {type:"shoppost",data:p};}));
+  const savedMusicArr=savedRaw.filter(function(s){return s.type==="music"&&s.musicUrl;});
+  const savedCombined=savedReviews.map(function(rv){return {type:"review",data:rv};}).concat(savedPostsArr.map(function(p){return {type:"shoppost",data:p};})).concat(savedMusicArr.map(function(m){return {type:"music",data:m};}));
   const custTabBar=el("div",{style:{display:"flex",background:"#fff",borderBottom:"1px solid #E8F5EE"}});
   function custTabBtn(key,label,count){
     const active=window._custProfileTab===key;
@@ -7285,6 +7336,21 @@ function buildUserProfile(uid){
     savedGrid.appendChild(el("div",{style:{gridColumn:"1/-1",textAlign:"center",color:"#6B8F75",padding:"20px",fontSize:".82rem"}},(_lang==="lo"?"ຍັງບໍ່ໄດ້ເຊັບຫຍັງໄວ້":"No saved items yet")));
   } else {
     savedCombined.forEach(function(sc,scIdx){
+      if(sc.type==="music"){
+        const md=sc.data;
+        const mcard=el("div",{style:{background:"#fff",borderRadius:"14px",overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.07)",cursor:"pointer"},
+          onclick:function(){showSavedMusicPlayer(md.musicName,md.musicUrl);}
+        });
+        const mBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",background:"linear-gradient(135deg,#1B6B3A,#0F5C2E)",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}});
+        mBox.appendChild(el("div",{style:{fontSize:"2.2rem"}},"🎵"));
+        mcard.appendChild(mBox);
+        const mInfo=el("div",{style:{padding:"8px"}});
+        mInfo.appendChild(el("div",{style:{fontSize:".75rem",fontWeight:"700",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},md.musicName||"🎵"));
+        mInfo.appendChild(el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginTop:"2px"}},_lang==="lo"?"ໄຟລ໌ສຽງ":"Audio track"));
+        mcard.appendChild(mInfo);
+        savedGrid.appendChild(mcard);
+        return;
+      }
       const isSPost=sc.type==="shoppost";
       const d=sc.data;
       const mUrl=isSPost?(d.mediaUrl||(d.imgs&&d.imgs[0])||null):d.mediaUrl;
@@ -8656,6 +8722,17 @@ function buildReviewDetailItemContent(itemType,itemData){
   return wrap;
 }
 
+// ── ป๊อบอัพเล่นเพลงที่เซฟไว้ (เสียงอย่างเดียว ไม่มีวิดีโอ) — เปิดจากแท็บ "เซฟไว้" ──
+function showSavedMusicPlayer(musicName,musicUrl){
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"24px",textAlign:"center",maxWidth:"340px"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontSize:"3rem",marginBottom:"10px"}},"🎵"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"14px"}},musicName||"🎵"));
+  const audioEl=document.createElement("audio");
+  audioEl.src=musicUrl;audioEl.controls=true;audioEl.autoplay=true;audioEl.style.cssText="width:100%;";
+  mod.appendChild(audioEl);
+  showOv(mod,null);
+}
 function showReviewDetail(itemType,itemData){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",overflow:"hidden",maxWidth:"420px"}});
   mod.appendChild(el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:function(){
@@ -11167,6 +11244,8 @@ function buildRiderDashboard(){
                   npost.mediaUrl=result.mediaUrl;
                   npost.mediaType="video";
                   npost.voiceoverUrl=result.voiceoverUrl;
+                  npost.voiceoverMusicName=result.musicName||null;
+                  npost.voiceoverMusicUrl=result.musicUrl||null;
                   mediaPreview.innerHTML="";
                   const v=document.createElement("video");v.src=npost.mediaUrl;v.style.cssText="width:100%;max-height:200px;object-fit:cover;";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;
                   mediaPreview.appendChild(v);

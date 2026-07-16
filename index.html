@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v548 -->
+<!-- LaoH Marketplace v550 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2783,7 +2783,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.4.8")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3342,7 +3342,7 @@ function buildFeedPage(){
       vid.controls=false;
       vid.style.cssText="width:100%;height:100%;object-fit:cover;cursor:pointer;";
       // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
-      const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
+      const voiceoverAudio=rv.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=rv.voiceoverUrl;a.preload="auto";a.style.display="none";document.body.appendChild(a);return a;})():null;
       vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
       // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว ──
       var vidPlaying=false;
@@ -3614,7 +3614,7 @@ function buildFeedPage(){
         vid.controls=false;
         vid.style.cssText="width:100%;height:100%;object-fit:contain;display:block;background:#000;cursor:pointer;";
         // ── ถ้ามีเสียงพากย์ทับ (voiceoverUrl) ให้เล่นไฟล์เสียงนี้ควบคู่กับวิดีโอที่ปิดเสียงต้นฉบับไว้เสมอ แทนการปลดเสียงวิดีโอปกติ ──
-        const voiceoverAudio=post.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=post.voiceoverUrl;a.preload="metadata";a.style.display="none";document.body.appendChild(a);return a;})():null;
+        const voiceoverAudio=post.voiceoverUrl?(function(){const a=document.createElement("audio");a.src=post.voiceoverUrl;a.preload="auto";a.style.display="none";document.body.appendChild(a);return a;})():null;
         vid._voiceoverAudioEl=voiceoverAudio; // ── เก็บอ้างอิงไว้ให้ปุ่มเสียงในแถบข้าง (นอก scope นี้) เรียกใช้ได้ ──
         // ── ใช้ตัวจดจำเสียงตัวเดียวกับ buildReviewCard เพื่อให้ทุกวิดีโอใน Feed (ทั้งโพสต์ร้านค้าและรีวิว) ใช้การตั้งค่าเดียวกันต่อเนื่องกัน ──
         var vidPlaying=false;
@@ -5294,7 +5294,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.4.8")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.0")
   );
 
   // Icon style helper
@@ -7343,8 +7343,27 @@ function buildUserProfile(uid){
           onclick:function(){showSavedMusicPlayer(md.musicName,md.musicUrl);}
         });
         const mBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",background:"linear-gradient(135deg,#1B6B3A,#0F5C2E)",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}});
-        mBox.appendChild(el("div",{style:{fontSize:"2.2rem"}},"🎵"));
+        mBox.appendChild(el("div",{style:{fontSize:"2.2rem",position:"relative",zIndex:"1",textShadow:"0 1px 4px rgba(0,0,0,.5)"}},"🎵"));
         mcard.appendChild(mBox);
+        // ── หารูปคัฟเวอร์เพลง (ถ้ามี) มาเป็นพื้นหลังหลังไอคอนโน้ตเพลง — ดึงมาครั้งเดียวแล้วจำไว้ใช้ซ้ำ ──
+        (function(){
+          function applyCover(coverUrl){
+            if(!coverUrl)return;
+            mBox.style.backgroundImage="url('"+coverUrl+"')";
+            mBox.style.backgroundSize="cover";
+            mBox.style.backgroundPosition="center";
+          }
+          if(window._bgMusicCoverCache&&window._bgMusicCoverCache[md.musicUrl]!==undefined){
+            applyCover(window._bgMusicCoverCache[md.musicUrl]);
+          } else if(db){
+            db.collection("bgMusic").where("url","==",md.musicUrl).limit(1).get().then(function(snap){
+              if(!window._bgMusicCoverCache)window._bgMusicCoverCache={};
+              const cover=(!snap.empty&&snap.docs[0].data().coverImg)?snap.docs[0].data().coverImg:null;
+              window._bgMusicCoverCache[md.musicUrl]=cover;
+              applyCover(cover);
+            }).catch(function(){});
+          }
+        })();
         const mInfo=el("div",{style:{padding:"8px"}});
         mInfo.appendChild(el("div",{style:{fontSize:".75rem",fontWeight:"700",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},md.musicName||"🎵"));
         mInfo.appendChild(el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginTop:"2px"}},_lang==="lo"?"ໄຟລ໌ສຽງ":"Audio track"));
@@ -8697,6 +8716,14 @@ function buildReviewDetailItemContent(itemType,itemData){
   hdrRow.appendChild(hdrAvatarBox);
   hdrRow.appendChild(el("span",{style:{fontWeight:"800",fontSize:".88rem",color:"#1A2B5F"}},userName));
   if(stars)hdrRow.appendChild(el("span",{style:{color:"#FFB800",fontSize:".8rem"}},"★".repeat(stars)));
+  if(itemData.voiceoverMusicName){
+    const musicRow2=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px"}});
+    const musicSaveBtn2=el("button",{style:{background:"none",border:"none",cursor:"pointer",padding:"0",flexShrink:"0"},title:_lang==="lo"?"ບັນທຶກເພງ":"Save music",onclick:function(e){e.stopPropagation();toggleSaveMusic(itemData.voiceoverMusicName,itemData.voiceoverMusicUrl,musicSaveBtn2,28);}});
+    musicSaveBtn2.innerHTML=bookmarkSvgSmall(isMusicSaved(itemData.voiceoverMusicUrl),28);
+    musicRow2.appendChild(musicSaveBtn2);
+    musicRow2.appendChild(el("div",{style:{fontSize:".76rem",color:"#1A2B5F",cursor:"pointer"},onclick:function(e){e.stopPropagation();showSavedMusicPlayer(itemData.voiceoverMusicName,itemData.voiceoverMusicUrl);}},"🎵 "+itemData.voiceoverMusicName));
+    infoBox.appendChild(musicRow2);
+  }
   infoBox.appendChild(hdrRow);
   if(caption)infoBox.appendChild(el("div",{style:{fontSize:".8rem",color:"#444",lineHeight:"1.5",marginBottom:"12px"}},caption));
 
@@ -8729,7 +8756,7 @@ function showSavedMusicPlayer(musicName,musicUrl){
   mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
   mod.appendChild(el("div",{style:{fontSize:"3rem",marginBottom:"10px"}},"🎵"));
   const nameRow=el("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",marginBottom:"14px"}});
-  const popupSaveBtn=el("button",{style:{background:"#E3F5E9",border:"none",borderRadius:"50%",width:"40px",height:"40px",cursor:"pointer",padding:"0",flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center"},title:_lang==="lo"?"ບັນທຶກເພງ":"Save music",onclick:function(e){e.stopPropagation();toggleSaveMusic(musicName,musicUrl,popupSaveBtn,28);}});
+  const popupSaveBtn=el("button",{style:{background:"#7BC896",border:"none",borderRadius:"50%",width:"40px",height:"40px",cursor:"pointer",padding:"0",flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center"},title:_lang==="lo"?"ບັນທຶກເພງ":"Save music",onclick:function(e){e.stopPropagation();toggleSaveMusic(musicName,musicUrl,popupSaveBtn,28);}});
   popupSaveBtn.innerHTML=bookmarkSvgSmall(isMusicSaved(musicUrl),28);
   nameRow.appendChild(popupSaveBtn);
   nameRow.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F"}},musicName||"🎵"));
@@ -17718,24 +17745,45 @@ function buildAdminTab(){
     fileInp.type="file";fileInp.accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac";
     fileInp.style.cssText="width:100%;font-size:.8rem;margin-bottom:10px;";
     uploadBox.appendChild(fileInp);
+    // ── รูปคัฟเวอร์เพลง (ไม่บังคับ) — จะไปแสดงเป็นพื้นหลังหลังไอคอนโน้ตเพลงตอนเซฟไว้ ──
+    uploadBox.appendChild(el("div",{style:{fontSize:".75rem",color:"#6B8F75",marginBottom:"4px"}},_lang==="lo"?"🖼 ຮູບຄັບເວີເພງ (ບໍ່ບັງຄັບ)":"🖼 Cover image (optional)"));
+    const coverInp=document.createElement("input");
+    coverInp.type="file";coverInp.accept="image/*";
+    coverInp.style.cssText="width:100%;font-size:.8rem;margin-bottom:10px;";
+    uploadBox.appendChild(coverInp);
     const uploadBtn=el("button",{style:{width:"100%",padding:"10px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit"},
       onclick:function(){
         const f=fileInp.files[0];
+        const coverF=coverInp.files[0];
         const trackName=(nameInp.value||"").trim();
         if(!trackName){toast(_lang==="lo"?"ກະລຸນາໃສ່ຊື່ເພງ":"Please enter a track name");return;}
         if(!f){toast(_lang==="lo"?"ກະລຸນາເລືອກໄຟລ໌ສຽງ":"Please select an audio file");return;}
+        uploadBtn.disabled=true;uploadBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...");
         const reader=new FileReader();
         reader.onload=function(e){
-          toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດ...":"Uploading...");
           uploadAudio(e.target.result,Date.now()+"_"+f.name).then(function(url){
-            const track={id:Date.now(),name:trackName,url:url,at:Date.now()};
-            if(db){db.collection("bgMusic").doc(String(track.id)).set(track).catch(function(){});}
-            toast(_lang==="lo"?"✅ ອັບໂຫຼດສຳເລັດ":"✅ Uploaded");
-            nameInp.value="";fileInp.value="";
-            drawTrackList();
-          }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");});
+            if(coverF){
+              const coverReader=new FileReader();
+              coverReader.onload=function(ce){
+                uploadFile(ce.target.result,"laoh/bgMusic/covers/"+Date.now()+"_"+coverF.name,coverF.type||"image/jpeg").then(function(coverUrl){
+                  saveTrack(url,coverUrl);
+                }).catch(function(){saveTrack(url,null);});
+              };
+              coverReader.readAsDataURL(coverF);
+            } else {
+              saveTrack(url,null);
+            }
+          }).catch(function(){toast("⚠ ອັບໂຫຼດບໍ່ສຳເລັດ");uploadBtn.disabled=false;uploadBtn.textContent="⬆️ "+(_lang==="lo"?"ອັບໂຫຼດເພງ":"Upload Track");});
         };
         reader.readAsDataURL(f);
+        function saveTrack(audioUrl,coverUrl){
+          const track={id:Date.now(),name:trackName,url:audioUrl,coverImg:coverUrl||null,at:Date.now()};
+          if(db){db.collection("bgMusic").doc(String(track.id)).set(track).catch(function(){});}
+          toast(_lang==="lo"?"✅ ອັບໂຫຼດສຳເລັດ":"✅ Uploaded");
+          nameInp.value="";fileInp.value="";coverInp.value="";
+          uploadBtn.disabled=false;uploadBtn.textContent="⬆️ "+(_lang==="lo"?"ອັບໂຫຼດເພງ":"Upload Track");
+          drawTrackList();
+        }
       }
     },"⬆️ "+(_lang==="lo"?"ອັບໂຫຼດເພງ":"Upload Track"));
     uploadBox.appendChild(uploadBtn);
@@ -17756,7 +17804,8 @@ function buildAdminTab(){
         snap.docs.forEach(function(d){
           const t=d.data();
           const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",background:"#fff",borderRadius:"12px",marginBottom:"8px",boxShadow:"0 1px 4px rgba(0,0,0,.06)"}});
-          row.appendChild(el("div",{style:{fontSize:"1.2rem",flexShrink:"0"}},"🎵"));
+          if(t.coverImg){row.appendChild(el("div",{style:{width:"36px",height:"36px",borderRadius:"8px",overflow:"hidden",flexShrink:"0"}},el("img",{src:t.coverImg,style:{width:"100%",height:"100%",objectFit:"cover"},alt:""})));}
+          else{row.appendChild(el("div",{style:{fontSize:"1.2rem",flexShrink:"0"}},"🎵"));}
           const info=el("div",{style:{flex:"1",minWidth:"0"}});
           info.appendChild(el("div",{style:{fontWeight:"700",fontSize:".83rem",color:"#1A2B5F",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},t.name));
           const audioEl=document.createElement("audio");audioEl.src=t.url;audioEl.controls=true;audioEl.style.cssText="width:100%;height:32px;margin-top:4px;";

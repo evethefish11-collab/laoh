@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v555 -->
+<!-- LaoH Marketplace v557 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2790,7 +2790,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5165,6 +5165,12 @@ function render(){
   const oldPMini=document.getElementById("product-mini-popup-widget"); if(oldPMini) oldPMini.remove();
   const _bnav=buildBottomNav();
   const page=el("div",{className:"page"+(_bnav?" page-bnav":"")});
+  // ── รีเซ็ตตำแหน่งเลื่อนจอกลับไปบนสุด เฉพาะตอนเพิ่งเข้าหน้าโปรไฟล์ร้านค้าใหม่ (หรือสลับไปดูร้านอื่น) — ไม่ให้ค้างตำแหน่งที่เลื่อนไว้จากหน้าก่อนหน้า ──
+  if(view==="shopProfile"&&(window._lastRenderedView!=="shopProfile"||window._lastRenderedShop!==fShop)){
+    setTimeout(function(){window.scrollTo(0,0);},0);
+  }
+  window._lastRenderedView=view;
+  window._lastRenderedShop=(view==="shopProfile")?fShop:null;
   if(view==="shop")page.appendChild(buildShop());
   else if(view==="shopProfile"&&fShop!==null)page.appendChild(buildShopProfile(fShop));
   else if(view==="live"){
@@ -5301,7 +5307,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.7")
   );
 
   // Icon style helper
@@ -7360,7 +7366,7 @@ function buildUserProfile(uid){
         const mBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",background:"linear-gradient(135deg,#1B6B3A,#0F5C2E)",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}});
         mBox.appendChild(el("div",{style:{fontSize:"2.2rem",position:"relative",zIndex:"1",textShadow:"0 1px 4px rgba(0,0,0,.5)"}},"🎵"));
         mcard.appendChild(mBox);
-        // ── หารูปคัฟเวอร์เพลง (ถ้ามี) มาเป็นพื้นหลังหลังไอคอนโน้ตเพลง — ดึงมาครั้งเดียวแล้วจำไว้ใช้ซ้ำ ──
+        // ── หารูปคัฟเวอร์เพลง (ถ้ามี) มาเป็นพื้นหลังหลังไอคอนโน้ตเพลง — ดึงข้อมูลใหม่ทุกครั้ง ไม่ใช้ระบบจดจำค้างไว้ เพื่อให้เห็นรูปคัฟเวอร์ที่เพิ่งเพิ่มทีหลังได้ทันที ──
         (function(){
           function applyCover(coverUrl){
             if(!coverUrl)return;
@@ -7368,13 +7374,9 @@ function buildUserProfile(uid){
             mBox.style.backgroundSize="cover";
             mBox.style.backgroundPosition="center";
           }
-          if(window._bgMusicCoverCache&&window._bgMusicCoverCache[md.musicUrl]!==undefined){
-            applyCover(window._bgMusicCoverCache[md.musicUrl]);
-          } else if(db){
+          if(db){
             db.collection("bgMusic").where("url","==",md.musicUrl).limit(1).get().then(function(snap){
-              if(!window._bgMusicCoverCache)window._bgMusicCoverCache={};
               const cover=(!snap.empty&&snap.docs[0].data().coverImg)?snap.docs[0].data().coverImg:null;
-              window._bgMusicCoverCache[md.musicUrl]=cover;
               applyCover(cover);
             }).catch(function(){});
           }
@@ -8771,7 +8773,7 @@ function showSavedMusicPlayer(musicName,musicUrl){
   const coverBox=el("div",{style:{width:"150px",height:"150px",margin:"0 auto 10px",borderRadius:"14px",background:"linear-gradient(135deg,#1B6B3A,#0F5C2E)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}});
   coverBox.appendChild(el("div",{style:{fontSize:"3rem",position:"relative",zIndex:"1",textShadow:"0 2px 6px rgba(0,0,0,.5)"}},"🎵"));
   mod.appendChild(coverBox);
-  // ── หารูปคัฟเวอร์ (ถ้ามี) มาเป็นพื้นหลังหลังไอคอน — ใช้ตัวจำที่เก็บไว้ร่วมกับแท็บเซฟ ──
+  // ── หารูปคัฟเวอร์ (ถ้ามี) มาเป็นพื้นหลังหลังไอคอน — ดึงข้อมูลใหม่ทุกครั้ง ไม่ใช้ระบบจดจำค้างไว้ ──
   (function(){
     function applyCover(coverUrl){
       if(!coverUrl)return;
@@ -8779,13 +8781,9 @@ function showSavedMusicPlayer(musicName,musicUrl){
       coverBox.style.backgroundSize="cover";
       coverBox.style.backgroundPosition="center";
     }
-    if(window._bgMusicCoverCache&&window._bgMusicCoverCache[musicUrl]!==undefined){
-      applyCover(window._bgMusicCoverCache[musicUrl]);
-    } else if(db){
+    if(db){
       db.collection("bgMusic").where("url","==",musicUrl).limit(1).get().then(function(snap){
-        if(!window._bgMusicCoverCache)window._bgMusicCoverCache={};
         const cover=(!snap.empty&&snap.docs[0].data().coverImg)?snap.docs[0].data().coverImg:null;
-        window._bgMusicCoverCache[musicUrl]=cover;
         applyCover(cover);
       }).catch(function(){});
     }

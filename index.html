@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v553 -->
+<!-- LaoH Marketplace v555 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1281,7 +1281,9 @@ function getShopNetTotal(o){
   const oDiscount=Number(o.discount)||0;
   const _sub=o.subtotal!=null?Number(o.subtotal):oTotal+oDiscount;
   const _discP=o.discProd!=null?Number(o.discProd):((o.coupon&&!o.shipCoupon)?oDiscount:0);
-  return (_sub-_discP)-getCancelledTotal(o);
+  // ── ถ้าคูปองที่ใช้เป็นของลาวเฮ็ดออกเอง ร้านค้าไม่ต้องถูกหักส่วนลดออกจากยอดขาย (ลาวเฮ็ดรับผิดชอบส่วนนี้เอง) — ร้านค้าออกคูปองเอง หรือไม่มีคูปอง ยังคงหักตามปกติ ──
+  const netBeforeCancel=(o.couponIssuer==="laoh")?_sub:(_sub-_discP);
+  return netBeforeCancel-getCancelledTotal(o);
 }
 // it = cart/order item ທີ່ມີ .id/.pid + .p/.dispPrice  |  returns string ຫຼື null
 function promoLabelForItem(itemId,itemPrice){
@@ -2028,10 +2030,15 @@ function getCommPct(sh, orderTimestamp){
 }
 
 // Calculate commission for a shop correctly across rate changes
+// ── ฐานคำนวณยอดขาย/คอมมิชชั่นของร้าน โดยคำนึงถึงว่าคูปองที่ใช้เป็นของลาวเฮ็ดหรือของร้านค้าเอง (ลาวเฮ็ดออก = ร้านได้ยอดเต็ม ไม่หักส่วนลด / ร้านออกเอง = หักส่วนลดสินค้าออกจากยอดตามปกติ) ──
+function shopRevenueBasis(o){
+  // ── ใช้ getShopNetTotal เป็นแหล่งข้อมูลหลักตัวเดียว (ตัวเดียวกับที่ 11 จุดทั่วเว็บใช้) เพื่อไม่ให้สูตรเพี้ยนออกจากกัน ──
+  return getShopNetTotal(o);
+}
 function calcShopCommission(sh, shopOrders){
   return shopOrders.filter(function(o){return o.status!=="ຍົກເລີກ";}).reduce(function(sum,o){
     const pct=getCommPct(sh,o.id); // o.id = timestamp
-    return sum+Math.round((o.subtotal||o.total||0)*pct/100);
+    return sum+Math.round(shopRevenueBasis(o)*pct/100);
   },0);
 }
 
@@ -2783,7 +2790,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5294,7 +5301,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.5")
   );
 
   // Icon style helper
@@ -9962,6 +9969,7 @@ function renderCo(){
               subtotal:sTotal,shipping:sFee,discount:sDisc,discProd:sDiscProd,
               coupon:idx===0&&cp&&cp.type!=="shipping"?cp.code:"",
               shipCoupon:idx===0&&cpShip2?cpShip2.code:(idx===0&&cp&&cp.type==="shipping"?cp.code:""),
+              couponIssuer:idx===0&&sDisc>0?((cp&&cp.issuer)||(cpShip2&&cpShip2.issuer)||"shop"):"",
               total:sTotal+sFee-sDisc,
               status:"ລໍຢືນຢັນ",
               at:new Date().toLocaleString("th-TH"),
@@ -14835,6 +14843,23 @@ function buildAdminTab(){
           w.appendChild(el("span",{style:{fontSize:".82rem",fontWeight:"600",color:"#e74c3c"}},"🔴 ໃຊ້ໄດ້ສະເພາະໃນ Live ເທົ່ານັ້ນ"));
           return w;
         })(),
+        // ── ผู้ออกคูปอง: ร้านค้า หรือ ลาวเฮ็ด — บังคับเลือก 1 อย่างเสมอ (ค่าเริ่มต้น = ร้านค้า) ──
+        el("label",{className:"lbl"},"🏷 ຜູ້ອອກໂຄ້ດ (ໃຜເປັນຄົນຮັບຜິດຊອບສ່ວນຫຼຸດ)"),
+        (()=>{
+          if(!nc.issuer)nc.issuer="shop";
+          const w=el("div",{style:{display:"flex",gap:"8px",marginBottom:"6px"}});
+          const shopBtn=el("button",{type:"button",style:{flex:"1",padding:"9px",borderRadius:"10px",border:"1.5px solid "+(nc.issuer==="shop"?"#1B6B3A":"#C8E6D4"),background:nc.issuer==="shop"?"#1B6B3A":"none",color:nc.issuer==="shop"?"#fff":"#1A2B5F",fontWeight:"700",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit"}},"🏪 "+(_lang==="lo"?"ຄູປອງຮ້ານຄ້າ":"Shop coupon"));
+          const laohBtn=el("button",{type:"button",style:{flex:"1",padding:"9px",borderRadius:"10px",border:"1.5px solid "+(nc.issuer==="laoh"?"#1B6B3A":"#C8E6D4"),background:nc.issuer==="laoh"?"#1B6B3A":"none",color:nc.issuer==="laoh"?"#fff":"#1A2B5F",fontWeight:"700",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit"}},"🌐 "+(_lang==="lo"?"ຄູປອງລາວເຮັດ":"LaoH coupon"));
+          shopBtn.onclick=function(){nc.issuer="shop";render();};
+          laohBtn.onclick=function(){nc.issuer="laoh";render();};
+          w.appendChild(shopBtn);w.appendChild(laohBtn);
+          return w;
+        })(),
+        el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"10px",lineHeight:"1.4"}},
+          nc.issuer==="laoh"
+            ?(_lang==="lo"?"ລາວເຮັດຮັບຜິດຊອບສ່ວນຫຼຸດເອງ — ຮ້ານຄ້າໄດ້ຍອດຂາຍເຕັມຈຳນວນ ຄິດ commission ຈາກຍອດເຕັມ":"LaoH covers the discount — shop gets full sale amount, commission is based on the full price")
+            :(_lang==="lo"?"ຮ້ານຄ້າຮັບຜິດຊອບສ່ວນຫຼຸດເອງ — ຍອດຂາຍຫັກສ່ວນຫຼຸດອອກກ່ອນຄິດ commission (ຄືເດີມ)":"Shop covers the discount — sale amount is reduced before commission is calculated (as before)")
+        ),
         el("label",{className:"lbl"},"🛍 ສິນຄ້າທີ່ຮ່ວມລາຍການ"),
         allChkWrap,
         pickerWrap,
@@ -14845,13 +14870,13 @@ function buildAdminTab(){
             const idx=coupons.findIndex(function(c){return c.id===nc._editId;});
             if(idx>=0){
               if(coupons.find(function(c){return c.code===nc.code&&c.id!==nc._editId;})){toast("ໂຄ້ດນີ້ມີຢູ່ແລ້ວ");return;}
-              coupons[idx]=Object.assign({},coupons[idx],{code:nc.code,pct:Number(nc.pct),limit:nc.limit?Number(nc.limit):null,perUserLimit:nc.perUserLimit?Number(nc.perUserLimit):null,allProds:nc.allProds,prodIds:nc.allProds?[]:nc.prodIds.slice(),type:nc.type||"product",liveOnly:!!nc.liveOnly,expiresAt:nc.expiresAt||null});
+              coupons[idx]=Object.assign({},coupons[idx],{code:nc.code,pct:Number(nc.pct),limit:nc.limit?Number(nc.limit):null,perUserLimit:nc.perUserLimit?Number(nc.perUserLimit):null,allProds:nc.allProds,prodIds:nc.allProds?[]:nc.prodIds.slice(),type:nc.type||"product",liveOnly:!!nc.liveOnly,expiresAt:nc.expiresAt||null,issuer:nc.issuer||"shop"});
               saveToCloud("coupons",coupons[idx].id,coupons[idx]);
               toast("✅ ແກ້ໄຂໂຄ້ດ "+nc.code+" ✓");
             }
           } else {
             if(coupons.find(function(c){return c.code===nc.code;})){toast("ໂຄ້ດນີ້ມີຢູ່ແລ້ວ");return;}
-            const cp={id:Date.now(),code:nc.code,pct:Number(nc.pct),limit:nc.limit?Number(nc.limit):null,perUserLimit:nc.perUserLimit?Number(nc.perUserLimit):null,used:0,active:true,allProds:nc.allProds,prodIds:nc.allProds?[]:nc.prodIds.slice(),type:nc.type||"product",liveOnly:!!nc.liveOnly,expiresAt:nc.expiresAt||null};
+            const cp={id:Date.now(),code:nc.code,pct:Number(nc.pct),limit:nc.limit?Number(nc.limit):null,perUserLimit:nc.perUserLimit?Number(nc.perUserLimit):null,used:0,active:true,allProds:nc.allProds,prodIds:nc.allProds?[]:nc.prodIds.slice(),type:nc.type||"product",liveOnly:!!nc.liveOnly,expiresAt:nc.expiresAt||null,issuer:nc.issuer||"shop"};
             coupons.push(cp);saveToCloud("coupons",cp.id,cp);toast("ເພີ່ມໂຄ້ດ "+cp.code+" ✓");
           }
           window._ncp=null;render();
@@ -15957,7 +15982,7 @@ function buildAdminTab(){
       el("div",{className:"acard"},
         el("div",{style:{fontWeight:"700",marginBottom:"10px"}},"ຮ້ານຄ້າທັງໝົດ ("+shops.length+")"),
         ...shops.map(function(sh,i){
-          const shRevenue=orders.filter(function(o){return o.status!=="ຍົກເລີກ"&&o.shopId===sh.id;}).reduce(function(s,o){return s+o.total;},0);
+          const shRevenue=orders.filter(function(o){return o.status!=="ຍົກເລີກ"&&o.shopId===sh.id;}).reduce(function(s,o){return s+shopRevenueBasis(o);},0);
           const commission=Math.round(shRevenue*(sh.commission||10)/100);
           return el("div",{style:{background:"#F0F7F2",borderRadius:"12px",padding:"12px",marginBottom:"10px"}},
             el("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}},
@@ -17275,7 +17300,7 @@ function buildAdminTab(){
 
     // ── สลับ sub-tab ──────────────────────────────────────────────
     const subTabRow=el("div",{className:"tabs",style:{marginBottom:"12px"}});
-    [["products","🛍 ສິນຄ້າ"],["shipping","🚚 ຂົນສົ່ງ"],["reviews","📸 ຮີວິວ"]].forEach(function(t){
+    [["products","🛍 ສິນຄ້າ"],["shipping","🚚 ຂົນສົ່ງ"],["reviews","📸 ຮີວິວ"],["coupons","🏷 ຄູປອງ"]].forEach(function(t){
       subTabRow.appendChild(el("button",{type:"button",style:{flex:"1",padding:"9px",border:"none",background:acct.subTab===t[0]?"#1A2B5F":"#fff",color:acct.subTab===t[0]?"#fff":"#1A2B5F",fontSize:".78rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){acct.subTab=t[0];render();}},t[1]));
     });
     section.appendChild(subTabRow);
@@ -17502,6 +17527,35 @@ function buildAdminTab(){
       XLSX.writeFile(wb,fname);
       toast("✅ ດາວໂຫລດ Excel ສຳເລັດ");
     }},"📊 ດາວໂຫລດ Excel (3 ບັນຊີ)"));
+
+    // ════════════════════════════════════════════════════════════
+    // ── COUPON SUB-ACCOUNT (ตัวเลือกใหม่) ──────────────────────
+    // ════════════════════════════════════════════════════════════
+    if(acct.subTab==="coupons"){
+      const couponOrders=orders.filter(function(o){return inDateRange(o.id)&&o.couponIssuer==="laoh"&&(o.discount||0)>0;}).sort(function(a,b){return b.id-a.id;});
+      const couponTotal=couponOrders.reduce(function(s,o){return s+(o.discount||0);},0);
+
+      section.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",color:"#C0392B",marginBottom:"8px"}},"⬇️ ຂາອອກ — ຄູປອງທີ່ລາວເຮັດຮັບຜິດຊອບ ("+couponOrders.length+")"));
+      const cpnCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
+      cpnCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#C0392B",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #FDECEA"}},
+        el("span",null,"ລວມສ່ວນຫຼຸດທີ່ລາວເຮັດຈ່າຍແທນ"),el("span",null,"-₭"+fmt(couponTotal))));
+      cpnCard.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"10px",lineHeight:"1.4"}},
+        _lang==="lo"?"ອໍເດີເຫຼົ່ານີ້ໃຊ້ຄູປອງທີ່ລາວເຮັດອອກເອງ — ຮ້ານຄ້າໄດ້ຮັບຍອດຂາຍເຕັມຈຳນວນແລ້ວ ສ່ວນຫຼຸດນີ້ເປັນຄ່າໃຊ້ຈ່າຍຂອງລາວເຮັດ":"These orders used a LaoH-issued coupon — the shop already received the full sale amount; this discount is LaoH's own expense"
+      ));
+      if(couponOrders.length===0){
+        cpnCard.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີການໃຊ້ຄູປອງລາວເຮັດໃນຊ່ວງວັນທີນີ້"));
+      } else {
+        couponOrders.slice(0,200).forEach(function(o){
+          const row=el("div",{style:{display:"flex",alignItems:"center",gap:"6px",padding:"7px 4px",borderBottom:"1px solid #f0f0f0",flexWrap:"wrap"}});
+          const info=el("div",{style:{flex:"1",minWidth:"0"}});
+          info.appendChild(el("div",{style:{fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},"#"+String(o.id).slice(-6)+(o.shopName?" · "+o.shopName:"")));
+          info.appendChild(el("div",{style:{fontSize:".65rem",color:"#888"}},(o.at||"")+" · 🏷 "+(o.coupon||o.shipCoupon||"")+" · -₭"+fmt(o.discount||0)));
+          row.appendChild(info);
+          cpnCard.appendChild(row);
+        });
+      }
+      section.appendChild(cpnCard);
+    }
 
     return section;
   }
@@ -18088,6 +18142,7 @@ function buildAdminTab(){
           items:sitems.map(function(i){return {n:i.name,c:i.c||"",s:i.s||"",q:i.q,p:i.p,cost:i.cost||0,preorder:i.preorder||false};}),
           subtotal:sTotal,shipping:0,discount:sDisc,discProd:sDisc,
           coupon:idx===0&&matchedCp?matchedCp.code:"",
+          couponIssuer:idx===0&&sDisc>0?((matchedCp&&matchedCp.issuer)||"shop"):"",
           total:sTotal-sDisc,
           status:"ລໍຢືນຢັນ",
           at:new Date().toLocaleString("th-TH"),

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v567 -->
+<!-- LaoH Marketplace v568 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1287,6 +1287,12 @@ function openShopModalSection(buildFn,title){
   window._activeShopModalRefresh=refresh;
   window._activeShopModalRestore=restore;
   showOv(mod,closeModalForGood);
+}
+// ── ป๊อบอัพแบบพิเศษที่ยอมให้เนื้อหาด้านในยื่นออกไปนอกกรอบการ์ดได้จริง (สำหรับรูปภาพสินค้าแบบ peek carousel) — ระบบป๊อบอัพปกติ (.ov class) มี overflow-y:auto ที่บังคับตัดขอบแนวนอนไปด้วยเสมอ (ข้อจำกัดของ CSS) จึงต้องแยกออกมาเป็นของตัวเอง ไม่กระทบป๊อบอัพจุดอื่นในเว็บเลย ──
+function showFullBleedOv(content,onbg=closeOv){
+  closeOv();
+  const ov=el("div",{id:"ov",onclick:e=>{if(e.target.id==="ov")onbg();},style:{position:"fixed",inset:"0",background:"rgba(18,10,28,.55)",zIndex:"200",display:"flex",alignItems:"center",justifyContent:"center",padding:"14px",overflow:"visible"}},content);
+  document.body.appendChild(ov);
 }
 function showOv(content,onbg=closeOv){
   closeOv();
@@ -2832,7 +2838,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.6.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.6.8")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5350,7 +5356,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.6.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.6.8")
   );
 
   // Icon style helper
@@ -9068,7 +9074,7 @@ function showProduct(p){
   const draw=()=>{
     const qN=selColor&&selSize?gQ(selColor,selSize):null;
     const dp=promo?promo.price:p.price;
-    showOv(el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",display:"flex",flexDirection:"column",overflow:"hidden"}},
+    showFullBleedOv(el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",display:"flex",flexDirection:"column",overflow:"visible"}},
       el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"),
 
       (function(){
@@ -9076,9 +9082,12 @@ function showProduct(p){
         const colorImg=(selColor&&p.colorImgs&&p.colorImgs[selColor]&&isUrl(p.colorImgs[selColor]))?p.colorImgs[selColor]:null;
         const imgs=colorImg?[colorImg]:((p.imgs&&p.imgs.length>0)?p.imgs.filter(function(u){return isUrl(u);}):(isUrl(p.img)?[p.img]:[]));
         let curIdx=0;
-        const wrap=el("div",{style:{position:"relative",aspectRatio:"1",borderRadius:"0",background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",width:"100%",flexShrink:"0",overflow:"hidden"}});
+        // ── imgArea = พื้นที่ที่มองเห็นได้จริง (เท่ากับความกว้างการ์ด) ปุ่ม/badge ทั้งหมดอิงตำแหน่งจากตัวนี้ — wrap = แทร็กภาพจริงที่กว้าง 2 เท่า ซ้อนอยู่ข้างในแบบกึ่งกลาง ──
+        const imgArea=el("div",{style:{position:"relative",aspectRatio:"2",overflow:"visible",flexShrink:"0"}});
+        const wrap=el("div",{style:{position:"absolute",top:"0",left:"50%",transform:"translateX(-50%)",width:"200%",height:"100%",background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",overflow:"hidden"}});
+        imgArea.appendChild(wrap);
         // ── ตัวติดตามแทร็กรูปภาพแบบเห็นขอบรูปก่อนหน้า/ถัดไปโผล่ (peek carousel) ──
-        const PEEK_SLIDE_PCT=0.82;
+        const PEEK_SLIDE_PCT=0.5;
         const PEEK_GAP_PCT=0.03;
         let track=null,slideEls=[];
         if(imgs.length>0){
@@ -9124,22 +9133,22 @@ function showProduct(p){
           slideEls.forEach(function(slide,i){slide.firstChild.style.opacity=i===curIdx?"1":".45";});
           if(dots){dots.childNodes.forEach(function(d,i){d.style.background=i===curIdx?"#fff":"rgba(255,255,255,.5)";});}
         }
-        if(dots)wrap.appendChild(dots);
+        if(dots)imgArea.appendChild(dots);
         setTimeout(function(){layoutSlides();applyTransform(basePos(0),false);},0);
         // ── ข้อความสรุปสต๊อก มุมซ้ายล่างของรูป ──
         (function(){
           const stxt=buildStockSummaryText(p);
-          if(stxt)wrap.appendChild(el("div",{style:{position:"absolute",bottom:"8px",left:"8px",background:"rgba(0,0,0,.2)",color:"#fff",fontSize:".65rem",fontWeight:"600",padding:"4px 9px",borderRadius:"20px",maxWidth:"70%",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",zIndex:"4"}},stxt));
+          if(stxt)imgArea.appendChild(el("div",{style:{position:"absolute",bottom:"8px",left:"8px",background:"rgba(0,0,0,.2)",color:"#fff",fontSize:".65rem",fontWeight:"600",padding:"4px 9px",borderRadius:"20px",maxWidth:"70%",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",zIndex:"4"}},stxt));
         })();
         if(imgs.length>0){
-          wrap.style.cursor="zoom-in";
+          imgArea.style.cursor="zoom-in";
         }
         // share button
         const shareBtn=el("button",{
           style:{position:"absolute",bottom:"10px",right:"10px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)",zIndex:"5"},
           onclick:e=>{e.stopPropagation();const shareUrl=location.origin+location.pathname+"?p="+p.id;if(navigator.share)navigator.share({title:p.name,text:"₭"+fmt(dp),url:shareUrl});else{try{navigator.clipboard.writeText(shareUrl);}catch(e2){}toast("ສຳເນົາລິງຂ ✓");}}
         },el("img",{src:"data:image/png;base64,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",style:{width:"18px",height:"18px",objectFit:"contain",verticalAlign:"middle"}}));
-        wrap.appendChild(shareBtn);
+        imgArea.appendChild(shareBtn);
         // ── ปุ่ม Copy Link (กดได้ URL ทันที ไม่ผ่าน share sheet — แก้ iOS/macOS issue) ──
         const copyLinkBtn=el("button",{
           style:{position:"absolute",bottom:"10px",right:"52px",background:"rgba(0,0,0,.55)",border:"none",borderRadius:"20px",padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px",color:"#fff",fontSize:".65rem",fontWeight:"700",fontFamily:"inherit",zIndex:"5"},
@@ -9157,21 +9166,21 @@ function showProduct(p){
             doCopy(shareUrl2);
           }
         },"🔗 "+(_lang==="lo"?"ລິ້ງ":"Link"));
-        if(!(user&&user.role==="c"&&!user.isShopViewer))wrap.appendChild(copyLinkBtn);
+        if(!(user&&user.role==="c"&&!user.isShopViewer))imgArea.appendChild(copyLinkBtn);
         // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) — วงกลมไอคอนอย่างเดียว เหมือนปุ่มแชร์ ──
         if(user&&user.role==="c"&&!user.isShopViewer){
           const sendFriendBtn=el("button",{
             style:{position:"absolute",bottom:"10px",right:"52px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)",fontSize:"1.1rem",zIndex:"5"},
             onclick:function(e){e.stopPropagation();openSendToFriendPicker("product",p.id);}
           },"📨");
-          wrap.appendChild(sendFriendBtn);
+          imgArea.appendChild(sendFriendBtn);
         }
         if(imgs.length>1){
           const arrowStyle="position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;z-index:5;line-height:1;";
           const prevArrow=el("button",{style:arrowStyle+"left:10px;",onclick:function(e){e.stopPropagation();if(curIdx>0)goTo(curIdx-1);}},"\u2039");
           const nextArrow=el("button",{style:arrowStyle+"right:10px;",onclick:function(e){e.stopPropagation();if(curIdx<imgs.length-1)goTo(curIdx+1);}},"\u203a");
-          wrap.appendChild(prevArrow);
-          wrap.appendChild(nextArrow);
+          imgArea.appendChild(prevArrow);
+          imgArea.appendChild(nextArrow);
         }
         // ── ลากนิ้วให้แทร็กเลื่อนตามแบบเรียลไทม์ แล้วปล่อยแล้วสแนปไปรูปที่ใกล้ที่สุด ──
         if(imgs.length>0&&track){
@@ -9219,10 +9228,10 @@ function showProduct(p){
           if(psh2&&psh2.isLao){
             const fb=document.createElement("div");
             fb.style.cssText="position:absolute;top:8px;right:8px;font-size:.95rem;background:rgba(255,255,255,.92);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;z-index:6;box-shadow:0 1px 4px rgba(0,0,0,.2);";
-            fb.textContent="🇱🇦";wrap.appendChild(fb);
+            fb.textContent="🇱🇦";imgArea.appendChild(fb);
           }
         })();
-        return wrap;
+        return imgArea;
       })(),
       el("div",{style:{padding:"20px 16px",overflowY:"auto",flex:"1",minHeight:"0","-webkit-overflow-scrolling":"touch"}},
       // โลโก้ร้านหน้าชื่อสินค้า

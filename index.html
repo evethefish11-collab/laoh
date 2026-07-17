@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v557 -->
+<!-- LaoH Marketplace v564 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -230,6 +230,7 @@ input:focus,select:focus,textarea:focus{
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js" crossorigin="anonymous"></script>
 <!-- Facebook SDK -->
 <div id="fb-root"></div>
 <script async defer crossorigin="anonymous"
@@ -396,6 +397,47 @@ try{
   db=firebase.firestore();
   storage=firebase.storage();
 }catch(e){console.warn("Firebase init failed:",e);}
+
+// ── PUSH NOTIFICATIONS (Firebase Cloud Messaging) ───────────────────
+// ── ต้องใส่ VAPID Key จริงจาก Firebase Console > Project Settings > Cloud Messaging > Web Push certificates ก่อนถึงจะใช้งานได้จริง ──
+const FCM_VAPID_KEY="ໃສ່ VAPID KEY ຂອງທ່ານທີ່ນີ້"; // TODO: แทนที่ด้วย VAPID Key จริงจาก Firebase Console
+let messaging=null;
+try{ if(firebase.messaging&&firebase.messaging.isSupported&&firebase.messaging.isSupported()){ messaging=firebase.messaging(); } }catch(e){console.warn("FCM not supported:",e);}
+
+// ── ขอสิทธิ์แจ้งเตือน + เก็บโทเค็นอุปกรณ์ไว้กับบัญชีผู้ใช้ ──
+function requestPushPermission(){
+  if(!messaging){toast(_lang==="lo"?"⚠️ ອຸປະກອນນີ້ບໍ່ຮອງຮັບການແຈ້ງເຕືອນ":"⚠️ Push notifications not supported on this device");return;}
+  if(!user||!user.id){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ":"Please log in first");return;}
+  if(FCM_VAPID_KEY.indexOf("ໃສ່")===0){console.warn("FCM_VAPID_KEY ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ — ໄປທີ່ Firebase Console ເພື່ອສ້າງ VAPID Key ກ່ອນ");toast("⚠️ ຍັງບໍ່ໄດ້ຕັ້ງຄ່າລະບົບແຈ້ງເຕືອນ (ຕິດຕໍ່ຜູ້ພັດທະນາ)");return;}
+  if(!("Notification" in window)){toast(_lang==="lo"?"⚠️ ອຸປະກອນນີ້ບໍ່ຮອງຮັບການແຈ້ງເຕືອນ":"⚠️ Notifications not supported on this device");return;}
+  Notification.requestPermission().then(function(permission){
+    if(permission!=="granted"){toast(_lang==="lo"?"❌ ບໍ່ອະນຸຍາດການແຈ້ງເຕືອນ":"❌ Notification permission denied");return;}
+    messaging.getToken({vapidKey:FCM_VAPID_KEY}).then(function(token){
+      if(!token)return;
+      // ── เก็บโทเค็นไว้ในเอกสารผู้ใช้ (เก็บเป็น array เพราะผู้ใช้อาจล็อกอินหลายอุปกรณ์) ──
+      const u=users.find(function(x){return x.id===user.id;});
+      const existingTokens=(u&&u.fcmTokens)||[];
+      if(existingTokens.indexOf(token)===-1){
+        const newTokens=existingTokens.concat([token]);
+        if(u)u.fcmTokens=newTokens;
+        user.fcmTokens=newTokens;
+        if(db)db.collection(user.role==="shop"?"shops":(user.role==="admin"?"settings":"users")).doc(user.role==="admin"?"main":String(user.id)).update({fcmTokens:newTokens}).catch(function(){
+          // ── ถ้าเอกสารยังไม่มี fcmTokens field มาก่อน ให้ set แทน update (update ล้มเหลวถ้า field ไม่เคยมี ในบาง edge case) ──
+          if(db)db.collection(user.role==="shop"?"shops":(user.role==="admin"?"settings":"users")).doc(user.role==="admin"?"main":String(user.id)).set({fcmTokens:newTokens},{merge:true}).catch(function(){});
+        });
+      }
+      toast("✅ "+(_lang==="lo"?"ເປີດການແຈ້ງເຕືອນສຳເລັດ":"Push notifications enabled"));
+    }).catch(function(err){console.error("FCM getToken error:",err);toast("⚠️ "+(err&&err.message?err.message:"Error enabling notifications"));});
+  });
+  // ── รับข้อความตอนแอปเปิดอยู่ (foreground) — ต้องจัดการเองเพราะ browser จะไม่โชว์ notification popup ให้อัตโนมัติตอนแอปเปิดอยู่ ──
+  if(messaging.onMessage){
+    messaging.onMessage(function(payload){
+      const title=(payload.notification&&payload.notification.title)||"LaoH";
+      const body=(payload.notification&&payload.notification.body)||"";
+      toast("🔔 "+title+(body?": "+body:""));
+    });
+  }
+}
 
 // ── SAVE INDICATOR ───────────────────────────────────────────
 var _pendingSaves=0;
@@ -2790,7 +2832,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.5.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.6.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5172,6 +5214,7 @@ function render(){
   window._lastRenderedView=view;
   window._lastRenderedShop=(view==="shopProfile")?fShop:null;
   if(view==="shop")page.appendChild(buildShop());
+  else if(view==="privacyPolicy")page.appendChild(buildPrivacyPolicyPage());
   else if(view==="shopProfile"&&fShop!==null)page.appendChild(buildShopProfile(fShop));
   else if(view==="live"){
     if(!(user&&user.role==="admin")){view="feed";page.appendChild(buildFeedPage());}
@@ -5307,7 +5350,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.5.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.6.4")
   );
 
   // Icon style helper
@@ -6512,6 +6555,12 @@ function buildUserProfile(uid){
       action:()=>{_lang=_lang==="lo"?"en":"lo";try{localStorage.setItem("laoh_lang",_lang);}catch(e){}render();}
     },
     {
+      icon:"🔔",
+      label:_lang==="lo"?"ການແຈ້ງເຕືອນ":(_lang==="zh"?"推送通知":"Push Notifications"),
+      value:(("Notification" in window)&&Notification.permission==="granted")?(_lang==="lo"?"ເປີດແລ້ວ":"On"):"",
+      action:()=>{requestPushPermission();}
+    },
+    {
       icon:"👥",
       label:_lang==="lo"?"ຄວາມເປັນສ່ວນຕົວ ຜູ້ຕິດຕາມ":(_lang==="zh"?"关注者隐私":"Follower Privacy"),
       value:"",
@@ -7560,6 +7609,153 @@ function buildFeedEntryStrip(){
   return strip;
 }
 
+// ── ໜ້າ Privacy Policy ແບບເປັນເອກະລາດ ເຂົ້າເຖິງໄດ້ໂດຍບໍ່ຕ້ອງ login (ຈຳເປັນສຳລັບ App Store/Google Play) ──
+const PRIVACY_POLICY_CONTENT={
+  lo:{
+    title:"ນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ (Privacy Policy)",
+    updated:"ປັບປຸງລ່າສຸດ: 17 ກໍລະກົດ 2026",
+    notice:"⚠️ ໝາຍເຫດສຳຄັນ: ເອກະສານສະບັບນີ້ເປັນຮ່າງເບື້ອງຕົ້ນເພື່ອເປັນແນວທາງ ບໍ່ແມ່ນຄຳແນະນຳທາງກົດໝາຍ",
+    sections:[
+      ["1. ບົດນຳ","LaoH ລາວເຮັດ (\"ພວກເຮົາ\") ໃຫ້ຄວາມສຳຄັນກັບຄວາມເປັນສ່ວນຕົວຂອງຜູ້ໃຊ້ງານ (\"ທ່ານ\") ນະໂຍບາຍສະບັບນີ້ອະທິບາຍວ່າພວກເຮົາເກັບກຳ ນຳໃຊ້ ແລະ ປົກປ້ອງຂໍ້ມູນຂອງທ່ານແນວໃດ ການໃຊ້ງານບໍລິການຂອງພວກເຮົາຖືວ່າທ່ານຍອມຮັບເງື່ອນໄຂໃນນະໂຍບາຍສະບັບນີ້."],
+      ["2. ຂໍ້ມູນທີ່ພວກເຮົາເກັບກຳ","• ຊື່-ນາມສະກຸນ, ເບີໂທ/WhatsApp, ທີ່ຢູ່ຈັດສົ່ງ, ຊື່ຜູ້ໃຊ້ ແລະ ລະຫັດຜ່ານ (ເຂົ້າລະຫັດໄວ້)\n• ຮູບສະລິບການໂອນເງິນ, ຮູບ/ວິດີໂອ/ຂໍ້ຄວາມທີ່ໂພສ\n• ປະຫວັດການສັ່ງຊື້, ສິນຄ້າ/ເພງທີ່ບັນທຶກໄວ້, ການຕັ້ງຄ່າພາສາ\n• ຂໍ້ມູນຈາກຜູ້ໃຫ້ບໍລິການຊຳລະເງິນ/ຂົນສົ່ງ"],
+      ["3. ຈຸດປະສົງໃນການນຳໃຊ້ຂໍ້ມູນ","ດຳເນີນການສັ່ງຊື້ ແລະ ຈັດສົ່ງ, ສົ່ງແຈ້ງເຕືອນຜ່ານ WhatsApp (ສະເພາະທີ່ຍິນຍອມ), ສະແດງຮີວິວ/ເນື້ອຫາທີ່ໂພສຕໍ່ສາທາລະນະ, ປັບປຸງບໍລິການ, ປ້ອງກັນການສໍ້ໂກງ."],
+      ["4. ເນື້ອຫາທີ່ຜູ້ໃຊ້ໂພສ ແລະ ຄວາມຮັບຜິດຊອບດ້ານລິຂະສິດ","ເມື່ອທ່ານໂພສຮູບ ວິດີໂອ ສຽງເພງປະກອບ ຫຼື ຂໍ້ຄວາມ ທ່ານຮັບຮອງວ່າເປັນເຈົ້າຂອງ ຫຼື ໄດ້ຮັບອະນຸຍາດຢ່າງຖືກຕ້ອງ.\n\n**ທ່ານເປັນຜູ້ຮັບຜິດຊອບແຕ່ພຽງຜູ້ດຽວສຳລັບເນື້ອຫາທີ່ໂພສ** ຫາກລະເມີດລິຂະສິດ/ຊັບສິນທາງປັນຍາຂອງບຸກຄົນອື່ນ: ຄວາມຮັບຜິດຊອບທາງກົດໝາຍທັງໝົດເປັນຂອງທ່ານແຕ່ພຽງຜູ້ດຽວ LaoH ບໍ່ຮັບຜິດຊອບຕໍ່ຄວາມເສຍຫາຍທີ່ເກີດຂຶ້ນ ແລະ ສະຫງວນສິດລຶບເນື້ອຫາ/ລະງັບບັນຊີທີ່ລະເມີດຊ້ຳໂດຍບໍ່ຕ້ອງແຈ້ງລ່ວງໜ້າ.\n\nແຈ້ງລະເມີດລິຂະສິດ: laohmarketoffice@gmail.com"],
+      ["5. ການເປີດເຜີຍຂໍ້ມູນຕໍ່ບຸກຄົນທີ່ສາມ","ພວກເຮົາຈະບໍ່ຂາຍຂໍ້ມູນສ່ວນບຸກຄົນ ຍົກເວັ້ນ: ຜູ້ໃຫ້ບໍລິການຂົນສົ່ງ, ຜູ້ໃຫ້ບໍລິການທາງເຕັກນິກ (ຄລາວ), ຫຼື ເມື່ອກົດໝາຍກຳນົດ."],
+      ["6. ສິດຂອງຜູ້ໃຊ້","ຂໍເຂົ້າເຖິງ/ແກ້ໄຂ/ລຶບຂໍ້ມູນຂອງທ່ານ, ຍົກເລີກຮັບແຈ້ງເຕືອນໄດ້ຕະຫຼອດເວລາ — ຕິດຕໍ່ laohmarketoffice@gmail.com"],
+      ["7. ຄວາມປອດໄພຂອງຂໍ້ມູນ","ພວກເຮົານຳໃຊ້ມາດຕະການຮັກສາຄວາມປອດໄພທີ່ເໝາະສົມ ແຕ່ບໍ່ມີລະບົບໃດປອດໄພ 100%."],
+      ["8. ຂໍ້ມູນຂອງຜູ້ເຍົາໄວ","ບໍລິການອະນຸຍາດໃຫ້ຜູ້ໃຊ້ອາຍຸ 13 ປີຂຶ້ນໄປ ຫາກພົບຜູ້ເຍົາໄວໃຫ້ຂໍ້ມູນໂດຍບໍ່ໄດ້ຮັບຄວາມຍິນຍອມຜູ້ປົກຄອງ ກະລຸນາຕິດຕໍ່ພວກເຮົາ."],
+      ["9. ການປ່ຽນແປງນະໂຍບາຍ","ພວກເຮົາອາດປັບປຸງນະໂຍບາຍນີ້ເປັນຄັ້ງຄາວ ການປ່ຽນແປງມີຜົນທັນທີທີ່ເຜີຍແຜ່."],
+      ["10. ຕິດຕໍ່ພວກເຮົາ","ອີເມລ: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 2646"],
+    ]
+  },
+  en:{
+    title:"Privacy Policy",
+    updated:"Last updated: July 17, 2026",
+    notice:"⚠️ Important notice: This document is a preliminary draft, not legal advice.",
+    sections:[
+      ["1. Introduction","LaoH ລາວເຮັດ (\"we\") is committed to protecting the privacy of our users (\"you\"). This Policy explains how we collect, use, and protect your information. By using our services, you agree to this Policy."],
+      ["2. Information We Collect","• Name, phone/WhatsApp, delivery address, username & password (encrypted)\n• Payment slip images, photos/videos/text you post\n• Order history, saved products/music, language settings\n• Information from payment/delivery providers"],
+      ["3. How We Use Your Information","Process orders and delivery, send WhatsApp notifications (with consent only), display reviews/content publicly, improve services, prevent fraud."],
+      ["4. User-Posted Content and Copyright Responsibility","When you post photos, videos, background music, or text, you warrant that you own it or have proper authorization.\n\n**You are solely responsible for the content you post.** If your content infringes third-party copyright/IP: you alone bear full legal liability, LaoH bears no responsibility for resulting damages, and LaoH reserves the right to remove content and suspend repeat-infringer accounts without prior notice.\n\nReport infringement: laohmarketoffice@gmail.com"],
+      ["5. Disclosure to Third Parties","We do not sell your personal information, except to: delivery providers, technical/cloud service providers, or when required by law."],
+      ["6. Your Rights","Access, correct, or delete your data; opt out of notifications anytime — contact laohmarketoffice@gmail.com"],
+      ["7. Data Security","We use reasonable security measures, but no system is 100% secure."],
+      ["8. Children's Privacy","Our services are available to users aged 13+. If a minor under this age has provided data without parental consent, please contact us."],
+      ["9. Changes to This Policy","We may update this Policy periodically. Changes take effect immediately upon posting."],
+      ["10. Contact Us","Email: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 2646"],
+    ]
+  },
+  th:{
+    title:"นโยบายความเป็นส่วนตัว (Privacy Policy)",
+    updated:"ปรับปรุงล่าสุด: 17 กรกฎาคม 2026",
+    notice:"⚠️ หมายเหตุสำคัญ: เอกสารฉบับนี้เป็นร่างเบื้องต้นเพื่อเป็นแนวทาง ไม่ใช่คำแนะนำทางกฎหมาย",
+    sections:[
+      ["1. บทนำ","LaoH ລາວເຮັດ (\"เรา\") ให้ความสำคัญกับความเป็นส่วนตัวของผู้ใช้งาน (\"ท่าน\") นโยบายฉบับนี้อธิบายว่าเราเก็บรวบรวม ใช้ และคุ้มครองข้อมูลของท่านอย่างไร การใช้งานบริการของเราถือว่าท่านยอมรับเงื่อนไขในนโยบายฉบับนี้"],
+      ["2. ข้อมูลที่เราเก็บรวบรวม","• ชื่อ-นามสกุล, เบอร์โทร/WhatsApp, ที่อยู่จัดส่ง, ชื่อผู้ใช้และรหัสผ่าน (เข้ารหัสไว้)\n• รูปสลิปการโอนเงิน, รูป/วิดีโอ/ข้อความที่โพสต์\n• ประวัติการสั่งซื้อ, สินค้า/เพลงที่บันทึกไว้, การตั้งค่าภาษา\n• ข้อมูลจากผู้ให้บริการชำระเงิน/ขนส่ง"],
+      ["3. วัตถุประสงค์ในการใช้ข้อมูล","ดำเนินการสั่งซื้อและจัดส่ง, ส่งแจ้งเตือนผ่าน WhatsApp (เฉพาะที่ยินยอม), แสดงรีวิว/เนื้อหาที่โพสต์ต่อสาธารณะ, ปรับปรุงบริการ, ป้องกันการฉ้อโกง"],
+      ["4. เนื้อหาที่ผู้ใช้โพสต์ และความรับผิดชอบด้านลิขสิทธิ์","เมื่อท่านโพสต์รูปภาพ วิดีโอ เสียงเพลงประกอบ หรือข้อความ ท่านรับรองว่าเป็นเจ้าของ หรือได้รับอนุญาตอย่างถูกต้อง\n\n**ท่านเป็นผู้รับผิดชอบแต่เพียงผู้เดียวสำหรับเนื้อหาที่โพสต์** หากละเมิดลิขสิทธิ์/ทรัพย์สินทางปัญญาของบุคคลอื่น: ความรับผิดทางกฎหมายทั้งหมดเป็นของท่านแต่เพียงผู้เดียว LaoH ไม่รับผิดชอบต่อความเสียหายที่เกิดขึ้น และสงวนสิทธิ์ลบเนื้อหา/ระงับบัญชีที่ละเมิดซ้ำโดยไม่ต้องแจ้งล่วงหน้า\n\nแจ้งละเมิดลิขสิทธิ์: laohmarketoffice@gmail.com"],
+      ["5. การเปิดเผยข้อมูลต่อบุคคลที่สาม","เราจะไม่ขายข้อมูลส่วนบุคคล ยกเว้น: ผู้ให้บริการขนส่ง, ผู้ให้บริการทางเทคนิค (คลาวด์), หรือเมื่อกฎหมายกำหนด"],
+      ["6. สิทธิของผู้ใช้","ขอเข้าถึง/แก้ไข/ลบข้อมูลของท่าน, ยกเลิกรับการแจ้งเตือนได้ตลอดเวลา — ติดต่อ laohmarketoffice@gmail.com"],
+      ["7. ความปลอดภัยของข้อมูล","เราใช้มาตรการรักษาความปลอดภัยที่เหมาะสม แต่ไม่มีระบบใดปลอดภัย 100%"],
+      ["8. ข้อมูลของผู้เยาว์","บริการอนุญาตให้ผู้ใช้อายุ 13 ปีขึ้นไป หากพบผู้เยาว์ให้ข้อมูลโดยไม่ได้รับความยินยอมผู้ปกครอง กรุณาติดต่อเรา"],
+      ["9. การเปลี่ยนแปลงนโยบาย","เราอาจปรับปรุงนโยบายนี้เป็นครั้งคราว การเปลี่ยนแปลงมีผลทันทีที่เผยแพร่"],
+      ["10. ติดต่อเรา","อีเมล: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 2646"],
+    ]
+  },
+  zh:{
+    title:"隐私政策 (Privacy Policy)",
+    updated:"最后更新：2026年7月17日",
+    notice:"⚠️ 重要提示：本文件为初步草案，仅供参考，不构成法律建议",
+    sections:[
+      ["1. 简介","LaoH ລາວເຮັດ（\u201c我们\u201d）重视用户（\u201c您\u201d）的隐私。本政策说明我们如何收集、使用和保护您的信息。使用我们的服务即表示您同意本政策的条款。"],
+      ["2. 我们收集的信息","• 姓名、电话/WhatsApp、送货地址、用户名和密码（已加密）\n• 转账凭证图片、您发布的照片/视频/文字\n• 订单记录、已保存的商品/音乐、语言设置\n• 来自支付/物流服务商的信息"],
+      ["3. 信息使用目的","处理订单和配送、通过WhatsApp发送通知（仅限已同意的用户）、公开展示您发布的评论/内容、改善服务质量、防止欺诈行为"],
+      ["4. 用户发布内容及版权责任","当您发布照片、视频、背景音乐或文字内容时，您保证您拥有该内容的所有权，或已获得合法授权使用该内容。\n\n**您对自己发布的内容承担全部责任。** 如果您发布的内容侵犯第三方版权/知识产权：您将独自承担全部法律责任，LaoH对由此造成的损失不承担任何责任，并保留在不预先通知的情况下删除内容及暂停屡次侵权账户的权利。\n\n举报侵权：laohmarketoffice@gmail.com"],
+      ["5. 向第三方披露信息","我们不会出售您的个人信息，以下情况除外：物流服务商（仅限配送所需信息）、我们使用的技术服务商（如云存储系统）、或法律要求披露时"],
+      ["6. 您的权利","您有权访问、更正或删除您的个人信息，随时可取消接收通知 — 联系方式：laohmarketoffice@gmail.com"],
+      ["7. 数据安全","我们采取合理的安全措施保护您的信息，但没有任何系统能保证100%的安全性"],
+      ["8. 儿童隐私","我们的服务仅面向13岁及以上的用户。如果您发现未满13岁的未成年人在未经监护人同意的情况下向我们提供了个人信息，请联系我们。"],
+      ["9. 政策变更","我们可能会不时更新本政策，变更内容一经发布即刻生效"],
+      ["10. 联系我们","邮箱：laohmarketoffice@gmail.com\nWhatsApp：+856 20 5982 2646"],
+    ]
+  }
+};
+// ── ตัวสร้างเนื้อหา Privacy Policy ที่ใช้ร่วมกัน — รับ footerBtn/onLangChange เข้ามาเพื่อให้ทั้งหน้าเต็มและป๊อบอัพใช้เนื้อหาชุดเดียวกันเป๊ะๆ ไม่มีวันเพี้ยนออกจากกัน ──
+function buildPrivacyPolicyContent(footerBtn,onLangChange){
+  // ── ใช้ตัวแปรภาษาแยกต่างหากเฉพาะเอกสารนี้ (ไม่ใช่ _lang ของทั้งเว็บ) เพื่อไม่ให้กระทบภาษาที่ใช้อยู่ในหน้าอื่นของเว็บเลย ──
+  if(!window._ppLang)window._ppLang=(_lang==="lo"||_lang==="en")?_lang:"lo";
+  const LANG_CYCLE=["lo","en","th","zh"];
+  const LANG_LABEL={lo:"ລາວ",en:"EN",th:"ไทย",zh:"中文"};
+  const lg=PRIVACY_POLICY_CONTENT[window._ppLang]||PRIVACY_POLICY_CONTENT.lo;
+  const wrap=el("div",{style:{maxWidth:"720px",margin:"0 auto",padding:"4px 2px 10px"}});
+  const hdr=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}});
+  hdr.appendChild(el("div",{style:{fontWeight:"900",fontSize:"1.1rem",color:"#1A2B5F"}},"LaoH ລາວເຮັດ"));
+  const langBtn2=el("button",{style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"20px",padding:"5px 12px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",marginRight:"38px"},onclick:function(){
+    const curIdx=LANG_CYCLE.indexOf(window._ppLang);
+    window._ppLang=LANG_CYCLE[(curIdx+1)%LANG_CYCLE.length];
+    onLangChange();
+  }},"🌐 "+LANG_LABEL[window._ppLang]);
+  hdr.appendChild(langBtn2);
+  wrap.appendChild(hdr);
+  wrap.appendChild(el("h1",{style:{fontSize:"1.1rem",color:"#1A2B5F",marginTop:"14px",marginBottom:"4px"}},lg.title));
+  wrap.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",marginBottom:"14px"}},lg.updated));
+  lg.sections.forEach(function(sec){
+    wrap.appendChild(el("h2",{style:{fontSize:".95rem",color:"#1B6B3A",marginTop:"20px",marginBottom:"7px"}},sec[0]));
+    const p=el("div",{style:{fontSize:".8rem",color:"#333",lineHeight:"1.65",whiteSpace:"pre-line"}});
+    const parts=sec[1].split(/\*\*(.+?)\*\*/g);
+    parts.forEach(function(part,i){
+      if(i%2===1)p.appendChild(el("strong",null,part));
+      else p.appendChild(document.createTextNode(part));
+    });
+    wrap.appendChild(p);
+  });
+  if(footerBtn)wrap.appendChild(el("div",{style:{marginTop:"26px",textAlign:"center"}},footerBtn));
+  return wrap;
+}
+function buildPrivacyPolicyPage(){
+  const inner=function(){return buildPrivacyPolicyContent(
+    el("button",{className:"btn btn-p",onclick:function(){view="shop";render();}},_lang==="lo"?"← ກັບໄປໜ້າຫຼັກ":"← Back to Home"),
+    function(){render();}
+  );};
+  const outer=el("div",{style:{maxWidth:"760px",margin:"0 auto",padding:"20px 18px 60px",background:"#fff",minHeight:"100vh"}});
+  outer.appendChild(inner());
+  return outer;
+}
+// ── ป๊อบอัพอ่าน+ยอมรับ Privacy Policy — ใช้ตอนสมัครสมาชิก (ลูกค้า/ร้านค้า) ไม่เปลี่ยน view ทั้งหน้า จึงไม่ทำให้ข้อมูลที่กรอกไว้ในฟอร์มสมัครหายไป ──
+function showPrivacyPolicyModal(onAccept){
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{maxWidth:"480px",maxHeight:"82vh",overflowY:"auto",padding:"20px 18px"}});
+  // ── ไม่มีปุ่ม ✕ ตั้งใจ — บังคับให้เลื่อนอ่านจนสุดแล้วกดยอมรับเท่านั้นถึงจะปิดป๊อบอัพนี้ได้ ──
+  let hasScrolledToBottom=false;
+  mod.addEventListener("scroll",function(){
+    if(mod.scrollTop+mod.clientHeight>=mod.scrollHeight-20){
+      hasScrolledToBottom=true;
+      updateAcceptBtnState();
+    }
+  });
+  let acceptBtnRef=null;
+  function updateAcceptBtnState(){
+    if(!acceptBtnRef)return;
+    acceptBtnRef.disabled=!hasScrolledToBottom;
+    acceptBtnRef.style.opacity=hasScrolledToBottom?"1":".45";
+    acceptBtnRef.style.cursor=hasScrolledToBottom?"pointer":"not-allowed";
+  }
+  function draw(){
+    mod.innerHTML="";
+    const acceptBtn=el("button",{className:"btn btn-p",style:{width:"100%"},onclick:function(){
+      if(!hasScrolledToBottom)return;
+      closeOv();if(onAccept)onAccept();
+    }},"✅ "+(_lang==="lo"?"ຂ້ອຍໄດ້ອ່ານ ແລະ ຍອມຮັບເງື່ອນໄຂ":"I have read and accept"));
+    acceptBtnRef=acceptBtn;
+    updateAcceptBtnState();
+    mod.appendChild(buildPrivacyPolicyContent(acceptBtn,draw));
+    // ── ถ้าเนื้อหาสั้นจนไม่ต้องเลื่อนเลย (พอดีจอ) ให้ถือว่าอ่านครบแล้วตั้งแต่แรก ──
+    setTimeout(function(){
+      if(mod.scrollHeight<=mod.clientHeight+20){hasScrolledToBottom=true;updateAcceptBtnState();}
+    },50);
+  }
+  draw();
+  showOv(mod,null);
+}
 function buildShop(){
   const PM=getPromoMap();
   const activeShopIds=new Set(shops.filter(function(s){return s.active;}).map(function(s){return s.id;}));
@@ -8876,53 +9072,77 @@ function showProduct(p){
       el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"),
 
       (function(){
-        // ── ຖ້າເລືອກສີໄວ້ ແລະສີນັ້ນມີຮູບສະເພາະ (p.colorImgs) ໃຫ້ໃຊ້ຮູບນັ້ນແທນຮູບລວມ; ບໍ່ມີກໍ່ໃຊ້ຮູບລວມເດີມ ──
+        // ── ถ้าเลือกสีไว้ และสีนั้นมีรูปเฉพาะ (p.colorImgs) ให้ใช้รูปนั้นแทนรูปรวม; ไม่มีก็ใช้รูปรวมเดิม ──
         const colorImg=(selColor&&p.colorImgs&&p.colorImgs[selColor]&&isUrl(p.colorImgs[selColor]))?p.colorImgs[selColor]:null;
         const imgs=colorImg?[colorImg]:((p.imgs&&p.imgs.length>0)?p.imgs.filter(function(u){return isUrl(u);}):(isUrl(p.img)?[p.img]:[]));
         let curIdx=0;
-        const imgEl=imgs.length>0?el("img",{src:imgs[0],alt:p.name,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"}}):null;
-        const dots=imgs.length>1?el("div",{style:{position:"absolute",bottom:"8px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"4px"}},...imgs.map(function(_,i){
+        const wrap=el("div",{style:{position:"relative",aspectRatio:"1",borderRadius:"12px",background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",marginBottom:"12px",overflow:"hidden"}});
+        // ── ตัวติดตามแทร็กรูปภาพแบบเห็นขอบรูปก่อนหน้า/ถัดไปโผล่ (peek carousel) ──
+        const PEEK_SLIDE_PCT=0.82;
+        const PEEK_GAP_PCT=0.03;
+        let track=null,slideEls=[];
+        if(imgs.length>0){
+          track=el("div",{style:{position:"absolute",top:"0",left:"0",height:"100%",display:"flex",willChange:"transform"}});
+          imgs.forEach(function(src,i){
+            const slide=el("div",{style:{flexShrink:"0",height:"100%",boxSizing:"border-box"}},
+              el("img",{src:src,alt:p.name,draggable:"false",style:{width:"100%",height:"100%",objectFit:"cover",display:"block",borderRadius:"12px",opacity:i===0?"1":".45",transition:"opacity .25s"}})
+            );
+            slideEls.push(slide);
+            track.appendChild(slide);
+          });
+          wrap.appendChild(track);
+        } else {
+          wrap.appendChild(el("span",null,p.img||"🛍"));
+        }
+        function layoutSlides(){
+          if(!track||imgs.length===0)return;
+          const wW=wrap.offsetWidth||300;
+          const slideW=wW*PEEK_SLIDE_PCT;
+          const gap=wW*PEEK_GAP_PCT;
+          slideEls.forEach(function(slide){slide.style.width=slideW+"px";slide.style.marginRight=gap+"px";});
+        }
+        function basePos(idx){
+          const wW=wrap.offsetWidth||300;
+          const slideW=wW*PEEK_SLIDE_PCT;
+          const gap=wW*PEEK_GAP_PCT;
+          const step=slideW+gap;
+          const centerOffset=(wW-slideW)/2;
+          return -(idx*step)+centerOffset;
+        }
+        function applyTransform(px,animate){
+          if(!track)return;
+          track.style.transition=animate?"transform .3s cubic-bezier(.22,.61,.36,1)":"none";
+          track.style.transform="translateX("+px+"px)";
+        }
+        const dots=imgs.length>1?el("div",{style:{position:"absolute",bottom:"8px",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"4px",zIndex:"4"}},...imgs.map(function(_,i){
           const d=el("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:i===0?"#fff":"rgba(255,255,255,.5)",transition:"background .2s"}});
           return d;
         })):null;
         function goTo(idx){
-          curIdx=idx;
-          if(imgEl)imgEl.src=imgs[idx];
-          if(dots){dots.childNodes.forEach(function(d,i){d.style.background=i===idx?"#fff":"rgba(255,255,255,.5)";});}
+          curIdx=Math.max(0,Math.min(imgs.length-1,idx));
+          applyTransform(basePos(curIdx),true);
+          slideEls.forEach(function(slide,i){slide.firstChild.style.opacity=i===curIdx?"1":".45";});
+          if(dots){dots.childNodes.forEach(function(d,i){d.style.background=i===curIdx?"#fff":"rgba(255,255,255,.5)";});}
         }
-        const wrap=el("div",{style:{position:"relative",aspectRatio:"1",borderRadius:"12px",background:p.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",marginBottom:"12px",overflow:"hidden"}});
-        if(imgEl)wrap.appendChild(imgEl);
-        else wrap.appendChild(el("span",null,p.img||"🛍"));
         if(dots)wrap.appendChild(dots);
-        // ── ຂໍ້ຄວາມສະຫຼຸບສະຕັອກ ມຸມຊ້າຍລຸ່ມຂອງຮູບ ──
+        setTimeout(function(){layoutSlides();applyTransform(basePos(0),false);},0);
+        // ── ข้อความสรุปสต๊อก มุมซ้ายล่างของรูป ──
         (function(){
           const stxt=buildStockSummaryText(p);
-          if(stxt)wrap.appendChild(el("div",{style:{position:"absolute",bottom:"8px",left:"8px",background:"rgba(0,0,0,.2)",color:"#fff",fontSize:".65rem",fontWeight:"600",padding:"4px 9px",borderRadius:"20px",maxWidth:"70%",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},stxt));
+          if(stxt)wrap.appendChild(el("div",{style:{position:"absolute",bottom:"8px",left:"8px",background:"rgba(0,0,0,.2)",color:"#fff",fontSize:".65rem",fontWeight:"600",padding:"4px 9px",borderRadius:"20px",maxWidth:"70%",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",zIndex:"4"}},stxt));
         })();
-        // Click image to zoom
-        if(imgEl){
+        if(imgs.length>0){
           wrap.style.cursor="zoom-in";
-          wrap.onclick=function(e){
-            if(e.target&&e.target.tagName==="BUTTON")return;
-            const overlay=document.createElement("div");
-            overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;";
-            const zoomImg=document.createElement("img");
-            zoomImg.src=imgEl.src||"";
-            zoomImg.style.cssText="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px;touch-action:pinch-zoom;";
-            overlay.appendChild(zoomImg);
-            overlay.onclick=function(){document.body.removeChild(overlay);};
-            document.body.appendChild(overlay);
-          };
         }
         // share button
         const shareBtn=el("button",{
-          style:{position:"absolute",bottom:"10px",right:"10px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)"},
+          style:{position:"absolute",bottom:"10px",right:"10px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)",zIndex:"5"},
           onclick:e=>{e.stopPropagation();const shareUrl=location.origin+location.pathname+"?p="+p.id;if(navigator.share)navigator.share({title:p.name,text:"₭"+fmt(dp),url:shareUrl});else{try{navigator.clipboard.writeText(shareUrl);}catch(e2){}toast("ສຳເນົາລິງຂ ✓");}}
         },el("img",{src:"data:image/png;base64,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",style:{width:"18px",height:"18px",objectFit:"contain",verticalAlign:"middle"}}));
         wrap.appendChild(shareBtn);
-        // ── ປຸ່ມ Copy Link (ກົດໄດ້ URL ທັນທີ ບໍ່ຜ່ານ share sheet — ແກ້ iOS/macOS issue) ──
+        // ── ปุ่ม Copy Link (กดได้ URL ทันที ไม่ผ่าน share sheet — แก้ iOS/macOS issue) ──
         const copyLinkBtn=el("button",{
-          style:{position:"absolute",bottom:"10px",right:"52px",background:"rgba(0,0,0,.55)",border:"none",borderRadius:"20px",padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px",color:"#fff",fontSize:".65rem",fontWeight:"700",fontFamily:"inherit"},
+          style:{position:"absolute",bottom:"10px",right:"52px",background:"rgba(0,0,0,.55)",border:"none",borderRadius:"20px",padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:"4px",color:"#fff",fontSize:".65rem",fontWeight:"700",fontFamily:"inherit",zIndex:"5"},
           onclick:function(e){
             e.stopPropagation();
             const shareUrl2=location.origin+location.pathname+"?p="+p.id;
@@ -8941,24 +9161,58 @@ function showProduct(p){
         // ── ปุ่มส่งให้เพื่อน (เฉพาะบัญชีลูกค้า) — วงกลมไอคอนอย่างเดียว เหมือนปุ่มแชร์ ──
         if(user&&user.role==="c"&&!user.isShopViewer){
           const sendFriendBtn=el("button",{
-            style:{position:"absolute",bottom:"10px",right:"52px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)",fontSize:"1.1rem"},
+            style:{position:"absolute",bottom:"10px",right:"52px",background:"#1B6B3A",border:"none",borderRadius:"50%",width:"36px",height:"36px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.25)",fontSize:"1.1rem",zIndex:"5"},
             onclick:function(e){e.stopPropagation();openSendToFriendPicker("product",p.id);}
           },"📨");
           wrap.appendChild(sendFriendBtn);
         }
         if(imgs.length>1){
-          // Arrow buttons
           const arrowStyle="position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;z-index:5;line-height:1;";
           const prevArrow=el("button",{style:arrowStyle+"left:10px;",onclick:function(e){e.stopPropagation();if(curIdx>0)goTo(curIdx-1);}},"\u2039");
           const nextArrow=el("button",{style:arrowStyle+"right:10px;",onclick:function(e){e.stopPropagation();if(curIdx<imgs.length-1)goTo(curIdx+1);}},"\u203a");
           wrap.appendChild(prevArrow);
           wrap.appendChild(nextArrow);
-          let sx=0;
-          wrap.addEventListener("touchstart",function(e){sx=e.touches[0].clientX;},{passive:true});
-          wrap.addEventListener("touchend",function(e){
-            const dx=e.changedTouches[0].clientX-sx;
-            if(Math.abs(dx)>40){if(dx<0&&curIdx<imgs.length-1)goTo(curIdx+1);else if(dx>0&&curIdx>0)goTo(curIdx-1);}
+        }
+        // ── ลากนิ้วให้แทร็กเลื่อนตามแบบเรียลไทม์ แล้วปล่อยแล้วสแนปไปรูปที่ใกล้ที่สุด ──
+        if(imgs.length>0&&track){
+          let dragStartX=0,dragging=false,dragMoved=false,dragCurPx=0;
+          wrap.addEventListener("touchstart",function(e){
+            dragStartX=e.touches[0].clientX;dragging=true;dragMoved=false;
           },{passive:true});
+          wrap.addEventListener("touchmove",function(e){
+            if(!dragging)return;
+            const dx=e.touches[0].clientX-dragStartX;
+            if(Math.abs(dx)>6)dragMoved=true;
+            dragCurPx=dx;
+            applyTransform(basePos(curIdx)+dx,false);
+          },{passive:true});
+          wrap.addEventListener("touchend",function(e){
+            if(!dragging)return;
+            dragging=false;
+            const wW=wrap.offsetWidth||300;
+            const step=wW*PEEK_SLIDE_PCT+wW*PEEK_GAP_PCT;
+            if(dragMoved){
+              let target=curIdx;
+              if(dragCurPx<-step*0.22&&curIdx<imgs.length-1)target=curIdx+1;
+              else if(dragCurPx>step*0.22&&curIdx>0)target=curIdx-1;
+              goTo(target);
+            } else {
+              applyTransform(basePos(curIdx),true);
+            }
+            dragCurPx=0;
+          },{passive:true});
+          wrap.addEventListener("click",function(e){
+            if(e.target&&e.target.tagName==="BUTTON")return;
+            if(dragMoved){dragMoved=false;return;}
+            const overlay=document.createElement("div");
+            overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;";
+            const zoomImg=document.createElement("img");
+            zoomImg.src=imgs[curIdx]||"";
+            zoomImg.style.cssText="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px;touch-action:pinch-zoom;";
+            overlay.appendChild(zoomImg);
+            overlay.onclick=function(){document.body.removeChild(overlay);};
+            document.body.appendChild(overlay);
+          });
         }
         // ธงลาวมุมบนขวาของรูปใน modal
         (function(){const psh2=shops.find(function(s){return s.id===p.shopId;});
@@ -9442,20 +9696,19 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
       aErr?el("div",{style:{color:"#1B6B3A",fontSize:".77rem",marginBottom:"8px",padding:"7px 10px",background:"rgba(123,79,160,.08)",borderRadius:"8px"}},"⚠️ "+aErr):null,
       ...fields,
       aMode==="register"&&aType==="c"?(function(){
-        const consentWrap=el("div",{style:{background:"#F0F7F2",borderRadius:"10px",padding:"10px 12px",marginBottom:"10px",border:"1.5px solid #C8E6D4"}});
-        const cb=document.createElement("input");
-        cb.type="checkbox";cb.id="consent_cb";
-        cb.style.cssText="width:16px;height:16px;cursor:pointer;accent-color:#1B6B3A;flex-shrink:0;margin-top:2px;";
-        cb.checked=aF.consent||false;
-        cb.onchange=function(){aF.consent=this.checked;};
-        const lbl=el("label",{for:"consent_cb",style:{fontSize:".75rem",color:"#1A2B5F",cursor:"pointer",lineHeight:"1.4"}},
-          _lang==="lo"
-            ?"ຂ້ອຍຍິນຍອມໃຫ້ LaoH ລາວເຮັດ ສົ່ງຂໍ້ຄວາມຜ່ານ WhatsApp ເພື່ອແຈ້ງເລກພັສດຸ, ສະຖານະສິນຄ້າ ແລະ ໂປຣໂມຊັ່ນຕ່າງໆ. ຂ້ອຍຍິນຍອມໃຫ້ຂໍ້ຄວາມຄິດເຫັນຂອງຂ້ອຍເປັນສາທາລະນະ."
-            :"I agree to receive WhatsApp messages from LaoH for parcel tracking, order status updates and promotions. I also agree that my comments will be visible to the public."
-        );
-        const row=el("div",{style:{display:"flex",alignItems:"flex-start",gap:"8px"}});
-        row.appendChild(cb); row.appendChild(lbl);
-        consentWrap.appendChild(row);
+        const consentWrap=el("div",{style:{background:"#F0F7F2",borderRadius:"10px",padding:"10px 12px",marginBottom:"10px",border:"1.5px solid "+(aF.consent?"#1B6B3A":"#E8B800")}});
+        consentWrap.appendChild(el("div",{style:{fontSize:".72rem",color:"#1A2B5F",marginBottom:"8px",lineHeight:"1.4"}},
+          _lang==="lo"?"ກະລຸນາອ່ານ ແລະ ຍອມຮັບນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ ແລະ ເງື່ອນໄຂການນຳໃຊ້ (ລວມທັງຄວາມຮັບຜິດຊອບກ່ຽວກັບລິຂະສິດເນື້ອຫາທີ່ໂພສ) ກ່ອນສະໝັກສະມາຊິກ":"Please read and accept our Privacy Policy and Terms of Use (including responsibility for copyright of posted content) before registering"
+        ));
+        const readBtn=el("button",{type:"button",style:{width:"100%",padding:"9px",borderRadius:"10px",border:"none",background:aF.consent?"#1B6B3A":"#E8B800",color:"#fff",fontWeight:"700",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit"},
+          onclick:function(){
+            showPrivacyPolicyModal(function(){
+              aF.consent=true;
+              drawAuth();
+            });
+          }
+        },aF.consent?"✅ "+(_lang==="lo"?"ຍອມຮັບແລ້ວ — ອ່ານອີກຄັ້ງ":"Accepted — read again"):"📄 "+(_lang==="lo"?"ອ່ານ ແລະ ຍອມຮັບເງື່ອນໄຂ":"Read and Accept"));
+        consentWrap.appendChild(readBtn);
         return consentWrap;
       })():null,
       el("button",{className:"btn btn-p",onclick:()=>{
@@ -18402,11 +18655,28 @@ function showShopApplyModal(){
         renderImgPreviews();
         return wrap;
       })(),
+      (function(){
+        const consentWrap=el("div",{style:{background:"#F0F7F2",borderRadius:"10px",padding:"10px 12px",marginBottom:"10px",border:"1.5px solid "+(f.consent?"#1B6B3A":"#E8B800")}});
+        consentWrap.appendChild(el("div",{style:{fontSize:".72rem",color:"#1A2B5F",marginBottom:"8px",lineHeight:"1.4"}},
+          _lang==="lo"?"ກະລຸນາອ່ານ ແລະ ຍອມຮັບນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ ແລະ ເງື່ອນໄຂການນຳໃຊ້ (ລວມທັງຄວາມຮັບຜິດຊອບກ່ຽວກັບລິຂະສິດເນື້ອຫາ/ຮູບສິນຄ້າທີ່ໂພສ) ກ່ອນສະໝັກເປັນຮ້ານຄ້າ":"Please read and accept our Privacy Policy and Terms of Use (including responsibility for copyright of posted content/product images) before applying as a shop"
+        ));
+        const readBtn2=el("button",{type:"button",style:{width:"100%",padding:"9px",borderRadius:"10px",border:"none",background:f.consent?"#1B6B3A":"#E8B800",color:"#fff",fontWeight:"700",fontSize:".8rem",cursor:"pointer",fontFamily:"inherit"},
+          onclick:function(){
+            showPrivacyPolicyModal(function(){
+              f.consent=true;
+              draw();
+            });
+          }
+        },f.consent?"✅ "+(_lang==="lo"?"ຍອມຮັບແລ້ວ — ອ່ານອີກຄັ້ງ":"Accepted — read again"):"📄 "+(_lang==="lo"?"ອ່ານ ແລະ ຍອມຮັບເງື່ອນໄຂ":"Read and Accept"));
+        consentWrap.appendChild(readBtn2);
+        return consentWrap;
+      })(),
       el("button",{className:"btn btn-p",style:{marginTop:"4px"},onclick:function(){
         if(!f.name.trim()){err="ກະລຸນາໃສ່ຊື່ຮ້ານ";draw();return;}
         if(!f.username.trim()){err="ກະລຸນາໃສ່ Username";draw();return;}
         if(f.username.trim().length<3){err="Username ຕ້ອງມີ 3 ຕົວຂຶ້ນໄປ";draw();return;}
         if(!f.password.trim()||f.password.length<4){err=(_lang==="lo"?"ລະຫັດຕ້ອງມີຢ່າງໜ້ອຍ 4 ຕົວ":"Password must be at least 4 characters");draw();return;}
+        if(!f.consent){err=(_lang==="lo"?"ກະລຸນາອ່ານ ແລະ ຍອມຮັບເງື່ອນໄຂກ່ອນ":"Please read and accept the terms first");draw();return;}
         if(shops.find(function(s){return s.username===f.username.trim();})){err="Username ນີ້ຖືກໃຊ້ແລ້ວ";draw();return;}
         if(shopApplications.find(function(a){return a.username===f.username.trim()&&a.status==="pending";})){err="ມີຄຳຂໍ Username ນີ້ລໍຖ້ານຢູ່ແລ້ວ";draw();return;}
         const app={id:Date.now(),name:f.name.trim(),username:f.username.trim(),password:f.password,phone:f.phone.trim(),shopType:f.shopType,slogan:f.slogan.trim(),about:f.about.trim(),emoji:"🏪",logo:null,sampleImages:f.sampleImages||[],status:"pending",appliedAt:Date.now()};
@@ -19627,6 +19897,10 @@ loadFromCloud().then(function(){
 
   // Handle ?p=productId from share link
   const urlParams=new URLSearchParams(location.search);
+  // Handle ?page=privacy — standalone Privacy Policy page, accessible without login (for App Store/Google Play links)
+  if(urlParams.get("page")==="privacy"){
+    view="privacyPolicy";render();
+  }
   const sharedPid=urlParams.get("p");
   if(sharedPid){
     const sp=prods.find(function(x){return String(x.id)===String(sharedPid);});

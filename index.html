@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v573 -->
+<!-- LaoH Marketplace v577 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2838,7 +2838,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.7.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v5.7.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5356,7 +5356,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.7.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v5.7.7")
   );
 
   // Icon style helper
@@ -9199,20 +9199,36 @@ function showProduct(p){
         }
         // ── ลากนิ้วให้แทร็กเลื่อนตามแบบเรียลไทม์ แล้วปล่อยแล้วสแนปไปรูปที่ใกล้ที่สุด ──
         if(imgs.length>0&&track){
-          let dragStartX=0,dragging=false,dragMoved=false,dragCurPx=0;
+          let dragStartX=0,dragStartY=0,dragging=false,dragMoved=false,dragCurPx=0,dragAxis=null,scrollStartTop=0;
           wrap.addEventListener("touchstart",function(e){
-            dragStartX=e.touches[0].clientX;dragging=true;dragMoved=false;
+            dragStartX=e.touches[0].clientX;dragStartY=e.touches[0].clientY;dragging=true;dragMoved=false;dragAxis=null;
+            const infoEl=document.getElementById("prodInfoScroll");
+            scrollStartTop=infoEl?infoEl.scrollTop:0;
           },{passive:true});
           wrap.addEventListener("touchmove",function(e){
             if(!dragging)return;
             const dx=e.touches[0].clientX-dragStartX;
+            const dy=e.touches[0].clientY-dragStartY;
+            // ── ล็อกทิศทางการลากครั้งแรกที่ขยับเกิน 6px แล้วยึดทิศนั้นตลอดการลากครั้งนี้ กันสับสนระหว่างลากแนวทแยง ──
+            if(dragAxis===null&&(Math.abs(dx)>6||Math.abs(dy)>6)){
+              dragAxis=Math.abs(dx)>Math.abs(dy)?"x":"y";
+            }
+            if(dragAxis==="y"){
+              // ── ลากแนวตั้ง: ส่งต่อไปเลื่อนส่วนข้อมูลสินค้าด้านล่างแทน ไม่ขยับรูปเลย ──
+              e.preventDefault();
+              const infoEl=document.getElementById("prodInfoScroll");
+              if(infoEl)infoEl.scrollTop=scrollStartTop-dy;
+              return;
+            }
+            if(dragAxis!=="x")return;
             if(Math.abs(dx)>6)dragMoved=true;
             dragCurPx=dx;
             applyTransform(basePos(curIdx)+dx,false);
-          },{passive:true});
+          },{passive:false});
           wrap.addEventListener("touchend",function(e){
             if(!dragging)return;
             dragging=false;
+            if(dragAxis==="y"){dragAxis=null;return;} // ลากแนวตั้งไปแล้ว ไม่ต้องสแนปรูป
             const wW=wrap.offsetWidth||300;
             const step=wW*PEEK_SLIDE_PCT+wW*PEEK_GAP_PCT;
             if(dragMoved){
@@ -9224,6 +9240,7 @@ function showProduct(p){
               applyTransform(basePos(curIdx),true);
             }
             dragCurPx=0;
+            dragAxis=null;
           },{passive:true});
           wrap.addEventListener("click",function(e){
             if(e.target&&e.target.tagName==="BUTTON")return;
@@ -19916,6 +19933,97 @@ try{
 }catch(e){}
 // First render with local data (fast)
 render();
+// ── โหลดชุดเล็กด่วนพิเศษสำหรับหน้าแรก (ร้านค้า+สินค้าจำนวนหนึ่ง) ก่อนเป็นอันดับแรก ให้เห็นเนื้อหาบางส่วนเร็วๆ แทนที่จะเห็นหน้าเปล่าจนกว่าข้อมูลทั้งเว็บ (18 หมวดหมู่) จะโหลดเสร็จ ──
+(function(){
+  if(!db)return;
+  try{
+    Promise.all([
+      db.collection("shops").where("active","==",true).limit(10).get().catch(function(){return null;}),
+      db.collection("prods").limit(4).get().catch(function(){return null;})
+    ]).then(function(results){
+      const shopSnap=results[0],prodSnap=results[1];
+      let changed=false;
+      if(shopSnap){
+        shopSnap.docs.forEach(function(d){
+          const s=d.data();
+          if(!shops.find(function(x){return String(x.id)===String(s.id);})){shops.push(s);changed=true;}
+        });
+      }
+      if(prodSnap){
+        prodSnap.docs.forEach(function(d){
+          const p=d.data();
+          if(!prods.find(function(x){return String(x.id)===String(p.id);})){prods.push(p);changed=true;}
+        });
+      }
+      if(changed&&!document.getElementById("ov"))render(); // ไม่แย่งวาดทับถ้ามีป๊อบอัพเปิดอยู่แล้ว (เช่น ทางลัดลิงก์สินค้ากำลังแสดงอยู่)
+    }).catch(function(){});
+  }catch(e){}
+})();
+// ── ทางลัดสำหรับลิงก์สินค้าที่แชร์มา (?p=...) — ดึงเฉพาะสินค้าชิ้นนั้น+ร้านค้าก่อนเป็นอันดับแรก ไม่ต้องรอโหลดข้อมูลทั้งเว็บ (18 หมวดหมู่) ให้เสร็จก่อนเหมือนเดิม ──
+(function(){
+  try{
+    const _fastParams=new URLSearchParams(location.search);
+    const _fastPid=_fastParams.get("p");
+    if(_fastPid&&db){
+      db.collection("prods").doc(String(_fastPid)).get().then(function(doc){
+        if(!doc.exists)return;
+        const fp=doc.data();
+        if(!prods.find(function(x){return String(x.id)===String(fp.id);}))prods.push(fp);
+        function openFast(){
+          if(document.getElementById("ov"))return; // ถ้ามีป๊อบอัพอื่นเปิดอยู่ก่อนแล้ว (ไม่ควรเกิดตอนนี้) ไม่แย่งเปิดซ้อน
+          window._fastPathOpenedProductId=String(fp.id);
+          showProduct(fp);
+        }
+        if(fp.shopId&&!shops.find(function(s){return String(s.id)===String(fp.shopId);})){
+          db.collection("shops").doc(String(fp.shopId)).get().then(function(sdoc){
+            if(sdoc.exists)shops.push(sdoc.data());
+            openFast();
+          }).catch(function(){openFast();});
+        } else {
+          openFast();
+        }
+      }).catch(function(){});
+    }
+  }catch(e){}
+})();
+// ── ทางลัดสำหรับลิงก์ร้านค้าที่แชร์มา (?shop=...) — ดึงเฉพาะร้านค้าชิ้นนั้นก่อนเป็นอันดับแรก ──
+(function(){
+  try{
+    const _fastParams=new URLSearchParams(location.search);
+    const _fastShopId=_fastParams.get("shop");
+    if(_fastShopId&&db){
+      db.collection("shops").doc(String(_fastShopId)).get().then(function(sdoc){
+        if(!sdoc.exists)return;
+        const fs=sdoc.data();
+        if(!shops.find(function(x){return String(x.id)===String(fs.id);}))shops.push(fs);
+        window._fastPathOpenedShopId=String(fs.id);
+        fShop=fs.id;view="shopProfile";render();
+      }).catch(function(){});
+    }
+  }catch(e){}
+})();
+// ── ทางลัดสำหรับลิงก์รีวิว/โพสต์ร้านค้าที่แชร์มา (?rv=... / ?post=...) — เปิดป๊อบอัพรายละเอียดตรงๆ (ตัวเดียวกับที่ใช้ในหน้าโปรไฟล์) แทนวิธีเลื่อนหาใน Feed แบบเดิม ไม่ว่าจะก๊อปปี้ลิงก์มาจากจุดไหนในเว็บก็ตาม ──
+(function(){
+  try{
+    const _fastParams=new URLSearchParams(location.search);
+    const _fastRvId=_fastParams.get("rv");
+    const _fastPostId=_fastParams.get("post");
+    if(_fastRvId&&db){
+      db.collection("reviews").doc(String(_fastRvId)).get().then(function(rdoc){
+        if(!rdoc.exists)return;
+        window._fastPathOpenedRvId=String(_fastRvId);
+        showReviewDetail("review",rdoc.data());
+      }).catch(function(){});
+    }
+    if(_fastPostId&&db){
+      db.collection("shopPosts").doc(String(_fastPostId)).get().then(function(pdoc){
+        if(!pdoc.exists)return;
+        window._fastPathOpenedPostId=String(_fastPostId);
+        showReviewDetail("shoppost",pdoc.data());
+      }).catch(function(){});
+    }
+  }catch(e){}
+})();
 // Then load from Firebase (syncs everyone's data)
 loadFromCloud().then(function(){
   // Load this restored session's delivery addresses from Firestore (with auto-migration from localStorage)
@@ -19933,13 +20041,13 @@ loadFromCloud().then(function(){
     view="privacyPolicy";render();
   }
   const sharedPid=urlParams.get("p");
-  if(sharedPid){
+  if(sharedPid&&window._fastPathOpenedProductId!==String(sharedPid)){
     const sp=prods.find(function(x){return String(x.id)===String(sharedPid);});
     if(sp){setTimeout(function(){showProduct(sp);},300);}
   }
   // Handle ?shop=shopId from shop share link
   const sharedShopId=urlParams.get("shop");
-  if(sharedShopId){
+  if(sharedShopId&&window._fastPathOpenedShopId!==String(sharedShopId)){
     const ss2=shops.find(function(s){return String(s.id)===String(sharedShopId);});
     if(ss2){
       fShop=ss2.id;view="shopProfile";render();
@@ -19949,7 +20057,7 @@ loadFromCloud().then(function(){
   }
   // Handle ?rv=reviewId from review share link
   const sharedRvId=urlParams.get("rv");
-  if(sharedRvId){
+  if(sharedRvId&&window._fastPathOpenedRvId!==String(sharedRvId)){
     view="feed";render();
     setTimeout(function(){
       // Scroll feed to the review card with matching id
@@ -19962,7 +20070,7 @@ loadFromCloud().then(function(){
   }
   // Handle ?post=postId from shop post share link
   const sharedPostId=urlParams.get("post");
-  if(sharedPostId){
+  if(sharedPostId&&window._fastPathOpenedPostId!==String(sharedPostId)){
     view="feed";render();
     setTimeout(function(){
       const feedItems3=document.querySelectorAll(".feed-item");

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v615 -->
+<!-- LaoH Marketplace v616 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2839,7 +2839,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.1.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.1.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5357,7 +5357,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.1.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.1.6")
   );
 
   // Icon style helper
@@ -15766,7 +15766,39 @@ function buildAdminTab(){
       (_freeShipMinAmt>0?" | ຍອດຂັ້ນຕ່ຳ ₭"+fmt(_freeShipMinAmt):"")
     );
 
+    // ── กล่องส่งแจ้งเตือน Broadcast ให้ผู้ใช้ทุกคน (โปรโมชั่น/อัปเดตแอป ฯลฯ) ──
+    const broadcastBox=el("div",{style:{background:"#EAF3FF",borderRadius:"12px",padding:"12px",marginBottom:"14px",border:"1.5px solid #90CAF9"}});
+    broadcastBox.appendChild(el("div",{style:{fontWeight:"800",fontSize:".85rem",color:"#0D47A1",marginBottom:"6px"}},"📢 "+(_lang==="lo"?"ສົ່ງແຈ້ງເຕືອນຫາທຸກຄົນ (Broadcast)":"Send Notification to Everyone (Broadcast)")));
+    broadcastBox.appendChild(el("div",{style:{fontSize:".72rem",color:"#1565C0",marginBottom:"10px",lineHeight:"1.5"}},
+      _lang==="lo"?"ໃຊ້ສຳລັບແຈ້ງໂປຣໂມຊັ່ນ, ອັບເດດແອັບ ຫຼື ຂ່າວສານອື່ນໆ ໃຫ້ຜູ້ໃຊ້ທຸກຄົນທີ່ເປີດການແຈ້ງເຕືອນໄວ້ (ຕ້ອງ Deploy Cloud Function ຊື່ onNewBroadcast ກ່ອນຈຶ່ງໃຊ້ໄດ້ຈິງ)":"Use this for promotions, app updates, or other news to every user who has notifications enabled (requires deploying the onNewBroadcast Cloud Function first)"
+    ));
+    const bcTitleInp=el("input",{className:"inp",placeholder:_lang==="lo"?"ຫົວຂໍ້ (ຕົວຢ່າງ: 🎉 ໂປຣໂມຊັ່ນໃໝ່!)":"Title (e.g. 🎉 New Promotion!)",style:{marginBottom:"8px"}});
+    const bcBodyInp=el("textarea",{className:"inp",placeholder:_lang==="lo"?"ຂໍ້ຄວາມ...":"Message...",rows:3,style:{marginBottom:"8px",resize:"vertical"}});
+    const bcBtn=el("button",{style:{width:"100%",padding:"10px",background:"#0D47A1",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit"},
+      onclick:function(){
+        const title=bcTitleInp.value.trim();
+        const body=bcBodyInp.value.trim();
+        if(!title||!body){toast("⚠️ "+(_lang==="lo"?"ກະລຸນາໃສ່ຫົວຂໍ້ ແລະ ຂໍ້ຄວາມ":"Please enter both title and message"));return;}
+        if(!confirm((_lang==="lo"?"ຢືນຢັນສົ່ງແຈ້ງເຕືອນນີ້ຫາຜູ້ໃຊ້ທຸກຄົນ?\n\n":"Send this notification to every user?\n\n")+title+"\n"+body))return;
+        if(!db){toast("⚠ Database not connected");return;}
+        bcBtn.disabled=true;bcBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງສົ່ງ...":"Sending...");
+        const bcDoc={title:title,body:body,sentBy:(user&&user.name)||"admin",sentAt:Date.now()};
+        db.collection("broadcasts").add(bcDoc).then(function(){
+          toast("✅ "+(_lang==="lo"?"ສົ່ງແຈ້ງເຕືອນແລ້ວ! (ອາດໃຊ້ເວລາຄູ່ນາທີໃຫ້ Cloud Function ສົ່ງຄົບທຸກຄົນ)":"Notification queued! (may take a minute or two for the Cloud Function to reach everyone)"));
+          bcTitleInp.value="";bcBodyInp.value="";
+          bcBtn.disabled=false;bcBtn.textContent="📢 "+(_lang==="lo"?"ສົ່ງຫາທຸກຄົນ":"Send to Everyone");
+        }).catch(function(err){
+          toast("❌ "+(err&&err.message?err.message:String(err)));
+          bcBtn.disabled=false;bcBtn.textContent="📢 "+(_lang==="lo"?"ສົ່ງຫາທຸກຄົນ":"Send to Everyone");
+        });
+      }
+    },"📢 "+(_lang==="lo"?"ສົ່ງຫາທຸກຄົນ":"Send to Everyone"));
+    broadcastBox.appendChild(bcTitleInp);
+    broadcastBox.appendChild(bcBodyInp);
+    broadcastBox.appendChild(bcBtn);
+
     return el("div",null,
+      broadcastBox,
       migrateBox,
       el("div",{className:"acard"},
         el("div",{style:{fontWeight:"700",marginBottom:"12px"}},"🚚 ຕັ້ງຄ່າຈັດສົ່ງ"),

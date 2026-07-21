@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v616 -->
+<!-- LaoH Marketplace v617 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -405,11 +405,47 @@ let messaging=null;
 try{ if(firebase.messaging&&firebase.messaging.isSupported&&firebase.messaging.isSupported()){ messaging=firebase.messaging(); } }catch(e){console.warn("FCM not supported:",e);}
 
 // ── ขอสิทธิ์แจ้งเตือน + เก็บโทเค็นอุปกรณ์ไว้กับบัญชีผู้ใช้ ──
+function _pushFcmDocRef(u){
+  if(!db||!u)return null;
+  return db.collection(u.role==="shop"?"shops":(u.role==="admin"?"settings":"users")).doc(u.role==="admin"?"main":String(u.id));
+}
+function _pushEnabledStorageKey(){
+  return "laoh_push_enabled_"+((user&&user.id)||"anon");
+}
+function isPushEnabledForThisDevice(){
+  try{ return localStorage.getItem(_pushEnabledStorageKey())==="1"; }catch(e){ return false; }
+}
+// ── ลบรหัสอุปกรณ์ของเครื่องนี้ออกจากบัญชีที่ระบุ (ใช้ทั้งตอนกด "ปิดแจ้งเตือน" และตอนล็อกเอาท์) ──
+function removeDeviceTokenFromAccount(targetUser,onDone){
+  if(!messaging||!targetUser){if(onDone)onDone();return;}
+  messaging.getToken({vapidKey:FCM_VAPID_KEY}).then(function(token){
+    if(!token){if(onDone)onDone();return;}
+    const u=users.find(function(x){return x.id===targetUser.id;});
+    const existingTokens=(u&&u.fcmTokens)||targetUser.fcmTokens||[];
+    const newTokens=existingTokens.filter(function(t){return t!==token;});
+    if(u)u.fcmTokens=newTokens;
+    if(targetUser)targetUser.fcmTokens=newTokens;
+    const ref=_pushFcmDocRef(targetUser);
+    if(ref)ref.update({fcmTokens:newTokens}).catch(function(){if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});});
+    if(onDone)onDone();
+  }).catch(function(){if(onDone)onDone();});
+}
 function requestPushPermission(){
   if(!messaging){toast(_lang==="lo"?"⚠️ ອຸປະກອນນີ້ບໍ່ຮອງຮັບການແຈ້ງເຕືອນ":"⚠️ Push notifications not supported on this device");return;}
   if(!user||!user.id){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ":"Please log in first");return;}
   if(FCM_VAPID_KEY.indexOf("ໃສ່")===0){console.warn("FCM_VAPID_KEY ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ — ໄປທີ່ Firebase Console ເພື່ອສ້າງ VAPID Key ກ່ອນ");toast("⚠️ ຍັງບໍ່ໄດ້ຕັ້ງຄ່າລະບົບແຈ້ງເຕືອນ (ຕິດຕໍ່ຜູ້ພັດທະນາ)");return;}
   if(!("Notification" in window)){toast(_lang==="lo"?"⚠️ ອຸປະກອນນີ້ບໍ່ຮອງຮັບການແຈ້ງເຕືອນ":"⚠️ Notifications not supported on this device");return;}
+
+  // ── ถ้าตอนนี้เปิดอยู่แล้ว (ตามสถานะที่แอปจำไว้เอง) ให้กดครั้งนี้เป็นการ "ปิด" แทน — ลบรหัสอุปกรณ์ออกจากบัญชีจริงๆ ไม่ใช่แค่ขอสิทธิ์ซ้ำเฉยๆ (ซึ่งเบราว์เซอร์ไม่ยอมให้ถอนสิทธิ์เองอยู่แล้ว) ──
+  if(isPushEnabledForThisDevice()){
+    removeDeviceTokenFromAccount(user,function(){
+      try{localStorage.setItem(_pushEnabledStorageKey(),"0");}catch(e){}
+      toast("🔕 "+(_lang==="lo"?"ປິດການແຈ້ງເຕືອນແລ້ວ":"Push notifications turned off"));
+      if(typeof render==="function")render();
+    });
+    return;
+  }
+
   Notification.requestPermission().then(function(permission){
     if(permission!=="granted"){toast(_lang==="lo"?"❌ ບໍ່ອະນຸຍາດການແຈ້ງເຕືອນ":"❌ Notification permission denied");return;}
     messaging.getToken({vapidKey:FCM_VAPID_KEY}).then(function(token){
@@ -421,12 +457,15 @@ function requestPushPermission(){
         const newTokens=existingTokens.concat([token]);
         if(u)u.fcmTokens=newTokens;
         user.fcmTokens=newTokens;
-        if(db)db.collection(user.role==="shop"?"shops":(user.role==="admin"?"settings":"users")).doc(user.role==="admin"?"main":String(user.id)).update({fcmTokens:newTokens}).catch(function(){
+        const ref=_pushFcmDocRef(user);
+        if(ref)ref.update({fcmTokens:newTokens}).catch(function(){
           // ── ถ้าเอกสารยังไม่มี fcmTokens field มาก่อน ให้ set แทน update (update ล้มเหลวถ้า field ไม่เคยมี ในบาง edge case) ──
-          if(db)db.collection(user.role==="shop"?"shops":(user.role==="admin"?"settings":"users")).doc(user.role==="admin"?"main":String(user.id)).set({fcmTokens:newTokens},{merge:true}).catch(function(){});
+          if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});
         });
       }
+      try{localStorage.setItem(_pushEnabledStorageKey(),"1");}catch(e){}
       toast("✅ "+(_lang==="lo"?"ເປີດການແຈ້ງເຕືອນສຳເລັດ":"Push notifications enabled"));
+      if(typeof render==="function")render();
     }).catch(function(err){console.error("FCM getToken error:",err);toast("⚠️ "+(err&&err.message?err.message:"Error enabling notifications"));});
   });
   // ── รับข้อความตอนแอปเปิดอยู่ (foreground) — ต้องจัดการเองเพราะ browser จะไม่โชว์ notification popup ให้อัตโนมัติตอนแอปเปิดอยู่ ──
@@ -2839,7 +2878,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.1.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.1.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -2866,7 +2905,7 @@ function buildSideMenu(){
   }catch(e){}
   cart=[];selectedCartKeys=new Set();_checkoutCart=null;
   window._appliedCoupon=null;window._appliedShipCoupon=null;
-  user=null;view="shop";
+  removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
   try{localStorage.removeItem("laoh_session");}catch(e){}
   laohTranslateResetForNewSession();closeSideMenu();
   toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
@@ -5357,7 +5396,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.1.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.1.7")
   );
 
   // Icon style helper
@@ -5958,7 +5997,7 @@ function buildShopProfile(shopId){
     onclick:function(){
       try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
       cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-      user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
+      removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
       toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();
     }
   },"🚪 "+(_lang==="lo"?"ອອກ":"Exit")):(user&&user.id?el("button",{
@@ -6566,8 +6605,9 @@ function buildUserProfile(uid){
     {
       icon:"🔔",
       label:_lang==="lo"?"ການແຈ້ງເຕືອນ":(_lang==="zh"?"推送通知":"Push Notifications"),
-      value:(("Notification" in window)&&Notification.permission==="granted")?(_lang==="lo"?"ເປີດແລ້ວ":"On"):"",
-      action:()=>{requestPushPermission();}
+      value:isPushEnabledForThisDevice()?(_lang==="lo"?"ເປີດແລ້ວ":"On"):"",
+      action:()=>{requestPushPermission();},
+      keepOpen:true
     },
     {
       icon:"👥",
@@ -6922,7 +6962,7 @@ function buildUserProfile(uid){
         try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
         if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
         cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-        user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
+        removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();
         toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();
       }
     },
@@ -6943,20 +6983,33 @@ function buildUserProfile(uid){
     wrap.appendChild(quickRow);
     quickRow.appendChild(
       custQuickBtn("⚙️",_lang==="lo"?"ຕັ້ງຄ່າ":"Settings",null,function(){
-          const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
-          mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-          mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"⚙️ "+(_lang==="lo"?"ຕັ້ງຄ່າ":"Settings")));
-          const list=el("div",{style:{display:"flex",flexDirection:"column",gap:"0"}});
-          settingItems.forEach(function(item,i){
-            const btn=el("button",{style:{width:"100%",padding:"14px 4px",background:"none",border:"none",borderBottom:i<settingItems.length-1?"1px solid #F0F7F2":"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},onclick:function(){closeOv();item.action();}});
-            btn.appendChild(el("span",{style:{fontSize:"1.1rem",flexShrink:"0"}},item.icon));
-            btn.appendChild(el("span",{style:{flex:"1",fontSize:".82rem",fontWeight:"600",color:"#1A2B5F"}},item.label));
-            if(item.value)btn.appendChild(el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 8px",borderRadius:"8px"}},item.value));
-            btn.appendChild(el("span",{style:{color:"#C8E6D4",fontSize:".9rem"}},"›"));
-            list.appendChild(btn);
-          });
-          mod.appendChild(list);
-          showOv(mod,null);
+          function drawSettingsModal(){
+            const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+            mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+            mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"⚙️ "+(_lang==="lo"?"ຕັ້ງຄ່າ":"Settings")));
+            const list=el("div",{style:{display:"flex",flexDirection:"column",gap:"0"}});
+            settingItems.forEach(function(item,i){
+              const btn=el("button",{style:{width:"100%",padding:"14px 4px",background:"none",border:"none",borderBottom:i<settingItems.length-1?"1px solid #F0F7F2":"none",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},onclick:function(){
+                if(item.keepOpen){
+                  item.action();
+                  // ── รอเล็กน้อยแล้วค่อยวาดหน้าตั้งค่าใหม่ ให้ป้ายเปิด/ปิดอัปเดตตามจริง โดยไม่ปิดหน้าต่างตั้งค่าออกไปเลย ──
+                  setTimeout(function(){
+                    if(document.getElementById("ov"))drawSettingsModal();
+                  },300);
+                } else {
+                  closeOv();item.action();
+                }
+              }});
+              btn.appendChild(el("span",{style:{fontSize:"1.1rem",flexShrink:"0"}},item.icon));
+              btn.appendChild(el("span",{style:{flex:"1",fontSize:".82rem",fontWeight:"600",color:"#1A2B5F"}},item.label));
+              if(item.value)btn.appendChild(el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700",background:"#E8F5EE",padding:"2px 8px",borderRadius:"8px"}},item.value));
+              btn.appendChild(el("span",{style:{color:"#C8E6D4",fontSize:".9rem"}},"›"));
+              list.appendChild(btn);
+            });
+            mod.appendChild(list);
+            showOv(mod,null);
+          }
+          drawSettingsModal();
         }
       ,"tourCustSettings")
     );
@@ -11057,7 +11110,7 @@ function buildStaffDashboard(){
   try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
   if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ ອອກ?"))return;
   cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-  user=null;view="shop";
+  removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
   try{localStorage.removeItem("laoh_session");}catch(e){}
   render();toast("ອອກຈາກລະບົບ ✓");},
         style:{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.4)",color:"#fff",borderRadius:"20px",padding:"6px 14px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}
@@ -11445,7 +11498,7 @@ function buildRiderDashboard(){
     el("button",{onclick:function(){try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
           if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ ອອກ?"))return;
           cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-          user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບ ✓");render();},
+          removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";try{localStorage.removeItem("laoh_session");}catch(e){}laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບ ✓");render();},
       style:{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.4)",color:"#fff",borderRadius:"20px",padding:"6px 14px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}
     },"🚪 ອອກ")
   ));
@@ -13666,7 +13719,7 @@ function buildAdmin(){
   try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
   if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
   cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-  user=null;view="shop";
+  removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
   try{localStorage.removeItem("laoh_session");}catch(e){}
   laohTranslateResetForNewSession();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
         },(_lang==="lo"?"🚪 ອອກ":"🚪 Logout"))
@@ -13680,7 +13733,7 @@ function buildAdmin(){
   if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
   cart=[];selectedCartKeys=new Set();_checkoutCart=null;
   window._appliedCoupon=null;window._appliedShipCoupon=null;
-  user=null;view="shop";
+  removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
   try{localStorage.removeItem("laoh_session");}catch(e){}
   laohTranslateResetForNewSession();toast("ອອກຈາກລະບົບແລ້ວ ✓");render();}
         },"🚪 ອອກ")
@@ -13822,7 +13875,7 @@ function buildAdmin(){
   try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
   if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
   cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-  user=null;view="shop";
+  removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
   try{localStorage.removeItem("laoh_session");}catch(e){}
   laohTranslateResetForNewSession();toast(_lang==="lo"?"ອອກຈາກລະບົບແລ້ວ ✓":"Logged out ✓");render();}
         },(_lang==="lo"?"🚪 ອອກ":"🚪 Logout"))
@@ -19104,7 +19157,7 @@ function showNarratorProfileModal(){
       try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
       if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ — ອອກ?"))return;
       cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-      user=null;view="shop";
+      removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
       try{localStorage.removeItem("laoh_session");}catch(e){}
       laohTranslateResetForNewSession();
       closeOv();toast("ອອກຈາກລະບົບ ✓");render();
@@ -20318,7 +20371,7 @@ function buildNarratorProfile(){
         try{const _lck="laoh_cart"+(user&&user.id?"_"+user.id:"");localStorage.setItem(_lck,JSON.stringify(cart));}catch(e){}
         if(_pendingSaves>0&&!confirm("ຍັງ "+_pendingSaves+" ລາຍການກຳລັງບັນທຶກ ອອກ?"))return;
         cart=[];selectedCartKeys=new Set();_checkoutCart=null;
-        user=null;view="shop";
+        removeDeviceTokenFromAccount(user,function(){});user=null;view="shop";
         try{localStorage.removeItem("laoh_session");}catch(e){}
         laohTranslateResetForNewSession();
         toast("ອອກຈາກລະບົບ ✓");render();

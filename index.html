@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v626 -->
+<!-- LaoH Marketplace v627 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2897,7 +2897,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5416,7 +5416,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.7")
   );
 
   // Icon style helper
@@ -6007,7 +6007,7 @@ function buildShopProfile(shopId){
           });
         });
       }});
-      const btn=el("button",{type:"button",style:{position:"absolute",bottom:"2px",left:"2px",width:"26px",height:"26px",borderRadius:"50%",background:"#E0A900",border:"2px solid #fff",color:"#fff",fontSize:".7rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,.3)",fontFamily:"inherit"},title:_lang==="lo"?"ໂພສ Story":"Post Story",onclick:function(e){e.stopPropagation();storyInp.click();}},"📸");
+      const btn=el("button",{id:"tourShopStoryBtn",type:"button",style:{position:"absolute",bottom:"2px",left:"2px",width:"26px",height:"26px",borderRadius:"50%",background:"#E0A900",border:"2px solid #fff",color:"#fff",fontSize:".7rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,.3)",fontFamily:"inherit"},title:_lang==="lo"?"ໂພສ Story":"Post Story",onclick:function(e){e.stopPropagation();storyInp.click();}},"📸");
       btn.appendChild(storyInp);
       return btn;
     })():null
@@ -10269,6 +10269,10 @@ const SHOP_VIEWER_TOUR_STEPS=[
   {selector:"#tourShopEditBtn",bigArrow:true,lo:"ນີ້ຄື \"ສິນຄ້າຕົວຢ່າງ\" ທີ່ລະບົບສ້າງໃຫ້ (ປິດການຂາຍໄວ້ ລູກຄ້າບໍ່ເຫັນ) ກົດປຸ່ມນີ້ເພື່ອລອງແກ້ໄຂ — ລຶບອອກໄດ້ເລີຍເມື່ອເຂົ້າໃຈການນຳໃຊ້ແລ້ວ",zh:"这是系统自动生成的\"示例商品\"（已关闭销售，顾客看不到），点击此按钮可以尝试编辑 — 熟悉用法后可随时删除",en:"This is a system-generated \"sample product\" (sale closed, customers can't see it). Tap this button to try editing — feel free to delete it once you're comfortable"},
   {selector:"#tourShopToggleBtn",bigArrow:true,lo:"ກົດປຸ່ມນີ້ເພື່ອປິດ/ເປີດການຂາຍສິນຄ້າຊົ່ວຄາວ ໂດຍບໍ່ຕ້ອງລຶບສິນຄ້າອອກ",zh:"点击这个按钮即可暂时关闭/开启该商品的销售，无需删除商品",en:"Tap this button to temporarily close/reopen sale of that product, without deleting it"},
   {selector:"#tourShopAvatarEdit",bigArrow:true,arrowTouch:true,lo:"ກົດປຸ່ມນີ້ເພື່ອປ່ຽນຮູບໂປຣໄຟລ໌ ຫຼື ຮູບໜ້າປົກຂອງຮ້ານ",zh:"点击这个按钮即可更改店铺的头像或封面图片",en:"Tap this button to change your shop's profile picture or cover photo"},
+  {selector:"#tourShopStoryBtn",bigArrow:true,arrowTouch:true,
+    lo:"📸 ປຸ່ມນີ້ໃຊ້ໂພສ Story (ຮູບພາບຢູ່ໄດ້ 24 ຊົ່ວໂມງແລ້ວຫາຍໄປເອງ) — ຮູບທີ່ອັບໂຫລດຈະຖືກຫຍໍ້ຂະໜາດ/ບີບອັດອັດຕະໂນມັດໃຫ້ບໍ່ໃຫຍ່ເກີນໄປ ບໍ່ຕ້ອງກັງວົນເລື່ອງໄຟລ໌ໃຫຍ່ ແລະ ຍັງສາມາດ🛒ປັກສິນຄ້າໃສ່ Story ໄດ້ອີກ ໃຫ້ລູກຄ້າກົດເບິ່ງ/ຊື້ສິນຄ້ານັ້ນໄດ້ໂດຍກົງເລີຍ",
+    zh:"📸 这个按钮用来发布动态（图片会保留24小时后自动消失）— 上传的图片会自动压缩，不用担心文件过大，还可以🛒为动态标记商品，让顾客可以直接点击查看/购买该商品",
+    en:"📸 This button posts a Story (the photo stays up for 24 hours before disappearing automatically) — uploaded photos are automatically compressed so file size isn't a concern, and you can also 🛒 tag a product to your story, letting customers tap to view/buy it directly"},
   {selector:"#tourShopCopyLink",bigArrow:"reduced",arrowTouch:true,lo:"ກົດປຸ່ມນີ້ເພື່ອກ໊ອບປີ້ລິ້ງຮ້ານໄປແຊ່ໃນແພລດຟອມອື່ນ ເຊັ່ນ Facebook, WhatsApp",zh:"点击这个按钮即可复制店铺链接，分享到 Facebook、WhatsApp 等其他平台",en:"Tap this button to copy your shop's link to share on other platforms like Facebook, WhatsApp"},
   {selector:"#tourShopAddPromo",bigArrow:"reduced",arrowTouch:true,lo:"ກົດປຸ່ມນີ້ເພື່ອສ້າງໂປຣໂມຊັ່ນ/ລາຄາພິເສດໃຫ້ສິນຄ້າຂອງຮ້ານ",zh:"点击这个按钮即可为店铺商品创建促销/特价活动",en:"Tap this button to create a promotion/special price for your shop's products"},
   {selector:"#tourShopBtnOrders",noTarget:true,action:"openOrders",

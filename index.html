@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v630 -->
+<!-- LaoH Marketplace v632 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -98,6 +98,7 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 .live-header{background:#1A2B5F;padding:12px 14px;display:flex;align-items:center;gap:8px;}
 .live-badge{background:#C0392B;color:#fff;font-size:.62rem;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.5px;animation:livePulse 1.5s infinite;}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes laohSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .live-viewer-count{font-size:.72rem;color:rgba(255,255,255,.75);margin-left:auto;display:flex;align-items:center;gap:4px;}
 .live-video-wrap{width:100%;background:#000;position:relative;aspect-ratio:9/16;overflow:hidden;max-height:80vh;}
 .live-video-wrap iframe{width:100%;height:100%;border:none;}
@@ -409,7 +410,14 @@ async function serverVerifyLogin(username,password,loginMode){
   if(!functionsInstance||!authInstance)return null; // ── SDK ไม่พร้อมใช้งาน ให้ระบบเก่ารับช่วงต่อ ──
   try{
     const call=functionsInstance.httpsCallable("verifyLogin");
-    const result=await call({username:username,password:password,loginMode:loginMode||"shopDirect"});
+    // ── ใส่ตัวจับเวลา 6 วินาที กันการเชื่อมต่อค้างเงียบๆ ไม่มีที่สิ้นสุด (เจอปัญหานี้บนคอมพิวเตอร์บางเครื่อง) — ถ้าเกินเวลาให้ถือว่าล้มเหลวทันที ตกไปใช้ระบบเก่าเลย ──
+    const timeoutPromise=new Promise(function(resolve){setTimeout(function(){resolve({__timedOut:true});},6000);});
+    const callPromise=call({username:username,password:password,loginMode:loginMode||"shopDirect"});
+    const result=await Promise.race([callPromise,timeoutPromise]);
+    if(result&&result.__timedOut){
+      console.warn("serverVerifyLogin timed out after 6s, falling back to legacy check");
+      return null;
+    }
     const data=result&&result.data;
     if(!data||!data.success||!data.token)return null;
     await authInstance.signInWithCustomToken(data.token);
@@ -418,6 +426,20 @@ async function serverVerifyLogin(username,password,loginMode){
     console.warn("serverVerifyLogin failed, falling back to legacy check:",err);
     return null; // ── เรียกไม่สำเร็จไม่ว่าเหตุผลอะไรก็ตาม (เน็ตหลุด, ฟังก์ชันยังไม่พร้อม ฯลฯ) ให้ระบบเก่าทำงานแทนเสมอ ไม่ทำให้ล็อกอินไม่ได้เด็ดขาด ──
   }
+}
+// ── ตัวแสดง "กำลังตรวจสอบข้อมูลก่อนล็อกอิน" (นาฬิกาทรายหมุน) ระหว่างที่รอเซิร์ฟเวอร์ตอบกลับ ──
+function showLoginCheckingOverlay(){
+  if(document.getElementById("loginCheckingOv"))return;
+  const ov=el("div",{id:"loginCheckingOv",style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.55)",zIndex:"400",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"14px"}});
+  ov.appendChild(el("div",{style:{fontSize:"2.6rem",animation:"laohSpin 1.1s linear infinite"}},"⏳"));
+  ov.appendChild(el("div",{style:{color:"#fff",fontWeight:"700",fontSize:".9rem",textAlign:"center",padding:"0 30px",lineHeight:"1.5",whiteSpace:"pre-line"}},
+    _lang==="lo"?"ກຳລັງກວດສອບຂໍ້ມູນກ່ອນເຂົ້າສູ່ລະບົບ\nເພື່ອຄວາມປອດໄພ...":(_lang==="zh"?"正在检查数据后再登录\n以确保安全...":"Checking data before login\nfor security...")
+  ));
+  document.body.appendChild(ov);
+}
+function hideLoginCheckingOverlay(){
+  const ov=document.getElementById("loginCheckingOv");
+  if(ov)ov.remove();
 }
 // ── บันทึกประวัติการล็อกอินไว้ถาวร (ใครล็อกอิน, เมื่อไหร่, ประเภทบัญชี, ผ่านระบบไหน) ให้ซุปเปอร์แอดมินดูย้อนหลังได้ ──
 function logLoginActivity(name,role,method){
@@ -2980,7 +3002,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.3.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.3.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5499,7 +5521,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.3.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.3.2")
   );
 
   // Icon style helper
@@ -10729,7 +10751,9 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
         // ── ຖ້າກວດບໍ່ສຳເລັດບໍ່ວ່າຍ້ອນເຫດຜົນໃດ (ເນັດຫຼຸດ, ຟັງຊັນຍັງບໍ່ພ້ອມ, ຂໍ້ມູນຜິດ) ຈະຕົກລົງໄປໃຊ້ລະບົບເກົ່າຂ້າງລຸ່ມນີ້ໂດຍອັດຕະໂນມັດ — ບໍ່ມີທາງລ໋ອກອິນບໍ່ໄດ້ເລີຍ ──
         // ══════════════════════════════════════════════════════════════
         if(aMode==="login"&&aF.u&&aF.p){
+          showLoginCheckingOverlay();
           const serverResult=await serverVerifyLogin(aF.u,aF.p,aType==="a"?"shopDirect":"customerChannel");
+          hideLoginCheckingOverlay();
           if(serverResult&&serverResult.success){
             if(serverResult.role==="admin"){
               user={role:"admin",name:serverResult.name||"Admin"};

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v623 -->
+<!-- LaoH Marketplace v624 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2897,7 +2897,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5416,7 +5416,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.4")
   );
 
   // Icon style helper
@@ -5672,8 +5672,13 @@ function updateSearchResults(){
 const STORY_LIFETIME_MS=24*60*60*1000;
 const STORY_DURATION_MS=20*1000; // ── แต่ละรูปแสดงผล 20 วินาทีก่อนไปรูปถัดไป ──
 function getActiveStories(sh){
-  if(!sh.stories||!Array.isArray(sh.stories))return [];
-  return sh.stories.filter(function(s){return s&&s.img&&s.postedAt&&(Date.now()-s.postedAt)<STORY_LIFETIME_MS;}).sort(function(a,b){return a.postedAt-b.postedAt;});
+  let list=(sh.stories&&Array.isArray(sh.stories))?sh.stories.slice():[];
+  // ── รองรับข้อมูลเก่าที่เคยเก็บด้วยชื่อฟิลด์เดิม "story" (เอกฉพาะ) ก่อนอัปเกรดเป็นระบบหลายรูป — กันไม่ให้ Story เก่าที่โพสต์ไว้ก่อนอัปเดตหายไปเงียบๆ ──
+  if(sh.story&&sh.story.img&&sh.story.postedAt){
+    const alreadyIncluded=list.some(function(s){return s.postedAt===sh.story.postedAt&&s.img===sh.story.img;});
+    if(!alreadyIncluded)list.push(sh.story);
+  }
+  return list.filter(function(s){return s&&s.img&&s.postedAt&&(Date.now()-s.postedAt)<STORY_LIFETIME_MS;}).sort(function(a,b){return a.postedAt-b.postedAt;});
 }
 function shopHasActiveStory(sh){
   return getActiveStories(sh).length>0;

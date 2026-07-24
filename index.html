@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v629 -->
+<!-- LaoH Marketplace v630 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -426,6 +426,59 @@ function logLoginActivity(name,role,method){
     const entry={name:name||"",role:role||"",method:method||"unknown",loggedInAt:Date.now(),ua:(navigator.userAgent||"").slice(0,120)};
     db.collection("loginLogs").add(entry).catch(function(){});
   }catch(e){}
+}
+// ── ป๊อบอัพแสดงประวัติการเข้าใช้งาน (ซุปเปอร์แอดมินเท่านั้น) — เปิดจากปุ่มในแท็บตั้งค่า แทนการทำเป็นแท็บแยก เพื่อความเสถียร ──
+function showLoginActivityModal(){
+  function draw(){
+    const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"80vh",overflowY:"auto"}});
+    mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+    mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},"📱 "+(_lang==="lo"?"ປະຫວັດການເຂົ້າໃຊ້ງານ":"Login Activity History")));
+    mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"12px"}},
+      _lang==="lo"?"ບັນທຶກທຸກຄັ້ງທີ່ມີຄົນລ໋ອກອິນເຂົ້າລະບົບ (ຊື່, ເວລາ, ປະເພດບັນຊີ, ຜ່ານລະບົບໃໝ່ ຫຼື ລະບົບເກົ່າ) — ເກັບໄວ້ຖາວອນ":"Records every login (name, time, account type, and whether it used the new server-verified system or the legacy fallback) — kept permanently"
+    ));
+    if(!window._loginLogsCache){
+      window._loginLogsCache="loading";
+      if(db){
+        db.collection("loginLogs").orderBy("loggedInAt","desc").limit(200).get().then(function(snap){
+          window._loginLogsCache=snap.docs.map(function(d){return d.data();});
+          if(document.getElementById("ov"))draw();
+        }).catch(function(err){
+          console.warn("loginLogs fetch failed:",err);
+          window._loginLogsCache=[];
+          if(document.getElementById("ov"))draw();
+        });
+      } else {
+        window._loginLogsCache=[];
+      }
+    }
+    if(window._loginLogsCache==="loading"){
+      mod.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px",fontSize:".82rem"}},"⏳ "+(_lang==="lo"?"ກຳລັງໂຫລດ...":"Loading...")));
+    } else {
+      const logs=window._loginLogsCache||[];
+      const refreshBtn=el("button",{style:{width:"100%",padding:"8px",background:"#F0F7F2",color:"#1B6B3A",border:"1.5px solid #C8E6D4",borderRadius:"10px",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px",fontSize:".78rem"},onclick:function(){window._loginLogsCache=null;draw();}},"🔄 "+(_lang==="lo"?"ໂຫລດຄືນໃໝ່":"Refresh"));
+      mod.appendChild(refreshBtn);
+      if(logs.length===0){
+        mod.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px",fontSize:".82rem"}},_lang==="lo"?"ຍັງບໍ່ມີຂໍ້ມູນ":"No data yet"));
+      } else {
+        const roleLabel={admin:"👑 Super Admin",shop:"🏪 Shop",narrator:"🎙️ Narrator",rider:"🚗 Rider",staff:"🏢 Staff","c-shopviewer":"🏪 Shop (via customer)",c:"🙋 Customer"};
+        const listWrap=el("div",{style:{border:"1px solid #F0F7F2",borderRadius:"10px",overflow:"hidden"}});
+        logs.forEach(function(log,i){
+          const row=el("div",{style:{padding:"10px 14px",borderBottom:i<logs.length-1?"1px solid #F0F7F2":"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"8px"}});
+          const left=el("div",{style:{minWidth:"0"}},
+            el("div",{style:{fontSize:".82rem",fontWeight:"700",color:"#1A2B5F",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},log.name||"—"),
+            el("div",{style:{fontSize:".7rem",color:"#6B8F75"}},(roleLabel[log.role]||log.role)+" • "+new Date(log.loggedInAt).toLocaleString(_lang==="lo"?"lo-LA":"en-US"))
+          );
+          const methodBadge=el("span",{style:{fontSize:".65rem",fontWeight:"800",padding:"3px 8px",borderRadius:"10px",flexShrink:"0",background:log.method==="server"?"#E8F5EE":"#FFF3E0",color:log.method==="server"?"#1B6B3A":"#E67E22"}},log.method==="server"?"🔒 "+(_lang==="lo"?"ໃໝ່":"New"):"🕰️ "+(_lang==="lo"?"ເກົ່າ":"Legacy"));
+          row.appendChild(left);
+          row.appendChild(methodBadge);
+          listWrap.appendChild(row);
+        });
+        mod.appendChild(listWrap);
+      }
+    }
+    showOv(mod,null);
+  }
+  draw();
 }
 
 // ── PUSH NOTIFICATIONS (Firebase Cloud Messaging) ───────────────────
@@ -2927,7 +2980,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.3.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5446,7 +5499,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.3.0")
   );
 
   // Icon style helper
@@ -14438,8 +14491,8 @@ function buildAdminTab(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library",_lang==="lo"?"📱 ການເຂົ້າໃຊ້ງານ":"📱 Login Activity"];
-  const superAdminTabMap={0:5,1:40,2:7,3:8,4:9,5:15,6:4,7:10,8:11,9:12,10:13,11:14,12:30,13:41,14:50};
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library"];
+  const superAdminTabMap={0:5,1:40,2:7,3:8,4:9,5:15,6:4,7:10,8:11,9:12,10:13,11:14,12:30,13:41};
   const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:31,7:20,8:32};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
@@ -16360,8 +16413,14 @@ function buildAdminTab(){
     broadcastBox.appendChild(bcBodyInp);
     broadcastBox.appendChild(bcBtn);
 
+    // ── กล่องปุ่มเปิดดูประวัติการเข้าใช้งาน ──
+    const loginActivityBox=el("div",{style:{background:"#F0F7F2",borderRadius:"12px",padding:"12px",marginBottom:"14px",border:"1.5px solid #C8E6D4"}});
+    loginActivityBox.appendChild(el("div",{style:{fontWeight:"800",fontSize:".85rem",color:"#1A2B5F",marginBottom:"8px"}},"📱 "+(_lang==="lo"?"ປະຫວັດການເຂົ້າໃຊ້ງານ":"Login Activity History")));
+    loginActivityBox.appendChild(el("button",{style:{width:"100%",padding:"10px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"10px",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){showLoginActivityModal();}},"📱 "+(_lang==="lo"?"ເບິ່ງປະຫວັດການລ໋ອກອິນ":"View Login History")));
+
     return el("div",null,
       broadcastBox,
+      loginActivityBox,
       migrateBox,
       el("div",{className:"acard"},
         el("div",{style:{fontWeight:"700",marginBottom:"12px"}},"🚚 ຕັ້ງຄ່າຈັດສົ່ງ"),
@@ -18114,58 +18173,6 @@ function buildAdminTab(){
           el("div",{style:{fontWeight:"800",marginBottom:"10px",color:"#6B8F75"}},"📂 ປະຫວັດ ("+donList.length+")"),
           ...donList.map(appCard)
         ));
-      }
-    }
-    return section;
-  }
-
-  // ── TAB 50: Login Activity Log (Super Admin only) ────────────────────
-  if(effectiveTab===50){
-    const section=el("div",null);
-    section.appendChild(el("div",{className:"acard"},
-      el("div",{style:{fontWeight:"700",marginBottom:"6px"}},"📱 "+(_lang==="lo"?"ປະຫວັດການເຂົ້າໃຊ້ງານ":"Login Activity History")),
-      el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"12px"}},
-        _lang==="lo"?"ບັນທຶກທຸກຄັ້ງທີ່ມີຄົນລ໋ອກອິນເຂົ້າລະບົບ (ຊື່, ເວລາ, ປະເພດບັນຊີ, ຜ່ານລະບົບໃໝ່ ຫຼື ລະບົບເກົ່າ) — ເກັບໄວ້ຖາວອນ":"Records every login (name, time, account type, and whether it used the new server-verified system or the legacy fallback) — kept permanently"
-      )
-    ));
-    if(!window._loginLogsCache){
-      window._loginLogsCache="loading";
-      if(db){
-        db.collection("loginLogs").orderBy("loggedInAt","desc").limit(200).get().then(function(snap){
-          window._loginLogsCache=snap.docs.map(function(d){return d.data();});
-          render();
-        }).catch(function(err){
-          console.warn("loginLogs fetch failed:",err);
-          window._loginLogsCache=[];
-          render();
-        });
-      } else {
-        window._loginLogsCache=[];
-      }
-    }
-    if(window._loginLogsCache==="loading"){
-      section.appendChild(el("div",{style:{textAlign:"center",color:"#6B8F75",padding:"20px",fontSize:".82rem"}},"⏳ "+(_lang==="lo"?"ກຳລັງໂຫລດ...":"Loading...")));
-    } else {
-      const logs=window._loginLogsCache||[];
-      const refreshBtn=el("button",{style:{width:"100%",padding:"8px",background:"#F0F7F2",color:"#1B6B3A",border:"1.5px solid #C8E6D4",borderRadius:"10px",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px",fontSize:".78rem"},onclick:function(){window._loginLogsCache=null;render();}},"🔄 "+(_lang==="lo"?"ໂຫລດຄືນໃໝ່":"Refresh"));
-      section.appendChild(refreshBtn);
-      if(logs.length===0){
-        section.appendChild(el("div",{className:"acard",style:{textAlign:"center",color:"#6B8F75",padding:"20px",fontSize:".82rem"}},_lang==="lo"?"ຍັງບໍ່ມີຂໍ້ມູນ":"No data yet"));
-      } else {
-        const roleLabel={admin:"👑 Super Admin",shop:"🏪 Shop",narrator:"🎙️ Narrator",rider:"🚗 Rider",staff:"🏢 Staff","c-shopviewer":"🏪 Shop (via customer)",c:"🙋 Customer"};
-        const listWrap=el("div",{className:"acard",style:{padding:"0",overflow:"hidden"}});
-        logs.forEach(function(log,i){
-          const row=el("div",{style:{padding:"10px 14px",borderBottom:i<logs.length-1?"1px solid #F0F7F2":"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"8px"}});
-          const left=el("div",{style:{minWidth:"0"}},
-            el("div",{style:{fontSize:".82rem",fontWeight:"700",color:"#1A2B5F",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},log.name||"—"),
-            el("div",{style:{fontSize:".7rem",color:"#6B8F75"}},(roleLabel[log.role]||log.role)+" • "+new Date(log.loggedInAt).toLocaleString(_lang==="lo"?"lo-LA":"en-US"))
-          );
-          const methodBadge=el("span",{style:{fontSize:".65rem",fontWeight:"800",padding:"3px 8px",borderRadius:"10px",flexShrink:"0",background:log.method==="server"?"#E8F5EE":"#FFF3E0",color:log.method==="server"?"#1B6B3A":"#E67E22"}},log.method==="server"?"🔒 "+(_lang==="lo"?"ໃໝ່":"New"):"🕰️ "+(_lang==="lo"?"ເກົ່າ":"Legacy"));
-          row.appendChild(left);
-          row.appendChild(methodBadge);
-          listWrap.appendChild(row);
-        });
-        section.appendChild(listWrap);
       }
     }
     return section;

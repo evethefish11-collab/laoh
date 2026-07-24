@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v634 -->
+<!-- LaoH Marketplace v637 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3008,7 +3008,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.3.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.3.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5527,7 +5527,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.3.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.3.7")
   );
 
   // Icon style helper
@@ -10761,6 +10761,9 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
           const serverResult=await serverVerifyLogin(aF.u,aF.p,aType==="a"?"shopDirect":"customerChannel");
           hideLoginCheckingOverlay();
           if(serverResult&&serverResult.success){
+            // ── รหัส ID ที่ส่งกลับจากเซิร์ฟเวอร์เป็นตัวอักษรเสมอ (มาจาก Firestore document ID) แต่ข้อมูลที่เก็บไว้ในเว็บทั้งหมดใช้ตัวเลข — แปลงให้ตรงกันตรงนี้ที่เดียว กันไม่ให้หาข้อมูลจริงไม่เจอในทุกกรณีข้างล่าง ──
+            if(serverResult.id!==undefined&&serverResult.id!==null&&!isNaN(Number(serverResult.id)))serverResult.id=Number(serverResult.id);
+            if(serverResult.shopId!==undefined&&serverResult.shopId!==null&&!isNaN(Number(serverResult.shopId)))serverResult.shopId=Number(serverResult.shopId);
             if(serverResult.role==="admin"){
               user={role:"admin",name:serverResult.name||"Admin"};
               try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
@@ -10912,9 +10915,26 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
                 el("button",{className:"btn btn-p",style:{width:"100%"},onclick:function(){drawAuth();}},_lang==="lo"?"ກັບໄປຍອມຮັບ":"Go Back & Accept")
               ));
               return;
-            }if(aF.p!==aF.c2){aErr="รหัสผ่านไม่ตรงกัน";drawAuth();return;}if(users.find(x=>x.username===aF.u)){aErr="ชื่อผู้ใช้นี้มีอยู่แล้ว";drawAuth();return;}const nu={id:Date.now(),username:aF.u,password:aF.p,name:aF.n,phone:aF.ph,facebook:aF.fb};users.push(nu);saveToCloud("users",nu.id,nu);user={role:"c",...nu};window._addrCache=[];window._addrCacheUid=nu.id;closeOv();
-pushNotifAdmin("new_user","👤 ສະມາຊິກໃໝ່: "+nu.name,nu.phone||nu.username,null);
-toast(_lang==="lo"?"ສະໝັກສຳເລັດ 🎉 ໃຊ້ LAOH15 ຫຼຸດ 15% ສຳລັບຄຳສັ່ງທຳອິດ!":"Registered! Use LAOH15 for 15% off your first order!");
+            }if(aF.p!==aF.c2){aErr="รหัสผ่านไม่ตรงกัน";drawAuth();return;}if(users.find(x=>x.username===aF.u)){aErr="ชื่อผู้ใช้นี้มีอยู่แล้ว";drawAuth();return;}const nu={id:Date.now(),username:aF.u,password:aF.p,name:aF.n,phone:aF.ph,facebook:aF.fb};users.push(nu);user={role:"c",...nu};window._addrCache=[];window._addrCacheUid=nu.id;closeOv();
+saveToCloud("users",nu.id,nu).then(function(result){
+  // ── saveToCloud ดักข้อผิดพลาดไว้ข้างในแล้วคืนค่า error object ออกมาแทนการโยน exception จึงต้องเช็คผลลัพธ์ตรงนี้ ──
+  if(result&&(result instanceof Error||result.code)){
+    // ── บันทึกไม่สำเร็จ — ต้องยกเลิกสถานะ "ล็อกอินแล้ว" ที่ตั้งไว้ก่อนหน้านี้ด้วย เพราะบัญชีนี้ไม่มีอยู่จริงในฐานข้อมูล ──
+    user=null;
+    users=users.filter(function(u){return u.id!==nu.id;});
+    try{localStorage.removeItem("laoh_session");}catch(e){}
+    showOv(el("div",{className:"mod","data-noswipe":"1",style:{textAlign:"center",maxWidth:"320px"},onclick:function(e){e.stopPropagation();}},
+      el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"⚠️"),
+      el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#C0392B",marginBottom:"8px"}},_lang==="lo"?"ສະໝັກສະມາຊິກບໍ່ສຳເລັດ":"Registration Failed"),
+      el("div",{style:{fontSize:".82rem",color:"#4a4a6a",marginBottom:"16px",lineHeight:"1.6"}},_lang==="lo"?"ຂໍ້ມູນຂອງທ່ານສົ່ງໄປບໍ່ຄົບ ບັນຊີຍັງບໍ່ໄດ້ຖືກສ້າງ ກະລຸນາລອງສະໝັກໃໝ່ອີກຄັ້ງ":"Your data was not fully received and your account was not created. Please try registering again."),
+      el("button",{className:"btn btn-p",style:{width:"100%"},onclick:function(){closeOv();showAuth("register");}},_lang==="lo"?"ລອງໃໝ່ອີກຄັ້ງ":"Try Again")
+    ));
+    render();
+    return;
+  }
+  pushNotifAdmin("new_user","👤 ສະມາຊິກໃໝ່: "+nu.name,nu.phone||nu.username,null);
+  toast(_lang==="lo"?"ສະໝັກສຳເລັດ 🎉 ໃຊ້ LAOH15 ຫຼຸດ 15% ສຳລັບຄຳສັ່ງທຳອິດ!":"Registered! Use LAOH15 for 15% off your first order!");
+});
 // ── ຖ້າສະໝັກຈາກໜ້າ Checkout ໃຫ້ກັບຄືນ Checkout ທັນທີ ──
 if(_checkoutCart&&_checkoutCart.length>0){showCheckout();}else{render();}}
       }},aType==="a"?_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login":aMode==="login"?_lang==="lo"?"ເຂົ້າສູ່ລະບົບ":"Login":_lang==="lo"?"ສະໝັກສະມາຊິກ":"Register"),

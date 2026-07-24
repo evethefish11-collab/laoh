@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v621 -->
+<!-- LaoH Marketplace v623 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2897,7 +2897,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.2.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5416,7 +5416,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.2.3")
   );
 
   // Icon style helper
@@ -5668,10 +5668,15 @@ function updateSearchResults(){
 }
 
 
-// ── ตัวช่วยตรวจสอบ/จัดลำดับ Story 24 ชม. และสลับลำดับร้านค้าแบบสุ่มคงที่ต่อ 1 รอบการเปิดเว็บ ──
+// ── ตัวช่วยตรวจสอบ/จัดลำดับ Story 24 ชม. (รองรับหลายรูปต่อร้าน) และสลับลำดับร้านค้าแบบสุ่มคงที่ต่อ 1 รอบการเปิดเว็บ ──
 const STORY_LIFETIME_MS=24*60*60*1000;
+const STORY_DURATION_MS=20*1000; // ── แต่ละรูปแสดงผล 20 วินาทีก่อนไปรูปถัดไป ──
+function getActiveStories(sh){
+  if(!sh.stories||!Array.isArray(sh.stories))return [];
+  return sh.stories.filter(function(s){return s&&s.img&&s.postedAt&&(Date.now()-s.postedAt)<STORY_LIFETIME_MS;}).sort(function(a,b){return a.postedAt-b.postedAt;});
+}
 function shopHasActiveStory(sh){
-  return !!(sh.story&&sh.story.img&&sh.story.postedAt&&(Date.now()-sh.story.postedAt)<STORY_LIFETIME_MS);
+  return getActiveStories(sh).length>0;
 }
 function _getShuffledShopOrder(activeShops){
   // ── สุ่มลำดับครั้งเดียวต่อการเปิดเว็บ 1 รอบ (เก็บไว้ใน window ไม่สุ่มใหม่ทุกครั้งที่ render กันงง) ──
@@ -5704,7 +5709,11 @@ function buildShopStrip(){
   // ── เรียงลำดับ: ร้านที่มี Story ยังไม่หมดอายุขึ้นก่อนเสมอ (ล่าสุดก่อน) จากนั้นตามด้วยร้านอื่นๆ ตามลำดับที่สุ่มไว้ ──
   const sortedShops=activeShopsList.slice().sort(function(a,b){
     const aStory=shopHasActiveStory(a),bStory=shopHasActiveStory(b);
-    if(aStory&&bStory)return (b.story.postedAt||0)-(a.story.postedAt||0);
+    if(aStory&&bStory){
+      const aLatest=getActiveStories(a).slice(-1)[0].postedAt;
+      const bLatest=getActiveStories(b).slice(-1)[0].postedAt;
+      return bLatest-aLatest;
+    }
     if(aStory&&!bStory)return -1;
     if(!aStory&&bStory)return 1;
     return (shuffleMap[a.id]||0)-(shuffleMap[b.id]||0);
@@ -5764,28 +5773,93 @@ function showShopStoryPrompt(sh){
   mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
   mod.appendChild(el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"📸"));
   mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"16px"}},
-    _lang==="lo"?"ຕ້ອງການເບິ່ງ Story ຂອງ "+sh.name+" ບໍ່?":(_lang==="zh"?"要查看 "+sh.name+" 的动态吗？":"View "+sh.name+"'s story?")
+    _lang==="lo"?"ຕ້ອງການເບິ່ງຫຍັງ?":(_lang==="zh"?"想查看什么？":"What would you like to view?")
   ));
   const row=el("div",{style:{display:"flex",gap:"8px"}});
   row.appendChild(el("button",{style:{flex:"1",padding:"10px",background:"#F0F7F2",color:"#1A2B5F",border:"1.5px solid #C8E6D4",borderRadius:"10px",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){closeOv();view="shopProfile";fShop=sh.id;render();}},
-    _lang==="lo"?"ບໍ່, ໄປໜ້າຮ້ານ":(_lang==="zh"?"不了，进店铺":"No, go to shop")));
+    _lang==="lo"?"🏪 ເຂົ້າໂປຣໄຟລ໌":(_lang==="zh"?"🏪 进入店铺":"🏪 Go to Profile")));
   row.appendChild(el("button",{className:"btn btn-p",style:{flex:"1"},onclick:function(){closeOv();showShopStoryViewer(sh);}},
-    _lang==="lo"?"ແມ່ນ, ເບິ່ງເລີຍ":(_lang==="zh"?"是的":"Yes, view")));
+    _lang==="lo"?"📸 ເບິ່ງ Story":(_lang==="zh"?"📸 查看动态":"📸 View Story")));
+  mod.appendChild(row);
+  showOv(mod,null);
+}
+// ── ป๊อบอัพถามตอนกดรูปโปรไฟล์ในหน้าร้าน (ต่างจากตัวบนเพราะอยู่ในหน้าร้านอยู่แล้ว เลยถามว่าดูรูปโปรไฟล์เต็มจอ หรือดู Story แทน) ──
+function showShopAvatarOrStoryPrompt(sh){
+  const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxWidth:"320px",textAlign:"center"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontSize:"2rem",marginBottom:"8px"}},"📸"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"16px"}},
+    _lang==="lo"?"ຕ້ອງການເບິ່ງຫຍັງ?":(_lang==="zh"?"想查看什么？":"What would you like to view?")
+  ));
+  const row=el("div",{style:{display:"flex",gap:"8px"}});
+  row.appendChild(el("button",{style:{flex:"1",padding:"10px",background:"#F0F7F2",color:"#1A2B5F",border:"1.5px solid #C8E6D4",borderRadius:"10px",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
+    closeOv();
+    if(!sh.logo||!isUrl(sh.logo))return;
+    const ov2=el("div",{id:"ov",style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.9)",zIndex:"300",display:"flex",alignItems:"center",justifyContent:"center"},onclick:closeOv});
+    ov2.appendChild(el("img",{src:sh.logo,style:{maxWidth:"90%",maxHeight:"90%",objectFit:"contain",borderRadius:"12px"},onclick:function(e){e.stopPropagation();}}));
+    ov2.appendChild(el("button",{style:{position:"absolute",top:"18px",right:"14px",background:"rgba(255,255,255,.2)",border:"none",borderRadius:"50%",width:"32px",height:"32px",color:"#fff",fontSize:"1rem",cursor:"pointer"},onclick:closeOv},"✕"));
+    document.body.appendChild(ov2);
+  }},_lang==="lo"?"🖼️ ເບິ່ງຮູບໂປຣໄຟລ໌":(_lang==="zh"?"🖼️ 查看头像":"🖼️ View profile picture")));
+  row.appendChild(el("button",{className:"btn btn-p",style:{flex:"1"},onclick:function(){closeOv();showShopStoryViewer(sh);}},
+    _lang==="lo"?"📸 ເບິ່ງ Story":(_lang==="zh"?"📸 查看动态":"📸 View Story")));
   mod.appendChild(row);
   showOv(mod,null);
 }
 // ── หน้าจอเต็มแสดง Story (รูปภาพเท่านั้น) ──
 function showShopStoryViewer(sh){
-  const overlay=el("div",{id:"ov",style:{position:"fixed",inset:"0",background:"#000",zIndex:"300",display:"flex",alignItems:"center",justifyContent:"center"},onclick:closeOv});
-  overlay.appendChild(el("img",{src:sh.story.img,style:{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"},onclick:function(e){e.stopPropagation();}}));
-  overlay.appendChild(el("div",{style:{position:"absolute",top:"14px",left:"14px",right:"14px",display:"flex",alignItems:"center",gap:"8px",color:"#fff"}},
+  const stories=getActiveStories(sh);
+  if(stories.length===0)return;
+  let idx=0;
+  let timer=null;
+
+  const overlay=el("div",{id:"ov",style:{position:"fixed",inset:"0",background:"#000",zIndex:"300",display:"flex",alignItems:"center",justifyContent:"center"}});
+  const imgHolder=el("div",{style:{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}});
+  const progressRow=el("div",{style:{position:"absolute",top:"8px",left:"10px",right:"10px",display:"flex",gap:"4px",zIndex:"2"}});
+  const segments=stories.map(function(){
+    const seg=el("div",{style:{flex:"1",height:"3px",background:"rgba(255,255,255,.35)",borderRadius:"2px",overflow:"hidden"}});
+    const fill=el("div",{style:{height:"100%",width:"0%",background:"#fff",borderRadius:"2px"}});
+    seg.appendChild(fill);
+    progressRow.appendChild(seg);
+    return fill;
+  });
+
+  function goToShop(){
+    stopTimer();
+    closeOv();
+    view="shopProfile";fShop=sh.id;render();
+  }
+  function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+  function showIdx(i){
+    stopTimer();
+    if(i>=stories.length){closeOv();return;} // ── ดูครบทุกรูปแล้ว ปิดอัตโนมัติ ──
+    if(i<0)i=0;
+    idx=i;
+    imgHolder.innerHTML="";
+    imgHolder.appendChild(el("img",{src:stories[idx].img,style:{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}}));
+    segments.forEach(function(fill,si){fill.style.transition="none";fill.style.width=si<idx?"100%":"0%";});
+    // ── ปล่อยให้ browser วาดค่า 0% ก่อน แล้วค่อยเริ่ม transition ไม่งั้นจะไม่มี animation ให้เห็น ──
+    void segments[idx].offsetWidth;
+    segments[idx].style.transition="width "+(STORY_DURATION_MS/1000)+"s linear";
+    segments[idx].style.width="100%";
+    timer=setTimeout(function(){showIdx(idx+1);},STORY_DURATION_MS);
+  }
+
+  overlay.appendChild(progressRow);
+  overlay.appendChild(imgHolder);
+  const headerRow=el("div",{style:{position:"absolute",top:"20px",left:"14px",right:"14px",display:"flex",alignItems:"center",gap:"8px",color:"#fff",cursor:"pointer",zIndex:"2"},onclick:function(e){e.stopPropagation();goToShop();}},
     el("div",{style:{width:"32px",height:"32px",borderRadius:"50%",overflow:"hidden",background:sh.color||"#1B6B3A",flexShrink:"0",display:"flex",alignItems:"center",justifyContent:"center"}},
       sh.logo&&isUrl(sh.logo)?el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover"}}):el("span",null,sh.emoji||"🏪")
     ),
     el("div",{style:{fontWeight:"700",fontSize:".85rem",textShadow:"0 1px 3px rgba(0,0,0,.6)"}},sh.name)
-  ));
-  overlay.appendChild(el("button",{style:{position:"absolute",top:"14px",right:"14px",background:"rgba(255,255,255,.2)",border:"none",borderRadius:"50%",width:"32px",height:"32px",color:"#fff",fontSize:"1rem",cursor:"pointer"},onclick:closeOv},"✕"));
+  );
+  overlay.appendChild(headerRow);
+  overlay.appendChild(el("button",{style:{position:"absolute",top:"18px",right:"14px",background:"rgba(255,255,255,.2)",border:"none",borderRadius:"50%",width:"32px",height:"32px",color:"#fff",fontSize:"1rem",cursor:"pointer",zIndex:"2"},onclick:function(e){e.stopPropagation();stopTimer();closeOv();}},"✕"));
+  // ── แตะฝั่งซ้าย/ขวาของจอ (นอกพื้นที่หัวเรื่อง/ปุ่มปิด) เพื่อย้อนกลับ/ไปต่อรูปถัดไปเอง ──
+  overlay.appendChild(el("div",{style:{position:"absolute",top:"0",bottom:"0",left:"0",width:"40%",zIndex:"1"},onclick:function(e){e.stopPropagation();showIdx(idx-1);}}));
+  overlay.appendChild(el("div",{style:{position:"absolute",top:"0",bottom:"0",right:"0",width:"40%",zIndex:"1"},onclick:function(e){e.stopPropagation();showIdx(idx+1);}}));
+
   document.body.appendChild(overlay);
+  showIdx(0);
 }
 
 // ── SHOP PROFILE PAGE ──────────────────────────────────────────────
@@ -5820,8 +5894,9 @@ function buildShopProfile(shopId){
   );
 
   const isMyShopHereForAvatar=user&&user.isShopViewer&&user.shopId===shopId;
+  const avatarHasStory=shopHasActiveStory(sh);
   const avatarWrap=el("div",{style:{position:"relative",flexShrink:"0"}},
-    el("div",{className:"shop-avatar",style:{background:sh.color||"#1B6B3A",overflow:"hidden"}},
+    el("div",{className:"shop-avatar",style:Object.assign({background:sh.color||"#1B6B3A",overflow:"hidden",cursor:avatarHasStory?"pointer":"default"},avatarHasStory?{boxShadow:"0 0 0 3px #E0A900"}:{}),onclick:avatarHasStory?function(e){e.stopPropagation();showShopAvatarOrStoryPrompt(sh);}:null},
       sh.logo&&isUrl(sh.logo)
         ? el("img",{src:sh.logo,style:{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}})
         : el("span",{style:{fontSize:"2rem"}},sh.emoji||"🏪")
@@ -5832,10 +5907,11 @@ function buildShopProfile(shopId){
         const file=e.target.files&&e.target.files[0];
         if(!file)return;
         resizeImage(file,1200,1200,0.8,function(dataUrl){
-          const updated=Object.assign({},sh,{story:{img:dataUrl,postedAt:Date.now()}});
+          const newStoryList=getActiveStories(sh).concat([{img:dataUrl,postedAt:Date.now()}]);
+          const updated=Object.assign({},sh,{stories:newStoryList});
           const idx=shops.findIndex(function(x){return x.id===sh.id;});
           if(idx>=0)shops[idx]=updated;
-          saveToCloud("shops",sh.id,{story:{img:dataUrl,postedAt:Date.now()}});
+          saveToCloud("shops",sh.id,{stories:newStoryList});
           toast("✅ "+(_lang==="lo"?"ໂພສ Story ສຳເລັດ! ຈະຫາຍໄປເອງໃນ 24 ຊົ່ວໂມງ":"Story posted! It will disappear automatically in 24 hours"));
           render();
         });

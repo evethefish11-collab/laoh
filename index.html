@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v617 -->
+<!-- LaoH Marketplace v619 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1066,6 +1066,22 @@ function stopNotifListener(){
   if(_notifListener){_notifListener();_notifListener=null;}
   _notifUnread=0;
 }
+// ── ฟังข้อมูลคำขอเปิดร้านแบบเรียลไทม์ (เฉพาะซุปเปอร์แอดมิน) — แก้ปัญหารายการคำขอไม่อัปเดตจนกว่าจะรีเฟรชหน้าเว็บ ──
+let _shopAppListener=null;
+function startShopAppListener(){
+  if(!db||!user||user.role!=="admin")return;
+  if(_shopAppListener){_shopAppListener();_shopAppListener=null;}
+  try{
+    _shopAppListener=db.collection("shopApplications").onSnapshot(function(snap){
+      shopApplications=snap.docs.map(function(d){return d.data();});
+      saveShopApplications(shopApplications);
+      if(typeof render==="function")try{render();}catch(e){}
+    },function(err){console.warn("shopApp listener err:",err);});
+  }catch(e){}
+}
+function stopShopAppListener(){
+  if(_shopAppListener){_shopAppListener();_shopAppListener=null;}
+}
 
 // ── ດຶງ notifications ຂອງ user ປັດຈຸບັນ (ສຳລັບ modal inbox) ──
 // ໃຊ້ single-field query ແລ້ວ sort client-side ເພື່ອຫຼີກ composite index ──
@@ -1152,6 +1168,9 @@ function showNotifModal(){
           } else if(n.type==="new_user"&&user&&user.role==="admin"){
             // ── ໄປໜ້າ Members (superAdminTabMap[6]=4) — ປັບຈາກ 5 ເປັນ 6 ເພາະເພີ່ມແທັບ "ຂໍ້ຄວາມ" ໄວ້ຕຳແໜ່ງ 1 ──
             view="admin";aTab=6;render();
+          } else if(n.type==="new_shop_app"&&user&&user.role==="admin"){
+            // ── ໄປໜ້າ "📋 ຄຳຂໍ" ໂດຍກົງ (superAdminTabMap[8]=11) ──
+            view="admin";aTab=8;render();
           } else if(n.orderId){
             if(user&&user.isShopViewer){
               // ── ຮ້ານຄ້າທີ່ login ຜ່ານຊ່ອງລູກຄ້າ: ເປີດໜ້າ "🧾 ຄຳສັ່ງຊື້" ເຕັມ ແລ້ວເລື່ອນໄປຫາອໍເດີ້ນັ້ນເລີຍ ──
@@ -2878,7 +2897,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.1.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.1.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5261,6 +5280,7 @@ function render(){
   window._lastRenderedShop=(view==="shopProfile")?fShop:null;
   if(view==="shop")page.appendChild(buildShop());
   else if(view==="privacyPolicy")page.appendChild(buildPrivacyPolicyPage());
+  else if(view==="termsPage")page.appendChild(buildTermsPage());
   else if(view==="shopProfile"&&fShop!==null)page.appendChild(buildShopProfile(fShop));
   else if(view==="live"){
     if(!(user&&user.role==="admin")){view="feed";page.appendChild(buildFeedPage());}
@@ -5396,7 +5416,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.1.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.1.9")
   );
 
   // Icon style helper
@@ -7743,6 +7763,84 @@ const PRIVACY_POLICY_CONTENT={
     ]
   }
 };
+const TERMS_OF_SERVICE_CONTENT={
+  lo:{
+    title:"ຂໍ້ກຳນົດການນຳໃຊ້ (Terms of Service)",
+    updated:"ປັບປຸງລ່າສຸດ: 21 ກໍລະກົດ 2026",
+    notice:"⚠️ ໝາຍເຫດສຳຄັນ: ເອກະສານສະບັບນີ້ເປັນຮ່າງເບື້ອງຕົ້ນເພື່ອເປັນແນວທາງ ບໍ່ແມ່ນຄຳແນະນຳທາງກົດໝາຍ",
+    sections:[
+      ["1. ການຍອມຮັບຂໍ້ກຳນົດ","ການເຂົ້າໃຊ້ງານເວັບໄຊ/ແອັບພລິເຄຊັນ LaoH ລາວເຮັດ (\"ແພລດຟອມ\") ບໍ່ວ່າຈະໃນຖານະລູກຄ້າ ຫຼື ຮ້ານຄ້າ ຖືວ່າທ່ານໄດ້ຍອມຮັບຂໍ້ກຳນົດສະບັບນີ້ທັງໝົດ **ອາຍຸຂັ້ນຕ່ຳໃນການສະໝັກ: 13 ປີບໍລິບູນ**"],
+      ["2. ບົດບາດຂອງແພລດຟອມ","LaoH ເປັນພຽງ \"ຕະຫຼາດກາງ\" ທີ່ເຊື່ອມໂຍງລະຫວ່າງຮ້ານຄ້າອິດສະຫຼະກັບລູກຄ້າ ບໍ່ໄດ້ເປັນເຈົ້າຂອງສິນຄ້າ ຫຼື ຄູ່ສັນຍາຊື້ຂາຍໂດຍກົງ — **ສັນຍາຊື້ຂາຍເກີດຂຶ້ນລະຫວ່າງລູກຄ້າກັບຮ້ານຄ້າແຕ່ລະຮ້ານໂດຍກົງ**"],
+      ["3. ບັນຊີຜູ້ໃຊ້ງານ","ທ່ານຕ້ອງໃຫ້ຂໍ້ມູນທີ່ຖືກຕ້ອງ ຮັກສາຄວາມລັບຂອງລະຫັດຜ່ານ ແລະ ຮັບຜິດຊອບທຸກກິດຈະກຳພາຍໃຕ້ບັນຊີຂອງທ່ານ ຫ້າມສ້າງບັນຊີປອມ."],
+      ["4. ເງື່ອນໄຂສຳລັບຮ້ານຄ້າ","ການເປີດຮ້ານຕ້ອງຜ່ານການອະນຸມັດ — ພວກເຮົາສະຫງວນສິດປະຕິເສດໄດ້ໂດຍບໍ່ຕ້ອງແຈ້ງເຫດຜົນ.\n\nຮ້ານຄ້າຕ້ອງຮັບຜິດຊອບໃຫ້ຂໍ້ມູນສິນຄ້າຖືກຕ້ອງ ແລະ ຈັດສົ່ງສິນຄ້າພາຍໃນເວລາທີ່ເໝາະສົມ.\n\nຮ້ານຄ້າຍອມຮັບໃຫ້ຫັກຄ່າຄອມມິຊັນຕາມອັດຕາທີ່ກຳນົດ."],
+      ["5. ເງື່ອນໄຂສຳລັບລູກຄ້າ","ຄຳສັ່ງຊື້ຈະສົມບູນເມື່ອຮ້ານຄ້າຢືນຢັນການຊຳລະເງິນແລ້ວເທົ່ານັ້ນ **ການປອມແປງສະລິບຖືເປັນຄວາມຜິດຮ້າຍແຮງ**\n\nເງື່ອນໄຂການສົ່ງຄືນ/ຄືນເງິນຂຶ້ນກັບນະໂຍບາຍຂອງແຕ່ລະຮ້ານ LaoH ຊ່ວຍໄກ່ເກ່ຍໄດ້ ແຕ່ການຕັດສິນໃຈສຸດທ້າຍຂຶ້ນກັບທັງສອງຝ່າຍ."],
+      ["6. ຂໍ້ຫ້າມໃນການນຳໃຊ້ງານ","ຫ້າມໂພສເນື້ອຫາຜິດກົດໝາຍ, ຈຳໜ່າຍສິນຄ້າຜິດກົດໝາຍ/ລອກແບບ, ຫຼອກລວງ, ແຮັກລະບົບ ຫຼື ສ້າງບັນຊີປອມຫຼາຍບັນຊີ **ອາດນຳໄປສູ່ການລະງັບບັນຊີຖາວອນ**"],
+      ["7. ຊັບສິນທາງປັນຍາ ແລະ ເນື້ອຫາຜູ້ໃຊ້","ຄວາມຮັບຜິດຊອບດ້ານລິຂະສິດຂອງເນື້ອຫາທີ່ໂພສ ເປັນໄປຕາມນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ (Privacy Policy) ຂອງພວກເຮົາ."],
+      ["8. ຂໍ້ຈຳກັດຄວາມຮັບຜິດຊອບ","ແພລດຟອມໃຫ້ບໍລິການ \"ຕາມສະພາບທີ່ເປັນຢູ່\" ພວກເຮົາບໍ່ຮັບຜິດຊອບຕໍ່ຄຸນນະພາບ/ຄວາມປອດໄພຂອງສິນຄ້າທີ່ຮ້ານຄ້າຈຳໜ່າຍ."],
+      ["9. ການລະງັບ/ຍົກເລີກບັນຊີ","ພວກເຮົາສະຫງວນສິດລະງັບ/ຍົກເລີກບັນຊີໄດ້ທັນທີ ຫາກພົບການລະເມີດຂໍ້ກຳນົດ ໂດຍບໍ່ຕ້ອງແຈ້ງລ່ວງໜ້າ."],
+      ["10. ການລະງັບຂໍ້ຂັດແຍ້ງ","ຫາກມີຂໍ້ຂັດແຍ້ງ ທັງສອງຝ່າຍຕົກລົງເຈລະຈາກ່ອນເປັນອັນດັບທຳອິດ ຫາກຕົກລົງບໍ່ໄດ້ ໃຫ້ເປັນໄປຕາມກົດໝາຍແຫ່ງ ສປປ ລາວ."],
+      ["11. ການປ່ຽນແປງຂໍ້ກຳນົດ","ພວກເຮົາອາດປັບປຸງຂໍ້ກຳນົດນີ້ເປັນຄັ້ງຄາວ ການນຳໃຊ້ຕໍ່ໄປຫຼັງການປ່ຽນແປງ ຖືວ່າທ່ານຍອມຮັບ."],
+      ["12. ຕິດຕໍ່ພວກເຮົາ","ອີເມລ: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 2646"],
+    ]
+  },
+  en:{
+    title:"Terms of Service",
+    updated:"Last updated: July 21, 2026",
+    notice:"⚠️ Important notice: This document is a preliminary draft, not legal advice.",
+    sections:[
+      ["1. Acceptance of Terms","By using the LaoH ລາວເຮັດ website/app (\"Platform\"), as a customer or shop, you agree to these Terms in full. **Minimum age to register: 13 years old**"],
+      ["2. Role of the Platform","LaoH is solely a \"marketplace\" connecting independent shops with customers. We do not own products or act as a direct party to sales. **The sales contract is formed directly between the customer and each shop.**"],
+      ["3. User Accounts","You must provide accurate information, keep your password confidential, and are responsible for all activity under your account. Fake accounts are prohibited."],
+      ["4. Terms for Shops","Opening a shop requires approval — we may reject applications without giving a reason.\n\nShops must keep product information accurate and ship orders within a reasonable time.\n\nShops agree to the Platform's commission deduction at the rate in effect."],
+      ["5. Terms for Customers","An order is complete only once the shop confirms payment. **Forging a payment slip is a serious offense.**\n\nReturn/refund terms depend on each shop's policy. LaoH can help mediate, but the final decision depends on both parties."],
+      ["6. Prohibited Conduct","No illegal content, counterfeit/illegal goods, fraud, hacking, or fake accounts. **Violations may lead to permanent account suspension.**"],
+      ["7. Intellectual Property and User Content","Responsibility for copyright of posted content is governed by our Privacy Policy."],
+      ["8. Limitation of Liability","The Platform is provided \"as-is.\" We are not responsible for the quality/safety of products sold by shops."],
+      ["9. Suspension/Termination of Accounts","We reserve the right to immediately suspend or terminate any account found in violation, without prior notice."],
+      ["10. Dispute Resolution","Both parties agree to negotiate first. If no agreement is reached, the matter is governed by the laws of the Lao PDR."],
+      ["11. Changes to These Terms","We may update these Terms from time to time. Continued use after changes constitutes acceptance."],
+      ["12. Contact Us","Email: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 2646"],
+    ]
+  },
+  th:{
+    title:"ข้อกำหนดการใช้งาน (Terms of Service)",
+    updated:"ปรับปรุงล่าสุด: 21 กรกฎาคม 2026",
+    notice:"⚠️ หมายเหตุสำคัญ: เอกสารฉบับนี้เป็นร่างเบื้องต้นเพื่อเป็นแนวทาง ไม่ใช่คำแนะนำทางกฎหมาย",
+    sections:[
+      ["1. การยอมรับข้อกำหนด","การเข้าใช้งานเว็บไซต์/แอปพลิเคชัน LaoH ລາວເຮັດ (\"แพลตฟอร์ม\") ไม่ว่าจะในฐานะลูกค้าหรือร้านค้า ถือว่าท่านยอมรับข้อกำหนดฉบับนี้ทั้งหมด **อายุขั้นต่ำในการสมัคร: 13 ปีบริบูรณ์**"],
+      ["2. บทบาทของแพลตฟอร์ม","LaoH เป็นเพียง \"ตลาดกลาง\" ที่เชื่อมโยงระหว่างร้านค้าอิสระกับลูกค้า ไม่ได้เป็นเจ้าของสินค้าหรือคู่สัญญาซื้อขายโดยตรง — **สัญญาซื้อขายเกิดขึ้นระหว่างลูกค้ากับร้านค้าแต่ละร้านโดยตรง**"],
+      ["3. บัญชีผู้ใช้งาน","ท่านต้องให้ข้อมูลที่ถูกต้อง รักษาความลับของรหัสผ่าน และรับผิดชอบทุกกิจกรรมภายใต้บัญชีของท่าน ห้ามสร้างบัญชีปลอม"],
+      ["4. เงื่อนไขสำหรับร้านค้า","การเปิดร้านต้องผ่านการอนุมัติ — เราสงวนสิทธิ์ปฏิเสธได้โดยไม่ต้องแจ้งเหตุผล\n\nร้านค้าต้องรับผิดชอบให้ข้อมูลสินค้าถูกต้อง และจัดส่งสินค้าภายในเวลาที่เหมาะสม\n\nร้านค้ายอมรับให้หักค่าคอมมิชชั่นตามอัตราที่กำหนด"],
+      ["5. เงื่อนไขสำหรับลูกค้า","คำสั่งซื้อจะสมบูรณ์เมื่อร้านค้ายืนยันการชำระเงินแล้วเท่านั้น **การปลอมแปลงสลิปถือเป็นความผิดร้ายแรง**\n\nเงื่อนไขการคืนสินค้า/คืนเงินขึ้นอยู่กับนโยบายของแต่ละร้านค้า LaoH ช่วยไกล่เกลี่ยได้ แต่การตัดสินใจสุดท้ายขึ้นอยู่กับทั้งสองฝ่าย"],
+      ["6. ข้อห้ามในการใช้งาน","ห้ามโพสต์เนื้อหาผิดกฎหมาย จำหน่ายสินค้าผิดกฎหมาย/ลอกเลียนแบบ หลอกลวง แฮ็กระบบ หรือสร้างบัญชีปลอมหลายบัญชี **อาจนำไปสู่การระงับบัญชีถาวร**"],
+      ["7. ทรัพย์สินทางปัญญาและเนื้อหาผู้ใช้","ความรับผิดชอบด้านลิขสิทธิ์ของเนื้อหาที่โพสต์ เป็นไปตามนโยบายความเป็นส่วนตัว (Privacy Policy) ของเรา"],
+      ["8. ข้อจำกัดความรับผิดชอบ","แพลตฟอร์มให้บริการ \"ตามสภาพที่เป็นอยู่\" เราไม่รับผิดชอบต่อคุณภาพ/ความปลอดภัยของสินค้าที่ร้านค้าจำหน่าย"],
+      ["9. การระงับ/ยกเลิกบัญชี","เราสงวนสิทธิ์ระงับ/ยกเลิกบัญชีได้ทันที หากพบการฝ่าฝืนข้อกำหนด โดยไม่ต้องแจ้งล่วงหน้า"],
+      ["10. การระงับข้อพิพาท","หากมีข้อพิพาท ทั้งสองฝ่ายตกลงเจรจากันก่อนเป็นอันดับแรก หากตกลงกันไม่ได้ ให้เป็นไปตามกฎหมายแห่ง สปป.ลาว"],
+      ["11. การเปลี่ยนแปลงข้อกำหนด","เราอาจปรับปรุงข้อกำหนดนี้เป็นครั้งคราว การใช้งานต่อไปหลังการเปลี่ยนแปลง ถือว่าท่านยอมรับ"],
+      ["12. ติดต่อเรา","อีเมล: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 2646"],
+    ]
+  },
+  zh:{
+    title:"使用条款 (Terms of Service)",
+    updated:"最后更新：2026年7月21日",
+    notice:"⚠️ 重要提示：本文件为初步草案，仅供参考，不构成法律建议。",
+    sections:[
+      ["1. 条款的接受","使用 LaoH ລາວເຮັດ 网站/应用程序（\"平台\"），无论是顾客还是店铺，即表示您同意本条款的全部内容。**注册的最低年龄要求：13周岁**"],
+      ["2. 平台的角色","LaoH 仅仅是连接独立店铺与顾客的\"中间市场\"。我们不拥有商品，也不是买卖合同的直接一方——**买卖合同是在顾客与各个店铺之间直接产生的**"],
+      ["3. 用户账号","您必须提供准确信息，对密码保密，并对账号下的所有活动负责。禁止创建虚假账号"],
+      ["4. 店铺条款","开设店铺必须经过审核批准——我们可拒绝申请且无需说明理由\n\n店铺须确保商品信息准确，并在合理时间内配送商品\n\n店铺同意按规定比例支付平台佣金"],
+      ["5. 顾客条款","只有店铺确认收款后，订单才算完成 **伪造付款凭证属于严重违规行为**\n\n退货/退款条件取决于各店铺的政策 LaoH 可协助调解，但最终决定取决于双方协商"],
+      ["6. 禁止行为","禁止发布违法内容、销售违法/仿冒商品、欺诈、攻击系统或创建多个虚假账号 **可能导致账号被永久封禁**"],
+      ["7. 知识产权与用户内容","用户发布内容的版权责任问题，适用我们的隐私政策（Privacy Policy）"],
+      ["8. 责任限制","平台按\"现状\"提供服务 我们对店铺所销售商品的质量/安全性不承担责任"],
+      ["9. 账号的暂停/终止","如发现违反本条款，我们保留立即暂停/终止账号的权利，无需事先通知"],
+      ["10. 争议解决","如发生争议，双方同意首先协商解决 如无法达成协议，则依照老挝人民民主共和国的法律处理"],
+      ["11. 条款的变更","我们可能不时更新本条款 变更后继续使用平台，即表示您同意新条款"],
+      ["12. 联系我们","邮箱：laohmarketoffice@gmail.com\nWhatsApp：+856 20 5982 2646"],
+    ]
+  }
+};
 // ── ตัวสร้างเนื้อหา Privacy Policy ที่ใช้ร่วมกัน — รับ footerBtn/onLangChange เข้ามาเพื่อให้ทั้งหน้าเต็มและป๊อบอัพใช้เนื้อหาชุดเดียวกันเป๊ะๆ ไม่มีวันเพี้ยนออกจากกัน ──
 function buildPrivacyPolicyContent(footerBtn,onLangChange){
   // ── ใช้ตัวแปรภาษาแยกต่างหากเฉพาะเอกสารนี้ (ไม่ใช่ _lang ของทั้งเว็บ) เพื่อไม่ให้กระทบภาษาที่ใช้อยู่ในหน้าอื่นของเว็บเลย ──
@@ -7784,6 +7882,46 @@ function buildPrivacyPolicyPage(){
   outer.appendChild(inner());
   return outer;
 }
+// ── ตัวสร้างเนื้อหา Terms of Service — คู่ขนานกับ Privacy Policy ทุกประการ แต่ใช้ตัวแปรภาษาแยกต่างหาก (window._tosLang) เพื่อไม่ให้ปนกับ Privacy Policy เลย ──
+function buildTermsContent(footerBtn,onLangChange){
+  if(!window._tosLang)window._tosLang=(_lang==="lo"||_lang==="en")?_lang:"lo";
+  const LANG_CYCLE=["lo","en","th","zh"];
+  const LANG_LABEL={lo:"ລາວ",en:"EN",th:"ไทย",zh:"中文"};
+  const lg=TERMS_OF_SERVICE_CONTENT[window._tosLang]||TERMS_OF_SERVICE_CONTENT.lo;
+  const wrap=el("div",{style:{maxWidth:"720px",margin:"0 auto",padding:"4px 2px 10px"}});
+  const hdr=el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}});
+  hdr.appendChild(el("div",{style:{fontWeight:"900",fontSize:"1.1rem",color:"#1A2B5F"}},"LaoH ລາວເຮັດ"));
+  const langBtn3=el("button",{style:{background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"20px",padding:"5px 12px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",marginRight:"38px"},onclick:function(){
+    const curIdx=LANG_CYCLE.indexOf(window._tosLang);
+    window._tosLang=LANG_CYCLE[(curIdx+1)%LANG_CYCLE.length];
+    onLangChange();
+  }},"🌐 "+LANG_LABEL[window._tosLang]);
+  hdr.appendChild(langBtn3);
+  wrap.appendChild(hdr);
+  wrap.appendChild(el("h1",{style:{fontSize:"1.1rem",color:"#1A2B5F",marginTop:"14px",marginBottom:"4px"}},lg.title));
+  wrap.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",marginBottom:"14px"}},lg.updated));
+  lg.sections.forEach(function(sec){
+    wrap.appendChild(el("h2",{style:{fontSize:".95rem",color:"#1B6B3A",marginTop:"20px",marginBottom:"7px"}},sec[0]));
+    const p=el("div",{style:{fontSize:".8rem",color:"#333",lineHeight:"1.65",whiteSpace:"pre-line"}});
+    const parts=sec[1].split(/\*\*(.+?)\*\*/g);
+    parts.forEach(function(part,i){
+      if(i%2===1)p.appendChild(el("strong",null,part));
+      else p.appendChild(document.createTextNode(part));
+    });
+    wrap.appendChild(p);
+  });
+  if(footerBtn)wrap.appendChild(el("div",{style:{marginTop:"26px",textAlign:"center"}},footerBtn));
+  return wrap;
+}
+function buildTermsPage(){
+  const inner=function(){return buildTermsContent(
+    el("button",{className:"btn btn-p",onclick:function(){view="shop";render();}},_lang==="lo"?"← ກັບໄປໜ້າຫຼັກ":"← Back to Home"),
+    function(){render();}
+  );};
+  const outer=el("div",{style:{maxWidth:"760px",margin:"0 auto",padding:"20px 18px 60px",background:"#fff",minHeight:"100vh"}});
+  outer.appendChild(inner());
+  return outer;
+}
 // ── ป๊อบอัพอ่าน+ยอมรับ Privacy Policy — ใช้ตอนสมัครสมาชิก (ลูกค้า/ร้านค้า) ไม่เปลี่ยน view ทั้งหน้า จึงไม่ทำให้ข้อมูลที่กรอกไว้ในฟอร์มสมัครหายไป ──
 function showPrivacyPolicyModal(onAccept){
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{maxWidth:"480px",maxHeight:"82vh",overflowY:"auto",padding:"20px 18px"}});
@@ -7807,10 +7945,12 @@ function showPrivacyPolicyModal(onAccept){
     const acceptBtn=el("button",{className:"btn btn-p",style:{width:"100%"},onclick:function(){
       if(!hasScrolledToBottom)return;
       closeOv();if(onAccept)onAccept();
-    }},"✅ "+(_lang==="lo"?"ຂ້ອຍໄດ້ອ່ານ ແລະ ຍອມຮັບເງື່ອນໄຂ":"I have read and accept"));
+    }},"✅ "+(_lang==="lo"?"ຂ້ອຍໄດ້ອ່ານ ແລະ ຍອມຮັບເງື່ອນໄຂທັງໝົດ":"I have read and accept all terms"));
     acceptBtnRef=acceptBtn;
     updateAcceptBtnState();
-    mod.appendChild(buildPrivacyPolicyContent(acceptBtn,draw));
+    mod.appendChild(buildPrivacyPolicyContent(null,draw));
+    mod.appendChild(el("div",{style:{borderTop:"2px dashed #E0E5DE",margin:"18px 0"}}));
+    mod.appendChild(buildTermsContent(acceptBtn,draw));
     // ── ถ้าเนื้อหาสั้นจนไม่ต้องเลื่อนเลย (พอดีจอ) ให้ถือว่าอ่านครบแล้วตั้งแต่แรก ──
     setTimeout(function(){
       if(mod.scrollHeight<=mod.clientHeight+20){hasScrolledToBottom=true;updateAcceptBtnState();}
@@ -20601,6 +20741,10 @@ loadFromCloud().then(function(){
   if(urlParams.get("page")==="privacy"){
     view="privacyPolicy";render();
   }
+  // Handle ?page=terms — standalone Terms of Service page, accessible without login (for App Store/Google Play links)
+  if(urlParams.get("page")==="terms"){
+    view="termsPage";render();
+  }
   const sharedPid=urlParams.get("p");
   if(sharedPid&&window._fastPathOpenedProductId!==String(sharedPid)){
     const sp=prods.find(function(x){return String(x.id)===String(sharedPid);});
@@ -20773,7 +20917,7 @@ loadFromCloud().then(function(){
     const curUid=user?String(user.id):null;
     if(curUid!==_lastNotifUid){
       _lastNotifUid=curUid;
-      if(user){startNotifListener();startMsgUnreadListener();}
+      if(user){startNotifListener();startMsgUnreadListener();startShopAppListener();}
       else{stopNotifListener();stopMsgUnreadListener();}
     }
   };

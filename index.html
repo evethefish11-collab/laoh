@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v644 -->
+<!-- LaoH Marketplace v645 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2387,6 +2387,83 @@ function compressVideoToBlob(videoFile,maxWidth,onProgress){
     video.onerror=function(){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS: ໂຫຼດວິດີໂອຕົ້ນສະບັບບໍ່ສຳເລັດ"));};
   });
 }
+// ── ตัวแสดง "กำลังอัปโหลดวิดีโอ..." (นาฬิกาทรายหมุน) — ใช้ร่วมกันทั้งช่วงบีบอัดและช่วงอัปโหลดจริง แค่เปลี่ยนข้อความ ──
+function showVideoCompressOverlay(text){
+  if(document.getElementById("vidCompressOv")){updateVideoCompressOverlay(text);return;}
+  const ov=el("div",{id:"vidCompressOv",style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.65)",zIndex:"10001",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"14px"}});
+  ov.appendChild(el("div",{style:{fontSize:"2.6rem",animation:"laohSpin 1.1s linear infinite"}},"⏳"));
+  ov.appendChild(el("div",{id:"vidCompressOvTxt",style:{color:"#fff",fontWeight:"700",fontSize:".9rem",textAlign:"center",padding:"0 30px",lineHeight:"1.5"}},
+    text||(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...")
+  ));
+  document.body.appendChild(ov);
+}
+function updateVideoCompressOverlay(text){
+  const t=document.getElementById("vidCompressOvTxt");
+  if(t&&text)t.textContent=text;
+}
+function hideVideoCompressOverlay(){
+  const ov=document.getElementById("vidCompressOv");
+  if(ov)ov.remove();
+}
+// ── บีบอัดวิดีโอ (ลดความกว้างสูงສຸດ) ໂດຍ "ຮັກສາສຽງຕົ້ນສະບັບໄວ້" — ต่างจาก compressVideoToBlob ที่ตัดเสียงทิ้งเสมอ (ໃຊ້ກັບເສັ້ນທາງພາກສຽງທີ່ຕັ້ງໃຈຕັດສຽງເດີມຢູ່ແລ້ວ) ──
+// ── ดึง audio track จากวิดีโอต้นฉบับผ่าน video.captureStream() มารวมกับ video track จาก canvas ก่อนบันทึกเป็นไฟล์ใหม่ ──
+function compressVideoWithAudioToBlob(videoFile,maxWidth,onProgress){
+  return new Promise(function(resolve,reject){
+    const url=URL.createObjectURL(videoFile);
+    const video=document.createElement("video");
+    video.src=url;video.muted=true;video.playsInline=true;video.setAttribute("playsinline","");
+    video.onloadedmetadata=function(){
+      if(!video.videoWidth||!video.videoHeight){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: ບໍ່ສາມາດອ່ານຂະໜາດວິດີໂອໄດ້"));return;}
+      const scale=Math.min(1,maxWidth/video.videoWidth);
+      const w=Math.max(2,Math.round(video.videoWidth*scale/2)*2);
+      const h=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
+      const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext("2d");
+      if(!canvas.captureStream){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: browser ນີ້ບໍ່ຮອງຮັບການບີບອັດວິດີໂອ"));return;}
+      const captureFn=video.captureStream||video.mozCaptureStream;
+      if(!captureFn){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: browser ນີ້ບໍ່ຮອງຮັບການດຶງສຽງຕົ້ນສະບັບ"));return;}
+      let audioTracks=[];
+      try{
+        const vStream=captureFn.call(video);
+        audioTracks=vStream.getAudioTracks();
+      }catch(e){}
+      if(audioTracks.length===0){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: ບໍ່ພົບແທຣັກສຽງໃນວິດີໂອຕົ້ນສະບັບ"));return;}
+      const canvasStream=canvas.captureStream(30);
+      const combinedStream=new MediaStream(canvasStream.getVideoTracks().concat(audioTracks));
+      const mimeCandidates=["video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
+      let chosenMime="";
+      for(let i=0;i<mimeCandidates.length;i++){
+        if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(mimeCandidates[i])){chosenMime=mimeCandidates[i];break;}
+      }
+      let recorder;
+      try{
+        recorder=chosenMime?new MediaRecorder(combinedStream,{mimeType:chosenMime,videoBitsPerSecond:1500000}):new MediaRecorder(combinedStream);
+      }catch(e){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: "+(e&&e.message?e.message:String(e))));return;}
+      const chunks=[];
+      recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
+      recorder.onstop=function(){
+        URL.revokeObjectURL(url);
+        if(chunks.length===0){reject(new Error("STEP_COMPRESS_AUDIO: ບໍ່ໄດ້ຂໍ້ມູນວິດີໂອທີ່ບີບອັດແລ້ວ"));return;}
+        resolve(new Blob(chunks,{type:chosenMime||"video/webm"}));
+      };
+      recorder.onerror=function(e){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: "+(e&&e.error&&e.error.message?e.error.message:"Recorder error")));};
+      let drawing=true;
+      function drawFrame(){
+        if(!drawing)return;
+        try{ctx.drawImage(video,0,0,w,h);}catch(e){}
+        if(onProgress&&video.duration)onProgress(Math.min(1,video.currentTime/video.duration));
+        requestAnimationFrame(drawFrame);
+      }
+      video.onended=function(){drawing=false;setTimeout(function(){try{recorder.stop();}catch(e){}},150);};
+      video.onplay=function(){
+        try{recorder.start();}catch(e){reject(new Error("STEP_COMPRESS_AUDIO: "+(e&&e.message?e.message:String(e))));return;}
+        drawFrame();
+      };
+      video.play().catch(function(e){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: "+(e&&e.message?e.message:String(e))));});
+    };
+    video.onerror=function(){URL.revokeObjectURL(url);reject(new Error("STEP_COMPRESS_AUDIO: ໂຫຼດວິດີໂອຕົ້ນສະບັບບໍ່ສຳເລັດ"));};
+  });
+}
 async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,musicVol){
   const AudioCtx=window.AudioContext||window.webkitAudioContext;
   if(!AudioCtx)throw new Error("STEP_VOICE_DECODE: AudioContext not supported on this browser");
@@ -3014,7 +3091,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.5")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5533,7 +5610,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.5")
   );
 
   // Icon style helper
@@ -12740,7 +12817,50 @@ function buildRiderDashboard(){
             const routeBox=el("div",{style:{background:"#fff",borderRadius:"16px",padding:"20px",maxWidth:"360px",width:"100%"},onclick:function(ev){ev.stopPropagation();}});
             routeBox.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"14px",textAlign:"center"}},_lang==="lo"?"ເລືອກແບບວິດີໂອ":"Choose video type"));
             routeBox.appendChild(el("button",{style:{width:"100%",padding:"14px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"12px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
-              onclick:function(){routeOverlay.remove();doShopProcess();}
+              onclick:function(){
+                routeOverlay.remove();
+                showVideoCompressOverlay(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ... 0%":"Uploading video... 0%");
+                compressVideoWithAudioToBlob(file,720,function(pct){
+                  updateVideoCompressOverlay((_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ... ":"Uploading video... ")+Math.round(pct*100)+"%");
+                }).then(function(compressedBlob){
+                  const reader2=new FileReader();
+                  reader2.onload=function(e2){
+                    const b64c=e2.target.result;
+                    npost.mediaUrl=b64c;
+                    mediaPreview.innerHTML="";
+                    const v=document.createElement("video");v.src=npost.mediaUrl;v.style.cssText="width:100%;max-height:200px;object-fit:cover;";v.controls=true;v.playsInline=true;
+                    mediaPreview.appendChild(v);
+                    const cl=document.createElement("button");cl.style.cssText="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.7rem;";cl.textContent="✕";
+                    cl.onclick=function(e){e.stopPropagation();npost.mediaUrl=null;npost.mediaType="image";mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);};
+                    mediaPreview.appendChild(cl);
+                    updateVideoCompressOverlay(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
+                    uploadVideoToStorage(b64c,Date.now()+".mp4").then(function(url){
+                      hideVideoCompressOverlay();
+                      if(url&&url.startsWith("http")){
+                        npost.mediaUrl=url;
+                        toast(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ ✓":"Video uploaded ✓");
+                      } else {
+                        npost.mediaUrl=null;
+                        toast("❌ ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ — Firebase Storage ປະຕິເສດ (ກວດ Rules ຫຼື content-type)");
+                        mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);
+                      }
+                    }).catch(function(err){
+                      hideVideoCompressOverlay();
+                      npost.mediaUrl=null;
+                      toast("❌ ອັບໂຫຼດວິດີໂອ error: "+(err&&err.message?err.message:"unknown"));
+                      console.error("Video upload error:",err);
+                      mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);
+                    });
+                  };
+                  reader2.readAsDataURL(compressedBlob);
+                }).catch(function(err){
+                  // ── browser ບໍ່ຮອງຮັບການບີບອັດແບບຮັກສາສຽງ (ເຊັ່ນ Safari ຮຸ່ນເກົ່າ) — ຕົກກັບໄປອັບໂຫລດໄຟລ໌ຕົ້ນສະບັບແທນ (ຊ້າກວ່າ ແຕ່ຍັງໃຊ້ໄດ້) ──
+                  console.warn("compressVideoWithAudioToBlob failed, fallback to raw upload:",err);
+                  hideVideoCompressOverlay();
+                  toast(_lang==="lo"?"⚠️ ບີບອັດບໍ່ສຳເລັດ, ກຳລັງອັບໂຫລດແບບເຕັມ (ອາດຊ້າ)...":"⚠️ Compression failed, uploading full file (may be slow)...");
+                  doShopProcess();
+                });
+              }
             },"📹 "+(_lang==="lo"?"ອັບໂຫຼດແບບເຕັມ (ມີສຽງຕົ້ນສະບັບ)":"Full upload (original audio)")));
             routeBox.appendChild(el("button",{style:{width:"100%",padding:"14px",background:"#F0F7F2",color:"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"12px",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit"},
               onclick:function(){

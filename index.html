@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v648 -->
+<!-- LaoH Marketplace v649 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3107,7 +3107,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.8")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5628,7 +5628,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.8")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.9")
   );
 
   // Icon style helper
@@ -19581,7 +19581,7 @@ function buildAdminTab(){
         items:[], // {pid,name,c,s,q,p,cost,preorder,shopId,shopName}
         deliveryType:"carrier",carrier:CARRIERS[0],branch:"",
         house:"",village:"",district:"",
-        couponCode:"",
+        couponCode:"",couponCodes:[], // ── couponCodes = array ໃໝ່ ຮອງຮັບເລືອກໄດ້ຫຼາຍໂຄ້ດພ້ອມກັນ; couponCode ເກົ່າເກັບໄວ້ເພື່ອບໍ່ໃຫ້ກະທົບໂຄ້ດອື່ນທີ່ອາດອ້າງອິງ ──
         showAdminOrders:false
       };
     }
@@ -19732,21 +19732,59 @@ function buildAdminTab(){
     }
     section.appendChild(delCard);
 
-    // ── STEP 4: Coupon ──────────────────────────────────────
+    // ── STEP 4: Coupon — ລາຍການໂຄ້ດທີ່ Active ໃຫ້ຄລິກເລືອກໄດ້ຫຼາຍໂຄ້ດພ້ອມກັນ (ແທນການພິມມືເທົ່ານັ້ນ) ──
     const cpCard=el("div",{className:"acard",style:{marginBottom:"14px"}});
-    cpCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",marginBottom:"10px"}},"④ "+(_lang==="lo"?"ໂຄ້ດສ່ວນຫຼຸດ (ບໍ່ບັງຄັບ)":"Coupon (optional)")));
-    const cpInp=el("input",{type:"text",placeholder:_lang==="lo"?"ໃສ່ໂຄ້ດ...":"Enter code...",value:ad.couponCode,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",textTransform:"uppercase"}});
+    cpCard.appendChild(el("div",{style:{fontWeight:"700",fontSize:".85rem",marginBottom:"10px"}},"④ "+(_lang==="lo"?"ໂຄ້ດສ່ວນຫຼຸດ (ບໍ່ບັງຄັບ, ເລືອກໄດ້ຫຼາຍໂຄ້ດ)":"Coupon (optional, multi-select)")));
+    const nowAd=Date.now();
+    const activeCoupons=coupons.filter(function(c){
+      return c.active&&!(c.expiresAt&&nowAd>c.expiresAt)&&!(c.limit&&c.used>=c.limit);
+    });
+    if(activeCoupons.length>0){
+      const cpList=el("div",{style:{display:"flex",flexDirection:"column",gap:"5px",marginBottom:"8px"}});
+      activeCoupons.forEach(function(c){
+        const isSel=ad.couponCodes.indexOf(c.code)>=0;
+        const cRow=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",background:isSel?"#E8F5EE":"#F7F7F9",border:"1.5px solid "+(isSel?"#1B6B3A":"#eee"),borderRadius:"8px",padding:"7px 10px",cursor:"pointer"}},
+          el("span",{style:{fontSize:".85rem"}},isSel?"✅":"⬜"),
+          el("div",{style:{flex:"1"}},
+            el("span",{style:{fontWeight:"800",fontSize:".8rem",color:"#1B6B3A",letterSpacing:"1px"}},c.code),
+            el("span",{style:{fontSize:".68rem",color:"#6B8F75",marginLeft:"6px"}},(c.type==="shipping"?(_lang==="lo"?"ຫຼຸດຄ່າສົ່ງ ":"Shipping "):(_lang==="lo"?"ຫຼຸດ ":"Discount "))+c.pct+"%")
+          )
+        );
+        cRow.onclick=function(){
+          const idx=ad.couponCodes.indexOf(c.code);
+          if(idx>=0)ad.couponCodes.splice(idx,1);
+          else ad.couponCodes.push(c.code);
+          render();
+        };
+        cpList.appendChild(cRow);
+      });
+      cpCard.appendChild(cpList);
+    }
+    // ── ຊ່ອງພິມມືສຳຮອງ ເຜື່ອໂຄ້ດພິເສດທີ່ບໍ່ຢູ່ໃນລາຍການຂ້າງເທິງ ──
+    const cpInp=el("input",{type:"text",placeholder:_lang==="lo"?"ຫຼືພິມໂຄ້ດອື່ນ...":"Or type another code...",value:ad.couponCode,style:{width:"100%",padding:"9px 11px",borderRadius:"9px",border:"1.5px solid #ddd",fontSize:".8rem",fontFamily:"inherit",textTransform:"uppercase"}});
     cpInp.oninput=function(){ad.couponCode=this.value.toUpperCase();};
-    cpCard.appendChild(cpInp);
+    const cpAddBtn=el("button",{type:"button",style:{width:"100%",padding:"7px",marginTop:"6px",borderRadius:"8px",border:"1.5px solid #1B6B3A",background:"#fff",color:"#1B6B3A",fontWeight:"600",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},
+      onclick:function(){
+        const cd=(ad.couponCode||"").trim();
+        if(!cd){toast(_lang==="lo"?"ໃສ່ໂຄ້ດກ່ອນ":"Enter a code first");return;}
+        const found=coupons.find(function(c){return c.code===cd&&c.active;});
+        if(!found){toast(_lang==="lo"?"ໂຄ້ດບໍ່ຖືກຕ້ອງ ❌":"Invalid code ❌");return;}
+        if(ad.couponCodes.indexOf(cd)<0)ad.couponCodes.push(cd);
+        ad.couponCode="";
+        render();
+      }
+    },(_lang==="lo"?"➕ ເພີ່ມໂຄ້ດນີ້":"➕ Add This Code"));
+    cpCard.appendChild(cpInp);cpCard.appendChild(cpAddBtn);
     section.appendChild(cpCard);
 
     // ── STEP 5: Summary & Submit ──────────────────────────────────────
     const subtotal=ad.items.reduce(function(s,it){return s+it.p*it.q;},0);
-    let discount=0,matchedCp=null;
-    if(ad.couponCode){
-      matchedCp=coupons.find(function(c){return c.code===ad.couponCode&&(!c.expiry||new Date(c.expiry)>=new Date());});
-      if(matchedCp&&matchedCp.type!=="shipping")discount=Math.round(subtotal*matchedCp.pct/100);
-    }
+    let discount=0;
+    const matchedCps=ad.couponCodes.map(function(cd){return coupons.find(function(c){return c.code===cd;});}).filter(Boolean);
+    matchedCps.forEach(function(mc){
+      if(mc.type!=="shipping")discount+=Math.round(subtotal*mc.pct/100);
+    });
+    const matchedCp=matchedCps.length>0?matchedCps[0]:null; // ── ເກັບໄວ້ໃຫ້ backward-compatible ກັບໂຄ້ດອື່ນທີ່ອາດອ້າງອິງ matchedCp ຕົວດຽວ ──
     const sumCard=el("div",{className:"acard",style:{marginBottom:"14px",background:"#F3F0F7"}});
     sumCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".82rem",marginBottom:"4px"}},el("span",null,_lang==="lo"?"ລວມສິນຄ້າ":"Subtotal"),el("span",null,"₭"+fmt(subtotal))));
     if(discount>0)sumCard.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".82rem",marginBottom:"4px",color:"#c0392b"}},el("span",null,_lang==="lo"?"ສ່ວນຫຼຸດ":"Discount"),el("span",null,"-₭"+fmt(discount))));
@@ -19782,7 +19820,7 @@ function buildAdminTab(){
           shopName:sitems[0].shopName||"LaoH",
           items:sitems.map(function(i){return {n:i.name,c:i.c||"",s:i.s||"",q:i.q,p:i.p,cost:i.cost||0,preorder:i.preorder||false};}),
           subtotal:sTotal,shipping:0,discount:sDisc,discProd:sDisc,
-          coupon:idx===0&&matchedCp?matchedCp.code:"",
+          coupon:idx===0&&matchedCps.length>0?matchedCps.map(function(m){return m.code;}).join(", "):"",
           couponIssuer:idx===0&&sDisc>0?((matchedCp&&matchedCp.issuer)||"shop"):"",
           total:sTotal-sDisc,
           status:"ລໍຢືນຢັນ",
@@ -19807,18 +19845,18 @@ function buildAdminTab(){
           }
         });
       });
-      if(matchedCp){
-        const cpU=Object.assign({},matchedCp,{used:(matchedCp.used||0)+1});
-        const cpIdx=coupons.findIndex(function(x){return x.id===matchedCp.id;});
+      matchedCps.forEach(function(mc){
+        const cpU=Object.assign({},mc,{used:(mc.used||0)+1});
+        const cpIdx=coupons.findIndex(function(x){return x.id===mc.id;});
         if(cpIdx>=0)coupons[cpIdx]=cpU;
         saveToCloud("coupons",cpU.id,cpU);
-      }
+      });
       // ── ກວດສອບວ່າ Firestore ບັນທຶກອໍເດີສຳເລັດແທ້ ກ່ອນແຈ້ງວ່າສຳເລັດ (ຄືແບບເຊັກເອົາທ໌ລູກຄ້າ v1.9.1) ──
       submitBtn.disabled=true;submitBtn.textContent=_lang==="lo"?"⏳ ກຳລັງສ້າງ...":"⏳ Creating...";
       function _attemptAdminOrderUpload(){
         if(!db){_showAdminOrderRetry();return;}
         const verifyCallsA=createdOrdersA.map(function(co){
-          return db.collection("orders").doc(String(co.id)).get()
+          return db.collection("orders").doc(String(co.id)).get({source:"server"})
             .then(function(doc){return doc.exists===true;})
             .catch(function(){return false;});
         });

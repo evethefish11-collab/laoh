@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v645 -->
+<!-- LaoH Marketplace v647 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1185,6 +1185,7 @@ function stopNotifListener(){
 }
 // ── ฟังข้อมูลคำขอเปิดร้านแบบเรียลไทม์ (เฉพาะซุปเปอร์แอดมิน) — แก้ปัญหารายการคำขอไม่อัปเดตจนกว่าจะรีเฟรชหน้าเว็บ ──
 let _shopAppListener=null;
+let _ordersListener=null; // ── Firestore realtime listener ສຳລັບ orders — ແກ້ບັນຫາ Admin/Shop ບໍ່ເຫັນອໍເດີໃໝ່ຈົນກວ່າຈະ refresh ໜ້າເອງ ──
 function startShopAppListener(){
   if(!db||!user||user.role!=="admin")return;
   if(_shopAppListener){_shopAppListener();_shopAppListener=null;}
@@ -1198,6 +1199,21 @@ function startShopAppListener(){
 }
 function stopShopAppListener(){
   if(_shopAppListener){_shopAppListener();_shopAppListener=null;}
+}
+// ── ຟັງການປ່ຽນແປງຂອງ orders ແບບ realtime — ໃຫ້ Admin ແລະ ຮ້ານຄ້າເຫັນອໍເດີໃໝ່/ອັບເດດທັນທີ ໂດຍບໍ່ຕ້ອງ refresh ໜ້າເອງ ──
+// ── (ດຶງຂໍ້ມູນເດີມທີ່ມີຢູ່ແລ້ວທັງໝົດມາພ້ອມກັນຕັ້ງແຕ່ callback ຄັ້ງທຳອິດ, ຈາກນັ້ນອັບເດດ live ຕໍ່ ) ──
+function startOrdersListener(){
+  if(!db||!user||(user.role!=="admin"&&user.role!=="shop"))return;
+  if(_ordersListener){_ordersListener();_ordersListener=null;}
+  try{
+    _ordersListener=db.collection("orders").orderBy("id","desc").onSnapshot(function(snap){
+      orders=snap.docs.map(function(d){return JSON.parse(JSON.stringify(d.data()));});
+      if(typeof render==="function")try{render();}catch(e){}
+    },function(err){console.warn("orders listener err:",err);});
+  }catch(e){}
+}
+function stopOrdersListener(){
+  if(_ordersListener){_ordersListener();_ordersListener=null;}
 }
 
 // ── ດຶງ notifications ຂອງ user ປັດຈຸບັນ (ສຳລັບ modal inbox) ──
@@ -3091,7 +3107,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4660,21 +4676,23 @@ if(!window._reviewsLoaded){
       });
     }
   }catch(e){}
-  // ✅ load from Firestore — overrides localStorage, then re-render so UI is fresh
+  // ✅ load from Firestore — ໃຊ້ onSnapshot ແທນ .get() ຄັ້ງດຽວ ເພື່ອໃຫ້ຮີວິວໃໝ່ຈາກຄົນອື່ນຂຶ້ນມາໃຫ້ເຫັນທັນທີ ໂດຍບໍ່ຕ້ອງ refresh ໜ້າເອງ (ແກ້ບັນຫາດຽວກັນກັບ orders) ──
   if(db){
-    db.collection("reviews").orderBy("at","desc").limit(500).get().then(function(snap){
-      if(snap&&!snap.empty){
-        const fbRevs=snap.docs.map(function(d){return d.data();});
-        const seen=new Set();
-        window._reviews=fbRevs.filter(function(r){
-          if(!r||!r.id||seen.has(r.id))return false;
-          seen.add(r.id); return true;
-        });
-        try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e){}
-        // re-render if on a page that shows reviews
-        if(typeof render==="function")render();
-      }
-    }).catch(function(){});
+    try{
+      db.collection("reviews").orderBy("at","desc").limit(500).onSnapshot(function(snap){
+        if(snap&&!snap.empty){
+          const fbRevs=snap.docs.map(function(d){return d.data();});
+          const seen=new Set();
+          window._reviews=fbRevs.filter(function(r){
+            if(!r||!r.id||seen.has(r.id))return false;
+            seen.add(r.id); return true;
+          });
+          try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e){}
+          // re-render if on a page that shows reviews
+          if(typeof render==="function")try{render();}catch(e){}
+        }
+      },function(err){console.warn("reviews listener err:",err);});
+    }catch(e){}
   }
 }
 
@@ -5610,7 +5628,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.7")
   );
 
   // Icon style helper
@@ -11494,8 +11512,8 @@ function renderCo(){
             _orderSaveCalls.push(saveToCloud("orders",sOid,o));
             // ── ແຈ້ງຮ້ານຄ້າ + admin ວ່າມີ Order ໃໝ່ ──
             const orderNo2="#"+String(sOid).slice(-6);
-            if(sh&&sh.id)pushNotif(sh.id,null,"order_new","📦 Order ໃໝ່ "+orderNo2,"ສັ່ງ "+sitems.length+" ລາຍການ",sOid);
-            pushNotifAdmin("order_new","📦 Order ໃໝ່ "+orderNo2,(user&&user.name||"ລູກຄ້າ")+" ສັ່ງ "+(sh?sh.name:""),sOid);
+            if(sh&&sh.id)pushNotif(sh.id,null,"order_new","📦 Order ໃໝ່ "+orderNo2,"ສັ່ງ "+sitems.length+" ລາຍການ (ລູກຄ້າກົດສັ່ງແລ້ວ ກຳລັງຢືນຢັນການບັນທຶກ...)",sOid);
+            pushNotifAdmin("order_new","📦 Order ໃໝ່ "+orderNo2,(user&&user.name||"ລູກຄ້າ")+" ສັ່ງ "+(sh?sh.name:"")+" (ລູກຄ້າກົດສັ່ງແລ້ວ ກຳລັງຢືນຢັນການບັນທຶກ...)",sOid);
             // ── Deduct stock for each item in this order ──────────
             sitems.forEach(function(item){
               const pidx=prods.findIndex(function(x){return x&&x.id===item.id;});
@@ -11552,6 +11570,13 @@ function renderCo(){
           const waMsg="Order "+createdOrders.map(function(o){return "#"+String(o.id).slice(-6)+(o.shopName?" ("+o.shopName+")":"");}).join(", ")+"\nຊື່: "+coDl.n+"\nເບີ: "+coDl.ph+"\nສິນຄ້າ: "+iList+"\nຍອດ: ₭"+fmt(gt-discount)+"\n"+delivInfo;
           // ── ສະແດງຜົນ "ສຳເລັດ" ແທ້ໆ ລ້າງ Cart ແລະສະແດງ popup ສຳເລັດ (ເອີ້ນຫຼັງກວດສອບແລ້ວເທົ່ານັ້ນ) ──
           function _finishCheckoutSuccess(){
+// ── ແຈ້ງເຕືອນອີກຄັ້ງ ຢືນຢັນວ່າອໍເດີບັນທຶກຂໍ້ມູນສຳເລັດສົມບູນແລ້ວ (ຫຼັງຈາກ Firestore ຢືນຢັນຈິງເທົ່ານັ້ນ) ──
+createdOrders.forEach(function(co){
+  const orderNo3="#"+String(co.id).slice(-6);
+  const shForNotif=shops.find(function(s){return String(s.id)===String(co.shopId);});
+  if(shForNotif&&shForNotif.id)pushNotif(shForNotif.id,null,"order_confirmed","✅ Order "+orderNo3+" ອັບໂຫຼດສຳເລັດ","ບັນທຶກຂໍ້ມູນອໍເດີສຳເລັດສົມບູນແລ້ວ",co.id);
+  pushNotifAdmin("order_confirmed","✅ Order "+orderNo3+" ອັບໂຫຼດສຳເລັດ","ບັນທຶກຂໍ້ມູນອໍເດີສຳເລັດສົມບູນແລ້ວ",co.id);
+});
 if(_checkoutCart){
   const ckKeys=new Set(_checkoutCart.map(function(i){return i.k;}));
   cart=cart.filter(function(i){return !ckKeys.has(i.k);});
@@ -21572,8 +21597,8 @@ loadFromCloud().then(function(){
     const curUid=user?String(user.id):null;
     if(curUid!==_lastNotifUid){
       _lastNotifUid=curUid;
-      if(user){startNotifListener();startMsgUnreadListener();startShopAppListener();}
-      else{stopNotifListener();stopMsgUnreadListener();}
+      if(user){startNotifListener();startMsgUnreadListener();startShopAppListener();startOrdersListener();}
+      else{stopNotifListener();stopMsgUnreadListener();stopOrdersListener();}
     }
   };
 

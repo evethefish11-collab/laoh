@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v649 -->
+<!-- LaoH Marketplace v651 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -412,30 +412,46 @@ function isNativeApp(){
 // ── คืนค่า {success,role,id,shopId,name,isShopViewer} ถ้าสำเร็จ, null ถ้าเรียกไม่สำเร็จ/หาไม่เจอ (ตอนนี้ผู้เรียกใช้จะขึ้นป๊อบอัพแจ้งเตือนแทนการล็อกอิน ไม่มีระบบเก่าให้ตกไปใช้อีกต่อไป) ──
 async function serverVerifyLogin(username,password,loginMode){
   if(!authInstance)return null; // ── SDK ไม่พร้อมใช้งาน ──
-  try{
-    // ── ใช้ fetch() ธรรมดาแทน httpsCallable() ของ Firebase SDK โดยตรง — เพราะ httpsCallable() มีบั๊กที่รู้จักกันดีว่าค้างไม่ตอบสนองบน Safari/WebKit ทุกรุ่น (ยืนยันจาก GitHub Issue #8157 ของ Firebase เอง) แต่ fetch() ธรรมดาไม่มีปัญหานี้ ──
-    const FUNCTION_URL="https://us-central1-laoh-marketplace.cloudfunctions.net/verifyLogin";
-    // ── ใส่ตัวจับเวลา 6 วินาที กันการเชื่อมต่อค้างเงียบๆ ไม่มีที่สิ้นสุด (เผื่อกรณีอื่นๆ ที่ไม่คาดคิด) — ถ้าเกินเวลาให้ถือว่าล้มเหลวทันที ──
-    const timeoutPromise=new Promise(function(resolve){setTimeout(function(){resolve({__timedOut:true});},6000);});
-    const fetchPromise=fetch(FUNCTION_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({data:{username:username,password:password,loginMode:loginMode||"shopDirect"}})
-    }).then(function(r){return r.json();});
-    const result=await Promise.race([fetchPromise,timeoutPromise]);
-    if(result&&result.__timedOut){
-      console.warn("serverVerifyLogin timed out after 6s");
+  // ── ใช้ fetch() ธรรมดาแทน httpsCallable() ของ Firebase SDK โดยตรง — เพราะ httpsCallable() มีบั๊กที่รู้จักกันดีว่าค้างไม่ตอบสนองบน Safari/WebKit ทุกรุ่น (ยืนยันจาก GitHub Issue #8157 ของ Firebase เอง) แต่ fetch() ธรรมดาไม่มีปัญหานี้ ──
+  const FUNCTION_URL="https://us-central1-laoh-marketplace.cloudfunctions.net/verifyLogin";
+  // ── ลองเรียกเซิร์ฟเวอร์ 1 ครั้ง — คืนค่า result ตอนสำเร็จ, null ตอน timeout/error (ให้ผู้เรียกใช้ตัดสินใจว่าจะลองซ้ำไหม) ──
+  async function attemptOnce(attemptLabel){
+    try{
+      // ── ใส่ตัวจับเวลา 7 วินาทีต่อครั้ง กันการเชื่อมต่อค้างเงียบๆ ไม่มีที่สิ้นสุด — ถ้าเกินเวลาให้ถือว่าล้มเหลวสำหรับความพยายามครั้งนี้ ──
+      const timeoutPromise=new Promise(function(resolve){setTimeout(function(){resolve({__timedOut:true});},7000);});
+      const fetchPromise=fetch(FUNCTION_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({data:{username:username,password:password,loginMode:loginMode||"shopDirect"}})
+      }).then(function(r){return r.json();});
+      const result=await Promise.race([fetchPromise,timeoutPromise]);
+      if(result&&result.__timedOut){
+        console.warn("serverVerifyLogin "+attemptLabel+" timed out after 7s");
+        return null;
+      }
+      return result;
+    }catch(err){
+      console.warn("serverVerifyLogin "+attemptLabel+" failed:",err);
       return null;
     }
-    // ── รูปแบบ response ของ Firebase Callable Function คือ {result:{...}} ตอนสำเร็จ หรือ {error:{...}} ตอนพลาด ──
-    const data=result&&result.result;
-    if(!data)return null; // ── ไม่มีข้อมูลตอบกลับเลย = เชื่อมต่อเซิร์ฟเวอร์ล้มเหลวจริง ──
-    if(!data.success)return data; // ── เซิร์ฟเวอร์ตอบกลับมาปกติ แต่ username/password ผิด — ไม่ใช่ปัญหาเน็ต ส่งกลับให้ผู้เรียกใช้แจ้ง "ข้อมูลไม่ถูกต้อง" แทน ──
-    if(!data.token)return null; // ── response ผิดปกติ (บอกว่าสำเร็จแต่ไม่มี token) ถือเป็นความล้มเหลวของการเชื่อมต่อ ──
+  }
+  let result=await attemptOnce("attempt#1");
+  if(result===null){
+    // ── ครั้งแรกอาจล้มเหลวเพราะ Cloud Function ຍັງ "cold start" ຢູ່ (ຫາກໍ່ຕື່ນຈາກການພັກ) — ລອງໃໝ່ອັດຕະໂນມັດທັນທີອີກຄັ້ງກ່ອນຈະຖືວ່າລົ້ມເຫຼວແທ້ ──
+    console.warn("serverVerifyLogin: retrying once automatically (possible cold start)...");
+    result=await attemptOnce("attempt#2 (auto-retry)");
+  }
+  if(result===null)return null; // ── ລົ້ມເຫຼວທັງສອງຄັ້ງແທ້ໆ ຄ່ອຍຖືວ່າເປັນບັນຫາເນັດ/ເຊີບເວີຈິງ ──
+  // ── รูปแบบ response ของ Firebase Callable Function คือ {result:{...}} ตอนสำเร็จ หรือ {error:{...}} ตอนพลาด ──
+  const data=result&&result.result;
+  if(!data)return null; // ── ไม่มีข้อมูลตอบกลับเลย = เชื่อมต่อเซิร์ฟเวอร์ล้มเหลวจริง ──
+  if(!data.success)return data; // ── เซิร์ฟเวอร์ตอบกลับมาปกติ แต่ username/password ผิด — ไม่ใช่ปัญหาเน็ต ส่งกลับให้ผู้เรียกใช้แจ้ง "ข้อมูลไม่ถูกต้อง" แทน ──
+  if(!data.token)return null; // ── response ผิดปกติ (บอกว่าสำเร็จแต่ไม่มี token) ถือเป็นความล้มเหลวของการเชื่อมต่อ ──
+  try{
     await authInstance.signInWithCustomToken(data.token);
     return data;
   }catch(err){
-    console.warn("serverVerifyLogin failed:",err);
+    console.warn("serverVerifyLogin signInWithCustomToken failed:",err);
     return null; // ── เรียกไม่สำเร็จไม่ว่าเหตุผลอะไรก็ตาม (เน็ตหลุด, ฟังก์ชันยังไม่พร้อม ฯลฯ) — ผู้เรียกใช้จะขึ้นป๊อบอัพแจ้งเน็ตช้าให้ผู้ใช้ทราบ ──
   }
 }
@@ -1237,7 +1253,10 @@ async function fetchNotifications(){
 // ── mark notification ວ່າ read ──
 function markNotifRead(nid){
   if(!db)return;
-  try{db.collection("notifications").doc(String(nid)).update({read:true});}catch(e){}
+  try{
+    db.collection("notifications").doc(String(nid)).update({read:true})
+      .catch(function(err){console.warn("markNotifRead failed:",nid,err&&err.message);});
+  }catch(e){console.warn("markNotifRead sync error:",e&&e.message);}
 }
 function markAllNotifsRead(){
   if(!db||!user)return;
@@ -1246,10 +1265,16 @@ function markAllNotifsRead(){
     if(user.role==="admin")q=db.collection("notifications").where("toRole","==","admin");
     else q=db.collection("notifications").where("toUid","==",String(user.id));
     q.get().then(function(snap){
-      snap.docs.filter(function(d){return d.data().read===false;})
-        .forEach(function(d){d.ref.update({read:true});});
-    });
-  }catch(e){}
+      const toMark=snap.docs.filter(function(d){return d.data().read===false;});
+      const updateCalls=toMark.map(function(d){
+        return d.ref.update({read:true}).catch(function(err){console.warn("markAllNotifsRead item failed:",d.id,err&&err.message);return err;});
+      });
+      Promise.all(updateCalls).then(function(results){
+        const failCount=results.filter(function(r){return r instanceof Error;}).length;
+        if(failCount>0)console.warn("markAllNotifsRead: "+failCount+" of "+toMark.length+" ບໍ່ສຳເລັດ (ອາດຕິດ Firestore Rules)");
+      });
+    }).catch(function(err){console.warn("markAllNotifsRead query failed:",err&&err.message);});
+  }catch(e){console.warn("markAllNotifsRead sync error:",e&&e.message);}
 }
 
 // ── open notification inbox modal ──
@@ -3107,7 +3132,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.4.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5628,7 +5653,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.4.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.1")
   );
 
   // Icon style helper
@@ -16496,7 +16521,7 @@ function buildAdminTab(){
               ),
               el("div",{style:{display:"flex",gap:"6px",flexShrink:"0"}},
                 el("button",{style:{background:"#5D2D7A",color:"#fff",border:"none",borderRadius:"8px",padding:"4px 10px",cursor:"pointer",fontSize:".72rem",fontFamily:"inherit",fontWeight:"700"},
-                  onclick:function(){window._ncp={code:cp.code,pct:String(cp.pct),limit:cp.limit?String(cp.limit):"",perUserLimit:cp.perUserLimit?String(cp.perUserLimit):"",allProds:cp.allProds,prodIds:(cp.prodIds||[]).slice(),type:cp.type||"product",liveOnly:!!cp.liveOnly,expiresAt:cp.expiresAt||null,_editId:cp.id};render();setTimeout(function(){window.scrollTo({top:0,behavior:"smooth"});},80);}},"✏️ ແກ້ໄຂ"),
+                  onclick:function(){window._ncp={code:cp.code,pct:String(cp.pct),limit:cp.limit?String(cp.limit):"",perUserLimit:cp.perUserLimit?String(cp.perUserLimit):"",allProds:cp.allProds,prodIds:(cp.prodIds||[]).slice(),type:cp.type||"product",liveOnly:!!cp.liveOnly,expiresAt:cp.expiresAt||null,issuer:cp.issuer||"shop",_editId:cp.id};render();setTimeout(function(){window.scrollTo({top:0,behavior:"smooth"});},80);}},"✏️ ແກ້ໄຂ"),
                 el("button",{style:{background:"none",border:"1.5px solid "+(cp.active?"#c00":"#27ae60"),color:cp.active?"#c00":"#27ae60",borderRadius:"8px",padding:"4px 10px",cursor:"pointer",fontSize:".72rem",fontFamily:"inherit"},
                   onclick:function(){cp.active=!cp.active;saveToCloud("coupons",cp.id,cp);render();}},cp.active?"ຢຸດ":"ເປີດ"),
                 el("button",{style:{background:"none",border:"none",color:"#c00",cursor:"pointer",fontSize:".85rem"},

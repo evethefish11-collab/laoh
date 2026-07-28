@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v651 -->
+<!-- LaoH Marketplace v652 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -783,14 +783,16 @@ async function loadFromCloud(){
         try{localStorage.setItem("laoh_audiobooks",JSON.stringify(fbAbs));}catch(e){}
       }
     }catch(e){}
-    // Load shopPosts from Firebase
+    // Load shopPosts from Firebase — ໃຊ້ onSnapshot ແທນ .get() ຄັ້ງດຽວ ເພື່ອໃຫ້ໂພສທີ່ຖືກລຶບ/ເພີ່ມໃໝ່ອັບເດດທັນທີ ໂດຍບໍ່ຕ້ອງ refresh ໜ້າເອງ (ແກ້ບັນຫາດຽວກັນກັບ reviews/orders) ──
     try{
-      const sps=await db.collection("shopPosts").get();
-      if(sps&&!sps.empty){
-        const fbPosts=sps.docs.map(function(d){return d.data();});
-        window._shopPosts=fbPosts;
-        try{localStorage.setItem("laoh_shopPosts",JSON.stringify(fbPosts));}catch(e){}
-      }
+      db.collection("shopPosts").onSnapshot(function(sps){
+        if(sps){
+          const fbPosts=sps.docs.map(function(d){return d.data();});
+          window._shopPosts=fbPosts;
+          try{localStorage.setItem("laoh_shopPosts",JSON.stringify(fbPosts));}catch(e){}
+          if(typeof render==="function")try{render();}catch(e){}
+        }
+      },function(err){console.warn("shopPosts listener err:",err);});
     }catch(e){}
     render();
   }catch(e){console.warn("Cloud load failed:",e);}
@@ -3132,7 +3134,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5653,7 +5655,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.2")
   );
 
   // Icon style helper
@@ -6387,6 +6389,19 @@ function buildShopProfile(shopId){
               closeOv();render();
             };
             vmInfo.appendChild(editCapBtn);
+            // ── ปุ่มลบโพสต์ — จุดที่ขาดหายไปในโหมดดูร้าน (มีแค่ในหน้า Dashboard เต็มรูปแบบมาก่อนหน้านี้) ──
+            const delPostBtn=document.createElement("button");
+            delPostBtn.textContent="🗑 "+(_lang==="lo"?"ລຶບໂພສ":"Delete post");
+            delPostBtn.style.cssText="margin-top:6px;margin-left:6px;background:none;border:1.5px solid #e74c3c;color:#ff8a80;border-radius:8px;padding:5px 12px;font-size:.72rem;cursor:pointer;font-family:inherit;";
+            delPostBtn.onclick=function(e){
+              e.stopPropagation();
+              if(confirm(_lang==="lo"?"ລຶບໂພສນີ້?":"Delete this post?")){
+                deleteShopPost(vItem.id);
+                toast(_lang==="lo"?"ລຶບໂພສແລ້ວ":"Post deleted");
+                closeOv();render();
+              }
+            };
+            vmInfo.appendChild(delPostBtn);
           }
           const rdOwnerUid=isPostItem?vItem.shopId:(vItem.uid||null);
           const rdTitle=isPostItem?(sh.name||"Post"):(vItem.userName||"Review");

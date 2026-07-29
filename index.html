@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v652 -->
+<!-- LaoH Marketplace v653 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2941,7 +2941,7 @@ function exportMonthlyExcel(){
   XLSX.utils.book_append_sheet(wb,ws5,"ສະມາຊິກ");
 
   // Sheet 6+: Per-shop commission detail
-  shops.filter(function(sh){return sh.active;}).forEach(function(sh){
+  shops.filter(function(sh){return sh.active&&!sh.paused&&!sh.deleted;}).forEach(function(sh){
     const commPct=sh.commission||10;
     const shDelivered=orders.filter(function(o){return o.shopId===sh.id&&o.status==="ອໍເດີສຳເລັດແລ້ວ";});
     const withdrawnIds=withdrawals.filter(function(w){return w.shopId===sh.id;}).reduce(function(acc,w){return acc.concat(w.orderIds||[]);}, []);
@@ -3134,7 +3134,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3387,7 +3387,10 @@ function loadComments(targetId, targetType, cb){
   db.collection("comments").where("targetId","==",String(targetId)).where("targetType","==",targetType)
     .limit(50).get()
     .then(function(snap){
-      const list=snap.docs.map(function(d){return d.data();});
+      let list=snap.docs.map(function(d){return d.data();});
+      // ── ซ่อนคอมเมนต์ที่ถูกแอดมินซ่อนไว้ จากผู้ใช้ทั่วไป (แอดมินยังเห็นครบเพื่อจัดการ) ──
+      const isAdminViewer=user&&user.role==="admin";
+      if(!isAdminViewer)list=list.filter(function(c){return !c.hidden;});
       list.sort(function(a,b){return (a.at||0)-(b.at||0);});
       cb(list);
     })
@@ -3469,6 +3472,21 @@ function buildCommentOverlay(targetId,targetType,targetOwnerUid,targetTitle,item
         };
         bub.appendChild(delBtn);
       }
+      // ── Admin-only: ซ่อน/เผยแพร่คอมเมนต์ (soft-hide, ไม่ลบถาวร) ──
+      if(user&&user.role==="admin"){
+        if(c.hidden)row.style.opacity="0.4";
+        const hideCBtn=document.createElement("div");
+        hideCBtn.className="rv-cmt-reply";
+        hideCBtn.textContent=c.hidden?"✅ "+(_lang==="lo"?"ເຜີຍແຜ່":"Publish"):"🚫 "+(_lang==="lo"?"ຊ່ອນ":"Hide");
+        hideCBtn.onclick=function(e){
+          e.stopPropagation();
+          c.hidden=!c.hidden;
+          if(db){try{db.collection("comments").doc(c.id).set({hidden:c.hidden},{merge:true});}catch(e2){}}
+          toast(c.hidden?(_lang==="lo"?"ຊ່ອນຄອມເມັນແລ້ວ ✓":"Comment hidden ✓"):(_lang==="lo"?"ເຜີຍແຜ່ຄອມເມັນແລ້ວ ✓":"Comment published ✓"));
+          renderCmts();
+        };
+        bub.appendChild(hideCBtn);
+      }
       row.appendChild(av);row.appendChild(bub);
       cmtArea.appendChild(row);
     });
@@ -3542,6 +3560,21 @@ function showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle)
         closeOv();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);
       };
       bub.appendChild(delBtn2);
+    }
+    // ── Admin-only: ซ่อน/เผยแพร่คอมเมนต์ (soft-hide, ไม่ลบถาวร) ──
+    if(user&&user.role==="admin"){
+      if(c.hidden)row.style.opacity="0.4";
+      const hideCBtn2=document.createElement("div");
+      hideCBtn2.style.cssText="font-size:.62rem;color:"+(c.hidden?"#1B6B3A":"#C62828")+";cursor:pointer;margin-top:3px;display:inline-block;margin-left:8px;";
+      hideCBtn2.textContent=c.hidden?"✅ "+(_lang==="lo"?"ເຜີຍແຜ່":"Publish"):"🚫 "+(_lang==="lo"?"ຊ່ອນ":"Hide");
+      hideCBtn2.onclick=function(e){
+        e.stopPropagation();
+        c.hidden=!c.hidden;
+        if(db){try{db.collection("comments").doc(c.id).set({hidden:c.hidden},{merge:true});}catch(e2){}}
+        toast(c.hidden?(_lang==="lo"?"ຊ່ອນຄອມເມັນແລ້ວ ✓":"Comment hidden ✓"):(_lang==="lo"?"ເຜີຍແຜ່ຄອມເມັນແລ້ວ ✓":"Comment published ✓"));
+        closeOv();showAllComments(cmtList,targetId,targetType,targetOwnerUid,targetTitle);
+      };
+      bub.appendChild(hideCBtn2);
     }
     row.appendChild(av);row.appendChild(bub);list.appendChild(row);
   });
@@ -3622,7 +3655,7 @@ function buildFeedPage(){
   reviews.filter(function(rv){return rv&&rv.id&&!rv.hidden;}).forEach(function(rv){
     chronoItems.push({type:"review",data:rv,_at:rv.at||0});
   });
-  getShopPosts().filter(function(p){return p&&p.id&&!p.hidden;}).forEach(function(post){
+getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.shopId)&&!isPostHiddenByMe(p.id);}).forEach(function(post){
     chronoItems.push({type:"shoppost",data:post,_at:post.at||0});
   });
   audiobooks.forEach(function(ab){
@@ -3899,6 +3932,21 @@ function buildFeedPage(){
     // Save button (เฉพาะบัญชีลูกค้า)
     const saveBtn1=buildSaveSidebarBtn(rv.id,"review",rv);
     if(saveBtn1)sidebar.appendChild(saveBtn1);
+    // ── ปุ่ม "ไม่สนใจ" — ซ่อนรีวิวนี้เฉพาะฟีดของตัวเอง (คนอื่นยังเห็นปกติ) เฉพาะลูกค้าที่ login และไม่ใช่รีวิวของตัวเอง ──
+    if(user&&user.role==="c"&&String(rv.uid)!==String(user.id)){
+      const saHideMe=document.createElement("div"); saHideMe.className="feed-action";
+      const sbHideMe=document.createElement("button"); sbHideMe.className="feed-action-btn-sm";
+      sbHideMe.textContent="🙈";
+      sbHideMe.onclick=function(e){
+        e.stopPropagation();
+        hideReviewForMe(rv.id);
+        item.style.display="none";
+        toast(_lang==="lo"?"🙈 ຊ່ອນແລ້ວ — ຈັດການໄດ້ໃນຕັ້ງຄ່າ":"🙈 Hidden — manage in Settings");
+      };
+      saHideMe.appendChild(sbHideMe);
+      const slHideMe=document.createElement("div"); slHideMe.className="feed-action-label"; slHideMe.textContent=_lang==="lo"?"ບໍ່ສົນໃຈ":"Not interested";
+      saHideMe.appendChild(slHideMe); sidebar.appendChild(saHideMe);
+    }
     // ── ปุ่มเปิด/ปิดเสียง (ทุกวิดีโอ ไม่ว่าจะมีเสียงพากย์หรือไม่) — แยกต่างหากจากตัวควบคุมวิดีโอโดยสิ้นเชิง ──
     if(rv.mediaType==="video"&&rv.mediaUrl){
       const saSound=document.createElement("div"); saSound.className="feed-action";
@@ -4098,6 +4146,22 @@ function buildFeedPage(){
     // Save button (เฉพาะบัญชีลูกค้า)
     const saveBtn2=buildSaveSidebarBtn(post.id,"shoppost",post);
     if(saveBtn2)sidebar.appendChild(saveBtn2);
+
+    // ── ปุ่ม "ไม่สนใจ" — ซ่อนโพสต์นี้เฉพาะฟีดของตัวเอง (คนอื่นยังเห็นปกติ) เฉพาะลูกค้าที่ login และไม่ใช่ร้านตัวเอง ──
+    if(user&&user.role==="c"&&String(post.shopId)!==String(user.shopId)){
+      const saHideMe2=document.createElement("div"); saHideMe2.className="feed-action";
+      const sbHideMe2=document.createElement("button"); sbHideMe2.className="feed-action-btn-sm";
+      sbHideMe2.textContent="🙈";
+      sbHideMe2.onclick=function(e){
+        e.stopPropagation();
+        hidePostForMe(post.id);
+        item.style.display="none";
+        toast(_lang==="lo"?"🙈 ຊ່ອນແລ້ວ — ຈັດການໄດ້ໃນຕັ້ງຄ່າ":"🙈 Hidden — manage in Settings");
+      };
+      saHideMe2.appendChild(sbHideMe2);
+      const slHideMe2=document.createElement("div"); slHideMe2.className="feed-action-label"; slHideMe2.textContent=_lang==="lo"?"ບໍ່ສົນໃຈ":"Not interested";
+      saHideMe2.appendChild(slHideMe2); sidebar.appendChild(saHideMe2);
+    }
 
     // ── ปุ่มเปิด/ปิดเสียง (ทุกวิดีโอ ไม่ว่าจะมีเสียงพากย์หรือไม่) — แยกต่างหากจากตัวควบคุมวิดีโอโดยสิ้นเชิง ──
     if(post.mediaType==="video"&&post.mediaUrl){
@@ -4658,6 +4722,56 @@ function buildFeedPage(){
 if(!window._liveShowAll) window._liveShowAll={};
 let liveRooms = [];
 
+// ── Account Pause/Delete visibility helpers ─────────────────────────
+// ผู้ໃຊ້/ຮ້ານທີ່ຖືກ pause ຫຼື delete ຈະຖືກເຊື່ອງຈາກສາທາລະນະ (ຄົນອື່ນ) ໂດຍອັດຕະໂນມັດ
+// ແຕ່ຂໍ້ມູນຍັງຄົງຢູ່ໃນ Firestore ສຳລັບເຈົ້າຂອງບັນຊີ ແລະ admin ເບິ່ງໄດ້ຄືເກົ່າ
+function isUserHidden(uid){
+  if(uid===undefined||uid===null)return false;
+  const u=(users||[]).find(function(x){return x.id===uid;});
+  return !!(u&&(u.paused||u.deleted));
+}
+function isShopHidden(shopId){
+  if(shopId===undefined||shopId===null)return false;
+  const s=(shops||[]).find(function(x){return x.id===shopId;});
+  return !!(s&&(s.paused||s.deleted));
+}
+// ── "ไม่สนใจโพสต์นี้" — ผู้ใช้แต่ละคนซ่อนโพสต์/รีวิวของคนอื่นได้เฉพาะฟีดของตัวเอง (คนอื่นยังเห็นปกติ) ──
+function isReviewHiddenByMe(rvId){
+  return !!(user&&user.hiddenReviewIds&&user.hiddenReviewIds.indexOf(rvId)!==-1);
+}
+function isPostHiddenByMe(postId){
+  return !!(user&&user.hiddenPostIds&&user.hiddenPostIds.indexOf(postId)!==-1);
+}
+function hideReviewForMe(rvId){
+  if(!user)return;
+  if(!user.hiddenReviewIds)user.hiddenReviewIds=[];
+  if(user.hiddenReviewIds.indexOf(rvId)===-1)user.hiddenReviewIds.push(rvId);
+  const u=users.find(function(x){return x.id===user.id;});
+  if(u)u.hiddenReviewIds=user.hiddenReviewIds;
+  saveToCloud("users",user.id,{hiddenReviewIds:user.hiddenReviewIds});
+}
+function hidePostForMe(postId){
+  if(!user)return;
+  if(!user.hiddenPostIds)user.hiddenPostIds=[];
+  if(user.hiddenPostIds.indexOf(postId)===-1)user.hiddenPostIds.push(postId);
+  const u=users.find(function(x){return x.id===user.id;});
+  if(u)u.hiddenPostIds=user.hiddenPostIds;
+  saveToCloud("users",user.id,{hiddenPostIds:user.hiddenPostIds});
+}
+function unhideReviewForMe(rvId){
+  if(!user||!user.hiddenReviewIds)return;
+  user.hiddenReviewIds=user.hiddenReviewIds.filter(function(x){return x!==rvId;});
+  const u=users.find(function(x){return x.id===user.id;});
+  if(u)u.hiddenReviewIds=user.hiddenReviewIds;
+  saveToCloud("users",user.id,{hiddenReviewIds:user.hiddenReviewIds});
+}
+function unhidePostForMe(postId){
+  if(!user||!user.hiddenPostIds)return;
+  user.hiddenPostIds=user.hiddenPostIds.filter(function(x){return x!==postId;});
+  const u=users.find(function(x){return x.id===user.id;});
+  if(u)u.hiddenPostIds=user.hiddenPostIds;
+  saveToCloud("users",user.id,{hiddenPostIds:user.hiddenPostIds});
+}
 // ── SHOP POSTS data ─────────────────────────────────────────────────
 if(!window._shopPosts)window._shopPosts=[];
 function getShopPosts(){return (window._shopPosts||[]).filter(function(p){return p&&p.id;});}
@@ -5463,9 +5577,125 @@ function showEditProfile(){
     }},_lang==="lo"?"💾 ບັນທຶກ":"💾 Save"),
 
     // ── (ທີ່ຢູ່ຈັດສົ່ງ ຍ້າຍໄປ Settings ແລ້ວ) ──
+
+    // ── เนื้อหาที่ซ่อนไว้ (โพสต์/รีวิวที่กด "ไม่สนใจ") — จัดการ/เอากลับมาได้เอง ──
+    (function(){
+      const hCount=((user.hiddenReviewIds||[]).length)+((user.hiddenPostIds||[]).length);
+      return el("button",{className:"btn",style:{width:"100%",marginTop:"14px",background:"none",border:"1.5px solid #1A2B5F",color:"#1A2B5F",fontWeight:"700"},
+        onclick:function(){showHiddenContentManager();}},
+        "🙈 "+(_lang==="lo"?"ເນື້ອຫາທີ່ຊ່ອນໄວ້":_lang==="th"?"เนื้อหาที่ซ่อนไว้":"Hidden Content")+(hCount?" ("+hCount+")":""));
+    })(),
+
+    // ── Danger Zone: Pause / Delete account (ผู้ใช้จัดการเองได้) ──
+    el("div",{style:{marginTop:"22px",paddingTop:"16px",borderTop:"1px solid #eee"}},
+      el("div",{style:{fontSize:".68rem",fontWeight:"700",color:"#999",marginBottom:"10px",letterSpacing:".05em"}},
+        _lang==="lo"?"ເຂດອັນຕະລາຍ":_lang==="th"?"เขตอันตราย":"Danger Zone"),
+      el("button",{className:"btn",style:{width:"100%",marginBottom:"8px",background:"none",border:"1.5px solid #D4A017",color:"#8A6D00",fontWeight:"700"},
+        onclick:function(){toggleMyPause();}},
+        user.paused
+          ? (_lang==="lo"?"▶️ ເປີດບັນຊີຄືນ":_lang==="th"?"▶️ เปิดบัญชีคืน":"▶️ Resume Account")
+          : (_lang==="lo"?"⏸️ ຢຸດບັນຊີຊົ່ວຄາວ":_lang==="th"?"⏸️ หยุดบัญชีชั่วคราว":"⏸️ Pause Account")),
+      el("button",{className:"btn",style:{width:"100%",background:"none",border:"1.5px solid #c00",color:"#c00",fontWeight:"700"},
+        onclick:function(){closeOv();showDeleteMyAccountConfirm();}},
+        _lang==="lo"?"🗑️ ລຶບບັນຊີ":_lang==="th"?"🗑️ ลบบัญชี":"🗑️ Delete Account")
+    )
   ));
 }
-// ── ซ่อน/ໂชว Top Navbar ตอน scroll — customer หน้าหลักเท่านั้น ──
+// ── ຢຸດ/ເປີດບັນຊີລູກຄ້າຊົ່ວຄາວດ້ວຍຕົນເອງ — ຄົນອື່ນຈະບໍ່ເຫັນໂປຣໄຟລ໌/ຮີວິວ ແຕ່ຂໍ້ມູນຍັງຢູ່ ແລະ login ໄດ້ປົກກະຕິເພື່ອເປີດຄືນ ──
+function toggleMyPause(){
+  if(!user)return;
+  const willPause=!user.paused;
+  const msg=willPause
+    ?(_lang==="lo"?"ຢືນຢັນຢຸດບັນຊີຊົ່ວຄາວ? ຄົນອື່ນຈະບໍ່ເຫັນໂປຣໄຟລ໌ ຫຼື ຮີວິວຂອງທ່ານ ຈົນກວ່າທ່ານຈະເປີດຄືນ":"Pause your account? Others won't see your profile or reviews until you resume it.")
+    :(_lang==="lo"?"ເປີດບັນຊີຄືນ?":"Resume your account?");
+  if(!confirm(msg))return;
+  user.paused=willPause;
+  const u=users.find(function(x){return x.id===user.id;});
+  if(u)u.paused=willPause;
+  saveToCloud("users",user.id,{paused:willPause});
+  try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
+  closeOv();render();
+  toast(willPause
+    ?(_lang==="lo"?"⏸️ ຢຸດບັນຊີຊົ່ວຄາວແລ້ວ":"⏸️ Account paused")
+    :(_lang==="lo"?"▶️ ເປີດບັນຊີຄືນແລ້ວ":"▶️ Account resumed"));
+}
+// ── ລຶບບັນຊີລູກຄ້າດ້ວຍຕົນເອງ (soft delete) — ເຊື່ອງຈາກສາທາລະນະທັນທີ, ຂໍ້ມູນຍັງເກັບໄວ້ໃນລະບົບ ──
+function showDeleteMyAccountConfirm(){
+  if(!user)return;
+  const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontSize:"2rem",textAlign:"center",marginBottom:"8px"}},"⚠️"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#c00",marginBottom:"10px",textAlign:"center"}},
+    _lang==="lo"?"ລຶບບັນຊີຖາວອນ":_lang==="th"?"ลบบัญชีถาวร":"Delete Account Permanently"));
+  mod.appendChild(el("div",{style:{fontSize:".78rem",color:"#555",marginBottom:"14px",lineHeight:"1.6"}},
+    _lang==="lo"?"ໂປຣໄຟລ໌ ຮີວິວ ແລະ ເນື້ອຫາທັງໝົດຂອງທ່ານຈະຖືກເຊື່ອງຈາກຄົນອື່ນທັນທີ ບໍ່ສາມາດກູ້ຄືນເອງໄດ້ (ຕ້ອງຕິດຕໍ່ Admin) — ຂໍ້ມູນຍັງຖືກເກັບໄວ້ໃນລະບົບຕາມນະໂຍບາຍຄວາມເປັນສ່ວນຕົວ":
+    _lang==="th"?"โปรไฟล์ รีวิว และเนื้อหาทั้งหมดของท่านจะถูกซ่อนจากผู้อื่นทันที ไม่สามารถกู้คืนได้เอง (ต้องติดต่อ Admin) — ข้อมูลยังถูกเก็บไว้ในระบบตามนโยบายความเป็นส่วนตัว":
+    "Your profile, reviews, and content will be hidden from others immediately and cannot be undone by yourself (contact Admin to restore). Data is retained internally per our Privacy Policy."));
+  mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"6px"}},
+    _lang==="lo"?'ພິມ "DELETE" ເພື່ອຢືນຢັນ:':_lang==="th"?'พิมพ์ "DELETE" เพื่อยืนยัน:':'Type "DELETE" to confirm:'));
+  const confInp=document.createElement("input");
+  confInp.className="inp"; confInp.placeholder="DELETE";
+  mod.appendChild(confInp);
+  mod.appendChild(el("button",{className:"btn",style:{width:"100%",marginTop:"14px",background:"#c00",color:"#fff",fontWeight:"700"},onclick:function(){
+    if(confInp.value.trim()!=="DELETE"){toast(_lang==="lo"?"ກະລຸນາພິມໃຫ້ຖືກຕ້ອງ":_lang==="th"?"กรุณาพิมพ์ให้ถูกต้อง":"Please type it exactly to confirm");return;}
+    const uid=user.id;
+    const u=users.find(function(x){return x.id===uid;});
+    if(u){u.deleted=true;u.deletedAt=Date.now();}
+    saveToCloud("users",uid,{deleted:true,deletedAt:Date.now()});
+    try{localStorage.removeItem("laoh_session");}catch(e){}
+    user=null;view="shop";
+    closeOv();render();
+    toast(_lang==="lo"?"ບັນຊີຖືກລຶບແລ້ວ":_lang==="th"?"ลบบัญชีแล้ว":"Account deleted");
+  }},_lang==="lo"?"🗑️ ຢືນຢັນລຶບບັນຊີ":_lang==="th"?"🗑️ ยืนยันลบบัญชี":"🗑️ Confirm Delete"));
+  showOv(mod,null);
+}
+// ── แสดงรายการเนื้อหา (โพสต์/รีวิว) ที่ผู้ใช้กด "ไม่สนใจ" ไว้เอง พร้อมปุ่มเอากลับมา ──
+function showHiddenContentManager(){
+  if(!user)return;
+  const hiddenRvs=(user.hiddenReviewIds||[]).map(function(id){return getReviews().find(function(r){return r.id===id;});}).filter(Boolean);
+  const hiddenPosts=(user.hiddenPostIds||[]).map(function(id){return getShopPosts().find(function(p){return p.id===id;});}).filter(Boolean);
+  const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"82vh",overflowY:"auto"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"6px"}},"🙈 "+(_lang==="lo"?"ເນື້ອຫາທີ່ຊ່ອນໄວ້":_lang==="th"?"เนื้อหาที่ซ่อนไว้":"Hidden Content")));
+  if(hiddenRvs.length===0&&hiddenPosts.length===0){
+    mod.appendChild(el("div",{style:{fontSize:".78rem",color:"#6B8F75",textAlign:"center",padding:"20px 0"}},
+      _lang==="lo"?"ທ່ານຍັງບໍ່ໄດ້ຊ່ອນເນື້ອຫາໃດ":_lang==="th"?"คุณยังไม่ได้ซ่อนเนื้อหาใด":"You haven't hidden any content yet"));
+    showOv(mod,null);return;
+  }
+  mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"10px"}},
+    _lang==="lo"?"ກົດ 👁️ ເພື່ອເອາເນື້ອຫາກັບມາໃນຟີດ":_lang==="th"?"กด 👁️ เพื่อนำเนื้อหากลับมาในฟีด":"Tap 👁️ to bring content back to your feed"));
+  const grid=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}});
+  hiddenRvs.forEach(function(rv){
+    const p2=prods.find(function(x){return x&&x.id===rv.prodId;})||{};
+    const card=el("div",{style:{borderRadius:"10px",overflow:"hidden",background:"#F0F7F2",position:"relative"}});
+    const imgBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",background:"#C8E6D4",position:"relative"}});
+    if(rv.mediaUrl)imgBox.appendChild(el(rv.mediaType==="video"?"video":"img",Object.assign({src:rv.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"}},rv.mediaType==="video"?{muted:true}:{})));
+    else imgBox.textContent="📸";
+    card.appendChild(imgBox);
+    card.appendChild(el("div",{style:{padding:"5px 7px",fontSize:".62rem",color:"#1A2B5F",fontWeight:"600",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},p2.name||rv.userName||(_lang==="lo"?"ຮີວິວ":"Review")));
+    const backBtn=el("button",{style:{position:"absolute",top:"5px",right:"5px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"6px",fontSize:".62rem",padding:"3px 7px",cursor:"pointer",fontFamily:"inherit",fontWeight:"700",zIndex:"5"},
+      onclick:function(){unhideReviewForMe(rv.id);card.remove();toast(_lang==="lo"?"👁️ ເອາກັບມາແລ້ວ":"👁️ Brought back");}
+    },"👁️");
+    card.appendChild(backBtn);
+    grid.appendChild(card);
+  });
+  hiddenPosts.forEach(function(pst){
+    const sh2=shops.find(function(s){return s.id===pst.shopId;})||{};
+    const card=el("div",{style:{borderRadius:"10px",overflow:"hidden",background:"#F0F7F2",position:"relative"}});
+    const imgBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",background:"#C8E6D4",position:"relative"}});
+    if(pst.mediaUrl)imgBox.appendChild(el(pst.mediaType==="video"?"video":"img",Object.assign({src:pst.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"}},pst.mediaType==="video"?{muted:true}:{})));
+    else imgBox.textContent="📋";
+    card.appendChild(imgBox);
+    card.appendChild(el("div",{style:{padding:"5px 7px",fontSize:".62rem",color:"#1A2B5F",fontWeight:"600",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},sh2.name||(_lang==="lo"?"ໂພສ":"Post")));
+    const backBtn2=el("button",{style:{position:"absolute",top:"5px",right:"5px",background:"#1B6B3A",color:"#fff",border:"none",borderRadius:"6px",fontSize:".62rem",padding:"3px 7px",cursor:"pointer",fontFamily:"inherit",fontWeight:"700",zIndex:"5"},
+      onclick:function(){unhidePostForMe(pst.id);card.remove();toast(_lang==="lo"?"👁️ ເອາກັບມາແລ້ວ":"👁️ Brought back");}
+    },"👁️");
+    card.appendChild(backBtn2);
+    grid.appendChild(card);
+  });
+  mod.appendChild(grid);
+  showOv(mod,null);
+}
 function setupNavScrollHide(){
   if(window._navScrollSetup)return;
   window._navScrollSetup=true;
@@ -5655,7 +5885,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.3")
   );
 
   // Icon style helper
@@ -5860,7 +6090,7 @@ function updateSearchResults(){
   // Filter products
   fAv="all"; fHomeStock="all"; // Reset availability filter (chips removed)
   fAv="all";
-  const _activeShopIds2=new Set(shops.filter(function(s){return s.active;}).map(function(s){return s.id;}));
+  const _activeShopIds2=new Set(shops.filter(function(s){return s.active&&!s.paused&&!s.deleted;}).map(function(s){return s.id;}));
   const fil=prods.filter(p=>{
     if(p.shopId&&!_activeShopIds2.has(p.shopId))return false;
     if(fShop!==null&&p.shopId!==fShop)return false;
@@ -5968,7 +6198,7 @@ function buildShopStrip(){
     el("div",{className:"shop-bubble-name"},_lang==="lo"?"ທັງໝົດ":"All")
   );
 
-  const activeShopsList=shops.filter(function(sh){return sh.active;});
+  const activeShopsList=shops.filter(function(sh){return sh.active&&!sh.paused&&!sh.deleted;});
   const shuffleMap=_getShuffledShopOrder(activeShopsList);
   // ── เรียงลำดับ: ร้านที่มี Story ยังไม่หมดอายุขึ้นก่อนเสมอ (ล่าสุดก่อน) จากนั้นตามด้วยร้านอื่นๆ ตามลำดับที่สุ่มไว้ ──
   const sortedShops=activeShopsList.slice().sort(function(a,b){
@@ -6193,9 +6423,24 @@ function showShopStoryViewer(sh){
 function buildShopProfile(shopId){
   const sh = shops.find(s=>s.id===shopId);
   if(!sh) return el("div",null,"Shop not found");
+  const _isShopOwnerViewer=user&&user.role==="shop"&&user.shopId===shopId;
+  const _isAdminViewer2=user&&user.role==="admin";
   if(!sh.active){
     view="shop";render();
     return el("div",null);
+  }
+  // ── ຮ້ານທີ່ຖືກ pause (ຢຸດຊົ່ວຄາວໂດຍເຈົ້າຂອງເອງ) ຫຼື delete ຈະເຫັນຫນ້ານີ້ແທນ ສຳລັບຄົນອື່ນ ──
+  if(!_isShopOwnerViewer&&!_isAdminViewer2&&(sh.paused||sh.deleted)){
+    return el("div",{style:{minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",textAlign:"center"}},
+      el("button",{style:{position:"absolute",top:"14px",left:"14px",background:"rgba(0,0,0,.08)",border:"none",borderRadius:"50%",width:"32px",height:"32px",cursor:"pointer",fontSize:"1rem"},
+        onclick:function(){view="shop";render();}
+      },"←"),
+      el("div",{style:{fontSize:"2.6rem",marginBottom:"10px"}},"🚫"),
+      el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},
+        _lang==="lo"?"ຮ້ານນີ້ບໍ່ພ້ອມໃຫ້ບໍລິການ":_lang==="th"?"ร้านนี้ไม่พร้อมให้บริการ":_lang==="zh"?"该店铺暂不可用":"This shop is currently unavailable"),
+      el("div",{style:{fontSize:".8rem",color:"#6B8F75",maxWidth:"280px"}},
+        _lang==="lo"?"ກະລຸນາລອງໃໝ່ພາຍຫຼັງ":_lang==="th"?"กรุณาลองใหม่ภายหลัง":_lang==="zh"?"请稍后再试":"Please check back later")
+    );
   }
 
   const _isMyShopViaCustCh=user&&user.isShopViewer&&user.shopId===shopId; // ── ใช้ก่อน isMyShopViaCustomerChannel ประกาศจริงด้านล่าง (คำนวณค่าเดียวกัน) ──
@@ -6272,7 +6517,7 @@ function buildShopProfile(shopId){
   if(!window._shopProfileTab)window._shopProfileTab="products";
 
   // Gather video reviews: customer reviews + shop's own posts, both filtered to this shop & video type
-  const shopVideoReviews=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.shopId===shopId&&rv.mediaType==="video"&&rv.mediaUrl;});
+  const shopVideoReviews=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.shopId===shopId&&rv.mediaType==="video"&&rv.mediaUrl&&!isUserHidden(rv.uid);});
   const shopVideoPosts=getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&p.shopId===shopId&&p.mediaType==="video"&&p.mediaUrl;});
   const allShopVideos=shopVideoReviews.concat(shopVideoPosts).slice().sort(function(a,b){return (b.at||0)-(a.at||0);});
 
@@ -7016,6 +7261,20 @@ function getFollowers(shopId){
 function buildUserProfile(uid){
   const pu=users.find(function(x){return x.id===uid;})||{id:uid,name:"ຜູ້ໃຊ້",following:[]};
   const isMe=user&&user.id===uid;
+  const isAdminViewer=user&&user.role==="admin";
+  // ── ບັນຊີທີ່ຖືກ pause/delete ຈະເຫັນຫນ້ານີ້ແທນ ສຳລັບຄົນອື່ນ (ບໍ່ແມ່ນເຈົ້າຂອງ ຫຼື admin) ──
+  if(!isMe&&!isAdminViewer&&(pu.paused||pu.deleted)){
+    return el("div",{style:{minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",textAlign:"center"}},
+      el("button",{style:{position:"absolute",top:"14px",left:"14px",background:"rgba(0,0,0,.08)",border:"none",borderRadius:"50%",width:"32px",height:"32px",cursor:"pointer",fontSize:"1rem"},
+        onclick:function(){const pv=prevView||"shop";prevView="shop";view=pv;render();}
+      },"←"),
+      el("div",{style:{fontSize:"2.6rem",marginBottom:"10px"}},"🚫"),
+      el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"6px"}},
+        _lang==="lo"?"ບໍ່ພົບບັນຊີນີ້":_lang==="th"?"ไม่พบบัญชีนี้":_lang==="zh"?"未找到此账号":"Account not found"),
+      el("div",{style:{fontSize:".8rem",color:"#6B8F75",maxWidth:"280px"}},
+        _lang==="lo"?"ບັນຊີນີ້ບໍ່ພ້ອມໃຊ້ງານໃນຕອນນີ້":_lang==="th"?"บัญชีนี้ไม่พร้อมใช้งานในขณะนี้":_lang==="zh"?"该账号目前不可用":"This account is currently unavailable")
+    );
+  }
   const uRvs=getReviews().filter(function(rv){return rv.uid===uid&&!rv.hidden;});
   const PM=getPromoMap();
   const followerCount=users.filter(function(u){return u.followingUsers&&u.followingUsers.includes(uid);}).length;
@@ -8156,8 +8415,8 @@ function buildUserProfile(uid){
 
 // ── Feed entry strip ສຳລັບໜ້າຫຼັກ: ໄອຄອນ Feed (ຄືກັນກັບ navbar) + preview ໂພສ/ຣີວິວລ່າສຸດ, ກົດແລ້ວໄປໜ້າ Feed ──
 function buildFeedEntryStrip(){
-  const allFeedContent=getReviews().filter(function(r){return r&&r.id&&!r.hidden;})
-    .concat(getShopPosts().filter(function(p){return p&&p.id&&!p.hidden;}))
+  const allFeedContent=getReviews().filter(function(r){return r&&r.id&&!r.hidden&&!isUserHidden(r.uid)&&(!r.shopId||!isShopHidden(r.shopId))&&!isReviewHiddenByMe(r.id);})
+    .concat(getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.shopId)&&!isPostHiddenByMe(p.id);}))
     .sort(function(a,b){return (b.at||0)-(a.at||0);});
   const latest=allFeedContent[0];
   const strip=el("div",{style:{margin:"14px 14px 0",background:"#fff",borderRadius:"14px",overflow:"hidden",cursor:"pointer",border:"1.5px solid #E8F5EE",boxShadow:"0 1px 6px rgba(0,0,0,.05)"},
@@ -8211,7 +8470,8 @@ const PRIVACY_POLICY_CONTENT={
       ["7. ຄວາມປອດໄພຂອງຂໍ້ມູນ","ພວກເຮົານຳໃຊ້ມາດຕະການຮັກສາຄວາມປອດໄພທີ່ເໝາະສົມ ແຕ່ບໍ່ມີລະບົບໃດປອດໄພ 100%."],
       ["8. ຂໍ້ມູນຂອງຜູ້ເຍົາໄວ","ບໍລິການອະນຸຍາດໃຫ້ຜູ້ໃຊ້ອາຍຸ 13 ປີຂຶ້ນໄປ ຫາກພົບຜູ້ເຍົາໄວໃຫ້ຂໍ້ມູນໂດຍບໍ່ໄດ້ຮັບຄວາມຍິນຍອມຜູ້ປົກຄອງ ກະລຸນາຕິດຕໍ່ພວກເຮົາ."],
       ["9. ການປ່ຽນແປງນະໂຍບາຍ","ພວກເຮົາອາດປັບປຸງນະໂຍບາຍນີ້ເປັນຄັ້ງຄາວ ການປ່ຽນແປງມີຜົນທັນທີທີ່ເຜີຍແຜ່."],
-      ["10. ຕິດຕໍ່ພວກເຮົາ","ອີເມລ: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 6333"],
+      ["10. ວິທີຂໍລຶບບັນຊີ","ຫາກທ່ານຕ້ອງການລຶບບັນຊີ ແລະ ຂໍ້ມູນທັງໝົດທີ່ກ່ຽວຂ້ອງ (ຊື່, ເບີໂທ, ປະຫວັດການສັ່ງຊື້, ຮູບ/ວິດີໂອທີ່ໂພສ) ກະລຸນາສົ່ງຄຳຮ້ອງຂໍມາທີ່ອີເມລ laohmarketoffice@gmail.com ຫຼື WhatsApp +856 20 5982 6333 ໂດຍລະບຸ:\n1. ຊື່ຜູ້ໃຊ້ (username) ຫຼື ເບີໂທທີ່ລົງທະບຽນໄວ້\n2. ເຫດຜົນທີ່ຕ້ອງການລຶບບັນຊີ (ບໍ່ບັງຄັບ)\n\nພວກເຮົາຈະດຳເນີນການລຶບບັນຊີ ແລະ ຂໍ້ມູນສ່ວນຕົວພາຍໃນ 30 ວັນ ນັບຈາກວັນທີ່ໄດ້ຮັບຄຳຮ້ອງຂໍ ຍົກເວັ້ນຂໍ້ມູນທີ່ກົດໝາຍກຳນົດໃຫ້ຕ້ອງເກັບຮັກສາໄວ້ (ເຊັ່ນ: ປະຫວັດການເງິນເພື່ອຈຸດປະສົງດ້ານພາສີ)."],
+      ["11. ຕິດຕໍ່ພວກເຮົາ","ອີເມລ: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 6333"],
     ]
   },
   en:{
@@ -8228,7 +8488,8 @@ const PRIVACY_POLICY_CONTENT={
       ["7. Data Security","We use reasonable security measures, but no system is 100% secure."],
       ["8. Children's Privacy","Our services are available to users aged 13+. If a minor under this age has provided data without parental consent, please contact us."],
       ["9. Changes to This Policy","We may update this Policy periodically. Changes take effect immediately upon posting."],
-      ["10. Contact Us","Email: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 6333"],
+      ["10. How to Request Account Deletion","If you wish to delete your account and all associated data (name, phone number, order history, posted photos/videos), please send a request to laohmarketoffice@gmail.com or WhatsApp +856 20 5982 6333, including:\n1. Your username or registered phone number\n2. Reason for deletion (optional)\n\nWe will delete your account and personal data within 30 days of receiving your request, except for data we are legally required to retain (e.g., financial records for tax purposes)."],
+      ["11. Contact Us","Email: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 6333"],
     ]
   },
   th:{
@@ -8245,7 +8506,8 @@ const PRIVACY_POLICY_CONTENT={
       ["7. ความปลอดภัยของข้อมูล","เราใช้มาตรการรักษาความปลอดภัยที่เหมาะสม แต่ไม่มีระบบใดปลอดภัย 100%"],
       ["8. ข้อมูลของผู้เยาว์","บริการอนุญาตให้ผู้ใช้อายุ 13 ปีขึ้นไป หากพบผู้เยาว์ให้ข้อมูลโดยไม่ได้รับความยินยอมผู้ปกครอง กรุณาติดต่อเรา"],
       ["9. การเปลี่ยนแปลงนโยบาย","เราอาจปรับปรุงนโยบายนี้เป็นครั้งคราว การเปลี่ยนแปลงมีผลทันทีที่เผยแพร่"],
-      ["10. ติดต่อเรา","อีเมล: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 6333"],
+      ["10. วิธีขอลบบัญชี","หากท่านต้องการลบบัญชีและข้อมูลทั้งหมดที่เกี่ยวข้อง (ชื่อ, เบอร์โทร, ประวัติการสั่งซื้อ, รูป/วิดีโอที่โพสต์) กรุณาส่งคำร้องขอมาที่อีเมล laohmarketoffice@gmail.com หรือ WhatsApp +856 20 5982 6333 โดยระบุ:\n1. ชื่อผู้ใช้ (username) หรือเบอร์โทรที่ลงทะเบียนไว้\n2. เหตุผลที่ต้องการลบบัญชี (ไม่บังคับ)\n\nเราจะดำเนินการลบบัญชีและข้อมูลส่วนตัวภายใน 30 วัน นับจากวันที่ได้รับคำร้องขอ ยกเว้นข้อมูลที่กฎหมายกำหนดให้ต้องเก็บรักษาไว้ (เช่น ประวัติการเงินเพื่อวัตถุประสงค์ด้านภาษี)"],
+      ["11. ติดต่อเรา","อีเมล: laohmarketoffice@gmail.com\nWhatsApp: +856 20 5982 6333"],
     ]
   },
   zh:{
@@ -8262,7 +8524,8 @@ const PRIVACY_POLICY_CONTENT={
       ["7. 数据安全","我们采取合理的安全措施保护您的信息，但没有任何系统能保证100%的安全性"],
       ["8. 儿童隐私","我们的服务仅面向13岁及以上的用户。如果您发现未满13岁的未成年人在未经监护人同意的情况下向我们提供了个人信息，请联系我们。"],
       ["9. 政策变更","我们可能会不时更新本政策，变更内容一经发布即刻生效"],
-      ["10. 联系我们","邮箱：laohmarketoffice@gmail.com\nWhatsApp：+856 20 5982 6333"],
+      ["10. 如何申请删除账号","如果您希望删除您的账号及所有相关数据（姓名、电话号码、订单记录、已发布的照片/视频），请发送申请至邮箱 laohmarketoffice@gmail.com 或 WhatsApp +856 20 5982 6333，并注明：\n1. 您的用户名或注册电话号码\n2. 删除原因（非必填）\n\n我们将在收到申请后30天内删除您的账号及个人数据，法律要求保留的数据除外（例如用于税务目的的财务记录）。"],
+      ["11. 联系我们","邮箱：laohmarketoffice@gmail.com\nWhatsApp：+856 20 5982 6333"],
     ]
   }
 };
@@ -8464,7 +8727,7 @@ function showPrivacyPolicyModal(onAccept){
 }
 function buildShop(){
   const PM=getPromoMap();
-  const activeShopIds=new Set(shops.filter(function(s){return s.active;}).map(function(s){return s.id;}));
+  const activeShopIds=new Set(shops.filter(function(s){return s.active&&!s.paused&&!s.deleted;}).map(function(s){return s.id;}));
   const fil=prods.filter(p=>{
     if(p.saleClosed)return false;
     if(p.shopId&&!activeShopIds.has(p.shopId))return false;
@@ -8750,8 +9013,8 @@ function buildShop(){
           var _filterSig=JSON.stringify([fSearch,fCat,fShop,window._fIsLao,fAv,fPromo,fCo,fSi]);
           if(window._homeGridFilterSig!==_filterSig){window._homeGridFilterSig=_filterSig;window._homeGridLimit=80;}
           var _visibleFil=fil.slice(0,window._homeGridLimit||80);
-          var _allRvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.mediaUrl;});
-          var _allPosts=getShopPosts().filter(function(p2){return p2&&p2.id&&!p2.hidden&&p2.pinnedProdId&&(p2.mediaUrl||p2.imgs);});
+          var _allRvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.mediaUrl&&!isUserHidden(rv.uid)&&(!rv.shopId||!isShopHidden(rv.shopId))&&!isReviewHiddenByMe(rv.id);});
+          var _allPosts=getShopPosts().filter(function(p2){return p2&&p2.id&&!p2.hidden&&p2.pinnedProdId&&(p2.mediaUrl||p2.imgs)&&!isShopHidden(p2.shopId)&&!isPostHiddenByMe(p2.id);});
           var _nodes=[];
           _visibleFil.forEach(function(p){
             _nodes.push(buildCard(p,PM));
@@ -10117,8 +10380,8 @@ function showProduct(p){
       })(),
       // ── ຣີວິວສິນຄ້ານີ້ ──────────────────────────────────────────────
       (function(){
-        const rvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.prodId===p.id;});
-        const posts=getShopPosts().filter(function(pt){return pt&&pt.id&&!pt.hidden&&Number(pt.pinnedProdId)===Number(p.id)&&(pt.mediaUrl||pt.imgs);});
+        const rvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.prodId===p.id&&!isUserHidden(rv.uid)&&!isReviewHiddenByMe(rv.id);});
+        const posts=getShopPosts().filter(function(pt){return pt&&pt.id&&!pt.hidden&&Number(pt.pinnedProdId)===Number(p.id)&&(pt.mediaUrl||pt.imgs)&&!isShopHidden(pt.shopId)&&!isPostHiddenByMe(pt.id);});
         // รวมกัน: posts ก่อน reviews
         const combined=posts.map(function(pt){return {type:"post",data:pt};}).concat(rvs.map(function(rv){return {type:"review",data:rv};}));
         if(combined.length===0)return null;
@@ -11006,8 +11269,10 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
               logLoginActivity(user.name,"admin","legacy");
               closeOv();view="admin";render();toast("ยินดีต้อนรับ Admin 👋");
             }else{
-              const foundShop=shops.find(function(s){return s.username===aF.u&&s.password===aF.p&&s.active;});
+              const foundShop=shops.find(function(s){return s.username===aF.u&&s.password===aF.p&&s.active&&!s.deleted;});
               if(!foundShop){
+                const deletedShop=shops.find(function(s){return s.username===aF.u&&s.password===aF.p&&s.deleted;});
+                if(deletedShop){aErr=_lang==="lo"?"🚫 ຮ້ານຄ້າຂອງທ່ານຖືກລຶບແລ້ວ ກະລຸນາຕິດຕໍ່ Admin":"🚫 Your shop has been deleted. Please contact Admin";drawAuth();return;}
                 const closedShop=shops.find(function(s){return s.username===aF.u&&s.password===aF.p;});
                 if(closedShop){aErr=_lang==="lo"?"🚫 ຮ້ານຄ້າຂອງທ່ານຖືກປິດ ກະລຸນາຕິດຕໍ່ Admin":"🚫 Your shop is closed. Please contact Admin";drawAuth();return;}
               }
@@ -11040,7 +11305,9 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
               }
             }
             return;}
-        if(aMode==="login"){const u=users.find(x=>x.username===aF.u&&x.password===aF.p);if(u){
+        if(aMode==="login"){const u=users.find(x=>x.username===aF.u&&x.password===aF.p);
+        if(u&&u.deleted){aErr=_lang==="lo"?"🚫 ບັນຊີນີ້ຖືກລຶບແລ້ວ ກະລຸນາຕິດຕໍ່ Admin":"🚫 This account has been deleted. Please contact Admin";drawAuth();return;}
+        if(u){
   user=Object.assign({role:"c"},u);
   try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
   // Load this user's saved cart (uid-based)
@@ -11057,7 +11324,7 @@ fields.push(mk(_lang==="lo"?"ຊື່-ນາມສະກຸນ":"Full Name","n"
   setTimeout(function(){if(!_custTourDismissed())showCustTour(0);},500);
   }else{
     // ── ບໍ່ພົບບັນຊີລູກຄ້າ — ລອງກວດເບິ່ງວ່າເປັນຮ້ານຄ້າທີ່ຈະເຂົ້າຊ່ອງລູກຄ້າ (ເບິ່ງຢ່າງດຽວ + ຮັບແຈ້ງເຕືອນ) ບໍ່ ──
-    const foundShopAsCust=shops.find(function(s){return s.username===aF.u&&s.password===aF.p&&s.active;});
+    const foundShopAsCust=shops.find(function(s){return s.username===aF.u&&s.password===aF.p&&s.active&&!s.deleted;});
     if(foundShopAsCust){
       user={role:"c",id:foundShopAsCust.id,shopId:foundShopAsCust.id,name:foundShopAsCust.name,isShopViewer:true};
       try{localStorage.setItem("laoh_session",JSON.stringify(user));}catch(e){}
@@ -15846,7 +16113,27 @@ function buildAdminTab(){
           info2.appendChild(el("div",{style:{fontSize:".58rem",color:"#bbb",marginTop:"2px"}},"ID: "+u.id+(u.createdAt?" · ສະໝັກ "+new Date(u.createdAt).toLocaleDateString("lo-LA"):"")));
           row1.appendChild(info2);
           row1.appendChild(el("span",{style:{fontSize:".65rem",background:u.banned?"#C62828":"#E8F5EE",color:u.banned?"#fff":"#1B6B3A",padding:"3px 8px",borderRadius:"20px",fontWeight:"700",flexShrink:"0"}},u.banned?"🚫 ປິດ":"✅ ເປີດ"));
+          if(u.paused)row1.appendChild(el("span",{style:{fontSize:".65rem",background:"#D4A017",color:"#fff",padding:"3px 8px",borderRadius:"20px",fontWeight:"700",flexShrink:"0",marginLeft:"4px"}},"⏸️ "+(_lang==="lo"?"ຢຸດຊົ່ວຄາວ":"Paused")));
+          if(u.deleted)row1.appendChild(el("span",{style:{fontSize:".65rem",background:"#8A1A1A",color:"#fff",padding:"3px 8px",borderRadius:"20px",fontWeight:"700",flexShrink:"0",marginLeft:"4px"}},"🗑️ "+(_lang==="lo"?"ຖືກລຶບ":"Deleted")));
           cardEl.appendChild(row1);
+
+          // ── Restore bar — ສະແດງເມື່ອ paused/deleted (ຜູ້ໃຊ້ຢຸດ/ລຶບບັນຊີດ້ວຍຕົນເອງ) ──
+          if(u.paused||u.deleted){
+            cardEl.appendChild(el("div",{style:{background:"#FFF8E7",border:"1.5px solid #D4A017",borderRadius:"8px",padding:"8px 10px",marginBottom:"8px",display:"flex",alignItems:"center",gap:"8px"}},
+              el("div",{style:{flex:"1",fontSize:".68rem",color:"#8A6D00"}},
+                u.deleted
+                  ?(_lang==="lo"?"ບັນຊີນີ້ຖືກລຶບໂດຍເຈົ້າຂອງເອງ — ຄົນອື່ນເບິ່ງບໍ່ເຫັນ":"This account was deleted by the user — hidden from others")
+                  :(_lang==="lo"?"ບັນຊີນີ້ຢຸດຊົ່ວຄາວໂດຍເຈົ້າຂອງເອງ":"This account was paused by the user")),
+              el("button",{style:{padding:"6px 10px",borderRadius:"8px",border:"none",background:"#1B6B3A",color:"#fff",fontSize:".7rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
+                onclick:function(){
+                  u.paused=false;u.deleted=false;
+                  saveToCloud("users",u.id,{paused:false,deleted:false});
+                  render();
+                  toast(_lang==="lo"?"✅ ກູ້ຄືນບັນຊີແລ້ວ":"✅ Account restored");
+                }
+              },"♻️ "+(_lang==="lo"?"ກູ້ຄືນ":"Restore"))
+            ));
+          }
 
           // Row 2: action buttons
           const btnRow=el("div",{style:{display:"flex",gap:"6px"}});
@@ -17657,8 +17944,24 @@ function buildAdminTab(){
                 el("div",{style:{fontWeight:"700",fontSize:".9rem"}},sh.name),
                 el("div",{style:{fontSize:".72rem",color:"#6B8F75"}},"@"+sh.username+" · commission "+(sh.commission||10)+"%")
               ),
-              el("span",{style:{background:sh.active?"#27ae60":"#c00",color:"#fff",fontSize:".62rem",padding:"2px 8px",borderRadius:"10px"}},sh.active?"ເປີດ":_lang==="lo"?"ປິດ":"Close")
+              el("span",{style:{background:sh.active?"#27ae60":"#c00",color:"#fff",fontSize:".62rem",padding:"2px 8px",borderRadius:"10px"}},sh.active?"ເປີດ":_lang==="lo"?"ປິດ":"Close"),
+              sh.paused?el("span",{style:{background:"#D4A017",color:"#fff",fontSize:".62rem",padding:"2px 8px",borderRadius:"10px",marginLeft:"4px"}},"⏸️ "+(_lang==="lo"?"ຢຸດຊົ່ວຄາວ":"Paused")):null,
+              sh.deleted?el("span",{style:{background:"#8A1A1A",color:"#fff",fontSize:".62rem",padding:"2px 8px",borderRadius:"10px",marginLeft:"4px"}},"🗑️ "+(_lang==="lo"?"ຖືກລຶບ":"Deleted")):null
             ),
+            (sh.paused||sh.deleted)?el("div",{style:{background:"#FFF8E7",border:"1.5px solid #D4A017",borderRadius:"8px",padding:"8px 10px",marginBottom:"8px",display:"flex",alignItems:"center",gap:"8px"}},
+              el("div",{style:{flex:"1",fontSize:".68rem",color:"#8A6D00"}},
+                sh.deleted
+                  ?(_lang==="lo"?"ຮ້ານນີ້ຖືກລຶບໂດຍເຈົ້າຂອງເອງ — ຄົນອື່ນເບິ່ງບໍ່ເຫັນ":"This shop was deleted by the owner — hidden from others")
+                  :(_lang==="lo"?"ຮ້ານນີ້ຢຸດຊົ່ວຄາວໂດຍເຈົ້າຂອງເອງ":"This shop was paused by the owner")),
+              el("button",{style:{padding:"6px 10px",borderRadius:"8px",border:"none",background:"#1B6B3A",color:"#fff",fontSize:".7rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
+                onclick:function(){
+                  sh.paused=false;sh.deleted=false;
+                  saveToCloud("shops",sh.id,{paused:false,deleted:false});
+                  render();
+                  toast(_lang==="lo"?"✅ ກູ້ຄືນຮ້ານແລ້ວ":"✅ Shop restored");
+                }
+              },"♻️ "+(_lang==="lo"?"ກູ້ຄືນ":"Restore"))
+            ):null,
             el("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"6px"}},
               el("button",{style:{flex:"1",padding:"6px",borderRadius:"8px",border:"1.5px solid "+(sh.active?"#c00":"#27ae60"),color:sh.active?"#c00":"#27ae60",background:"none",cursor:"pointer",fontSize:".72rem",fontFamily:"inherit"},onclick:function(){
                 sh.active=!sh.active;
@@ -17676,6 +17979,52 @@ function buildAdminTab(){
                   });
                 }
               },"🔑 Reset"),
+              el("button",{style:{padding:"6px 10px",borderRadius:"8px",border:"1.5px solid #5D2D7A",background:"#F3ECFA",cursor:"pointer",fontSize:".72rem",fontFamily:"inherit",color:"#5D2D7A"},
+                onclick:function(){
+                  const shPosts=getShopPosts().filter(function(p){return p.shopId===sh.id;});
+                  if(shPosts.length===0){toast(_lang==="lo"?"ຮ້ານນີ້ຍັງບໍ່ມີໂພສ":"This shop has no posts yet");return;}
+                  const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();},style:{maxHeight:"82vh",overflowY:"auto"}});
+                  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+                  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#1A2B5F",marginBottom:"6px"}},"📋 "+(_lang==="lo"?"ໂພສຂອງ ":"Posts by ")+sh.name));
+                  mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"10px"}},shPosts.length+(_lang==="lo"?" ໂພສ · ກົດ 🚫/✅ ເພື່ອຊ່ອນ/ເຜີຍແຜ່":" posts · click 🚫/✅ to hide/publish")));
+                  const pGrid=el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}});
+                  shPosts.forEach(function(pst){
+                    const card=el("div",{style:{borderRadius:"10px",overflow:"hidden",background:pst.hidden?"#FFE5E5":"#F0F7F2",position:"relative"}});
+                    const imgBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",background:"#C8E6D4",position:"relative"}});
+                    imgBox.style.opacity=pst.hidden?"0.35":"1";
+                    if(pst.mediaUrl&&pst.mediaType==="video"){
+                      const v=document.createElement("video");v.src=pst.mediaUrl;v.muted=true;v.style.cssText="width:100%;height:100%;object-fit:cover;";
+                      imgBox.appendChild(v);
+                      imgBox.appendChild(el("div",{style:{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",fontSize:"1.3rem",pointerEvents:"none"}},"▶"));
+                    } else if(pst.mediaUrl){
+                      imgBox.appendChild(el("img",{src:pst.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"}}));
+                    } else {imgBox.textContent="📋";}
+                    if(pst.hidden){
+                      const ovl=el("div",{style:{position:"absolute",inset:"0",background:"rgba(198,40,40,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.5rem"}});
+                      ovl.textContent="🚫";imgBox.appendChild(ovl);
+                    }
+                    card.appendChild(imgBox);
+                    card.appendChild(el("div",{style:{padding:"5px 7px",fontSize:".62rem",color:"#1A2B5F",fontWeight:"600",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},pst.caption||(_lang==="lo"?"(ບໍ່ມີຄຳອະທິບາຍ)":"(no caption)")));
+                    card.appendChild(el("div",{style:{padding:"0 7px 5px",fontSize:".58rem",color:"#888"}},pst.at?new Date(pst.at).toLocaleDateString("lo-LA"):""));
+                    const hideBtn=el("button",{style:{position:"absolute",top:"5px",right:"5px",background:pst.hidden?"#1B6B3A":"#C62828",color:"#fff",border:"none",borderRadius:"6px",fontSize:".62rem",padding:"3px 7px",cursor:"pointer",fontFamily:"inherit",fontWeight:"700",zIndex:"5"}});
+                    hideBtn.textContent=pst.hidden?"✅":"🚫";
+                    hideBtn.onclick=function(e){
+                      e.stopPropagation();
+                      pst.hidden=!pst.hidden;
+                      saveShopPost(pst);
+                      imgBox.style.opacity=pst.hidden?"0.35":"1";
+                      card.style.background=pst.hidden?"#FFE5E5":"#F0F7F2";
+                      hideBtn.style.background=pst.hidden?"#1B6B3A":"#C62828";
+                      hideBtn.textContent=pst.hidden?"✅":"🚫";
+                      toast(pst.hidden?(_lang==="lo"?"ຊ່ອນໂພສແລ້ວ ✓":"Post hidden ✓"):(_lang==="lo"?"ເຜີຍແຜ່ໂພສແລ້ວ ✓":"Post published ✓"));
+                    };
+                    card.appendChild(hideBtn);
+                    pGrid.appendChild(card);
+                  });
+                  mod.appendChild(pGrid);
+                  showOv(mod,null);
+                }
+              },"📋 "+(_lang==="lo"?"ໂພສ":"Posts")),
               el("button",{style:{padding:"6px 10px",borderRadius:"8px",border:"1.5px solid #c00",background:"none",cursor:"pointer",fontSize:".72rem",fontFamily:"inherit",color:"#c00"},onclick:function(){deleteFromCloud("shops",sh.id);shops.splice(i,1);render();}},"🗑")
             ),
             (function(){
@@ -20437,7 +20786,64 @@ function showEditShop(sh){
       }
     });
   }},"💾 ບັນທຶກ"));
+
+  // ── Danger Zone: Pause / Delete shop (ร้านค้าจัดการเองได้ ไม่แสดงตอนแอดมินแก้ไขร้านอื่น) ──
+  if(isShopSelf){
+    modal.appendChild(el("div",{style:{marginTop:"22px",paddingTop:"16px",borderTop:"1px solid #eee"}},
+      el("div",{style:{fontSize:".68rem",fontWeight:"700",color:"#999",marginBottom:"10px",letterSpacing:".05em"}},
+        _lang==="lo"?"ເຂດອັນຕະລາຍ":_lang==="th"?"เขตอันตราย":"Danger Zone"),
+      el("button",{className:"btn",style:{width:"100%",marginBottom:"8px",background:"none",border:"1.5px solid #D4A017",color:"#8A6D00",fontWeight:"700"},
+        onclick:function(){toggleMyShopPause(sh);}},
+        sh.paused
+          ? (_lang==="lo"?"▶️ ເປີດຮ້ານຄືນ":_lang==="th"?"▶️ เปิดร้านคืน":"▶️ Resume Shop")
+          : (_lang==="lo"?"⏸️ ຢຸດຮ້ານຊົ່ວຄາວ":_lang==="th"?"⏸️ หยุดร้านชั่วคราว":"⏸️ Pause Shop")),
+      el("button",{className:"btn",style:{width:"100%",background:"none",border:"1.5px solid #c00",color:"#c00",fontWeight:"700"},
+        onclick:function(){closeOv();showDeleteMyShopConfirm(sh);}},
+        _lang==="lo"?"🗑️ ລຶບຮ້ານ":_lang==="th"?"🗑️ ลบร้าน":"🗑️ Delete Shop")
+    ));
+  }
   showOv(modal,null);
+}
+// ── ຢຸດ/ເປີດຮ້ານຊົ່ວຄາວດ້ວຍຕົນເອງ — ຄົນອື່ນຈະບໍ່ເຫັນໜ້າຮ້ານ/ສິນຄ້າ/ໂພສ ແຕ່ຂໍ້ມູນຍັງຢູ່ ແລະ login ຈັດການໄດ້ປົກກະຕິ ──
+function toggleMyShopPause(sh){
+  if(!sh)return;
+  const willPause=!sh.paused;
+  const msg=willPause
+    ?(_lang==="lo"?"ຢືນຢັນຢຸດຮ້ານຊົ່ວຄາວ? ຄົນອື່ນຈະບໍ່ເຫັນຮ້ານ, ສິນຄ້າ, ຫຼື ໂພສຂອງທ່ານ ຈົນກວ່າທ່ານຈະເປີດຄືນ":"Pause your shop? Others won't see your shop, products, or posts until you resume it.")
+    :(_lang==="lo"?"ເປີດຮ້ານຄືນ?":"Resume your shop?");
+  if(!confirm(msg))return;
+  sh.paused=willPause;
+  saveToCloud("shops",sh.id,{paused:willPause});
+  closeOv();render();
+  toast(willPause
+    ?(_lang==="lo"?"⏸️ ຢຸດຮ້ານຊົ່ວຄາວແລ້ວ":"⏸️ Shop paused")
+    :(_lang==="lo"?"▶️ ເປີດຮ້ານຄືນແລ້ວ":"▶️ Shop resumed"));
+}
+// ── ລຶບຮ້ານດ້ວຍຕົນເອງ (soft delete) — ເຊື່ອງຈາກສາທາລະນະທັນທີ, ຂໍ້ມູນຍັງເກັບໄວ້ໃນລະບົບ ──
+function showDeleteMyShopConfirm(sh){
+  if(!sh)return;
+  const mod=el("div",{className:"mod",onclick:function(e){e.stopPropagation();}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontSize:"2rem",textAlign:"center",marginBottom:"8px"}},"⚠️"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".95rem",color:"#c00",marginBottom:"10px",textAlign:"center"}},
+    _lang==="lo"?"ລຶບຮ້ານຖາວອນ":_lang==="th"?"ลบร้านถาวร":"Delete Shop Permanently"));
+  mod.appendChild(el("div",{style:{fontSize:".78rem",color:"#555",marginBottom:"14px",lineHeight:"1.6"}},
+    _lang==="lo"?"ໜ້າຮ້ານ ສິນຄ້າ ໂພສ ແລະ ຮີວິວທັງໝົດຈະຖືກເຊື່ອງຈາກຄົນອື່ນທັນທີ ບໍ່ສາມາດກູ້ຄືນເອງໄດ້ (ຕ້ອງຕິດຕໍ່ Admin) — ຂໍ້ມູນຄຳສັ່ງຊື້ ແລະ ປະຫວັດການເງິນຍັງຖືກເກັບໄວ້ໃນລະບົບຕາມທີ່ກົດໝາຍກຳນົດ":
+    _lang==="th"?"หน้าร้าน สินค้า โพสต์ และรีวิวทั้งหมดจะถูกซ่อนจากผู้อื่นทันที ไม่สามารถกู้คืนได้เอง (ต้องติดต่อ Admin) — ข้อมูลคำสั่งซื้อและประวัติการเงินยังถูกเก็บไว้ในระบบตามที่กฎหมายกำหนด":
+    "Your shop page, products, posts, and reviews will be hidden from others immediately and cannot be undone by yourself (contact Admin to restore). Order and financial records are retained as legally required."));
+  mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"6px"}},
+    _lang==="lo"?'ພິມ "DELETE" ເພື່ອຢືນຢັນ:':_lang==="th"?'พิมพ์ "DELETE" เพื่อยืนยัน:':'Type "DELETE" to confirm:'));
+  const confInp=document.createElement("input");
+  confInp.className="inp"; confInp.placeholder="DELETE";
+  mod.appendChild(confInp);
+  mod.appendChild(el("button",{className:"btn",style:{width:"100%",marginTop:"14px",background:"#c00",color:"#fff",fontWeight:"700"},onclick:function(){
+    if(confInp.value.trim()!=="DELETE"){toast(_lang==="lo"?"ກະລຸນາພິມໃຫ້ຖືກຕ້ອງ":_lang==="th"?"กรุณาพิมพ์ให้ถูกต้อง":"Please type it exactly to confirm");return;}
+    sh.deleted=true;sh.deletedAt=Date.now();
+    saveToCloud("shops",sh.id,{deleted:true,deletedAt:Date.now()});
+    closeOv();view="shop";render();
+    toast(_lang==="lo"?"ຮ້ານຖືກລຶບແລ້ວ":_lang==="th"?"ลบร้านแล้ว":"Shop deleted");
+  }},_lang==="lo"?"🗑️ ຢືນຢັນລຶບຮ້ານ":_lang==="th"?"🗑️ ยืนยันลบร้าน":"🗑️ Confirm Delete"));
+  showOv(mod,null);
 }
 
 // ── Excel ອັບໂຫລດສິນຄ້າ: ອ່ານ, ກວດສອບ, ສະແດງສະຫຼຸບ, ລໍຖ້າຢືນຢັນກ່ອນແກ້ໄຂຈິງ ──

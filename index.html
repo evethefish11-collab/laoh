@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v653 -->
+<!-- LaoH Marketplace v654 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3134,7 +3134,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5885,7 +5885,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.4")
   );
 
   // Icon style helper
@@ -8386,10 +8386,74 @@ function buildUserProfile(uid){
             if(idx>=0)window._reviews[idx]=Object.assign({},window._reviews[idx],{caption:newCaption});
             try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e2){}
           }
+          // ── (แก้บั๊ก) บันทึกลง Firestore จริงด้วย — เดิมแก้แค่ในเครื่อง พอโหลดใหม่คำอธิบายจะย้อนกลับของเดิม ──
+          saveToCloud("reviews",rv.id,{caption:newCaption});
           toast(_lang==="lo"?"✅ ບັນທຶກແລ້ວ":"✅ Saved");
           render();
         };
         imgBox.appendChild(editCapBtn);
+        // ── ปุ่มใหม่: เปลี่ยนรูป/วิดีโอของรีวิว — ไม่ต้องลบรีวิวทิ้งแล้วเสียสิทธิ์รีวิวใหม่ ──
+        const editMediaBtn=el("div",{style:{position:"absolute",top:"5px",right:"59px",width:"22px",height:"22px",borderRadius:"50%",background:"rgba(0,0,0,.55)",color:"#fff",fontSize:".65rem",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:"5"}});
+        editMediaBtn.textContent="🖼️";
+        const editMediaInp=document.createElement("input");
+        editMediaInp.type="file"; editMediaInp.accept="image/*,video/*"; editMediaInp.style.display="none";
+        editMediaInp.onchange=function(e){
+          const file=e.target.files[0]; if(!file)return;
+          const isVid=file.type.indexOf("video")===0;
+          const r=new FileReader();
+          r.onload=function(ev){
+            const b64=ev.target.result;
+            // ── ขั้นที่ 1: แสดง preview + ปุ่มบันทึก ก่อนอัปโหลดจริง (ยังไม่อัปโหลดจนกว่าจะกดบันทึก) ──
+            const previewMod=el("div",{className:"mod",onclick:function(ev2){ev2.stopPropagation();}});
+            previewMod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+            previewMod.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"10px",textAlign:"center"}},
+              _lang==="lo"?"ຕົວຢ່າງສື່ໃໝ່":_lang==="th"?"ตัวอย่างสื่อใหม่":"New media preview"));
+            const previewBox=el("div",{style:{borderRadius:"12px",overflow:"hidden",marginBottom:"14px",background:"#E8F5EE"}});
+            if(isVid){
+              const v=document.createElement("video");v.src=b64;v.style.cssText="width:100%;max-height:340px;display:block;";v.controls=true;
+              previewBox.appendChild(v);
+            } else {
+              previewBox.appendChild(el("img",{src:b64,style:{width:"100%",maxHeight:"340px",objectFit:"contain",display:"block"}}));
+            }
+            previewMod.appendChild(previewBox);
+            const btnRow2=el("div",{style:{display:"flex",gap:"8px"}});
+            btnRow2.appendChild(el("button",{style:{flex:"1",padding:"10px",borderRadius:"10px",border:"1.5px solid #ddd",background:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".82rem"},onclick:closeOv},
+              _lang==="lo"?"ຍົກເລີກ":_lang==="th"?"ยกเลิก":"Cancel"));
+            const saveMediaBtn=el("button",{style:{flex:"1",padding:"10px",borderRadius:"10px",background:"#1B6B3A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".82rem",fontWeight:"700"}},
+              "💾 "+(_lang==="lo"?"ບັນທຶກ":_lang==="th"?"บันทึก":"Save"));
+            saveMediaBtn.onclick=function(){
+              saveMediaBtn.disabled=true;
+              saveMediaBtn.textContent="⏳ "+(isVid?(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video..."):(_lang==="lo"?"ກຳລັງອັບໂຫຼດຮູບ...":"Uploading image..."));
+              const uploadPromise=isVid?uploadVideoToStorage(b64,Date.now()+".mp4"):uploadImage(b64,"laoh/reviews");
+              uploadPromise.then(function(url){
+                rv.mediaUrl=url;
+                rv.mediaType=isVid?"video":"image";
+                if(window._reviews){
+                  const idx=window._reviews.findIndex(function(x){return x.id===rv.id;});
+                  if(idx>=0)window._reviews[idx]=Object.assign({},window._reviews[idx],{mediaUrl:url,mediaType:rv.mediaType});
+                  try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e2){}
+                }
+                // ── บันทึกลง Firestore จริง ──
+                saveToCloud("reviews",rv.id,{mediaUrl:url,mediaType:rv.mediaType});
+                closeOv();
+                toast(_lang==="lo"?"✅ ປ່ຽນສື່ສຳເລັດ":"✅ Media updated");
+                // ── รีเฟรชหน้าปัจจุบันทันที (ยังอยู่หน้าเดิม) ให้เห็นรูป/วิดีโอใหม่ทันที ──
+                render();
+              }).catch(function(){
+                saveMediaBtn.disabled=false;
+                saveMediaBtn.textContent="💾 "+(_lang==="lo"?"ບັນທຶກ":_lang==="th"?"บันทึก":"Save");
+                toast(_lang==="lo"?"⚠ ອັບໂຫຼດບໍ່ສຳເລັດ":"⚠ Upload failed");
+              });
+            };
+            btnRow2.appendChild(saveMediaBtn);
+            previewMod.appendChild(btnRow2);
+            showOv(previewMod,null);
+          };
+          r.readAsDataURL(file);
+        };
+        editMediaBtn.onclick=function(e){e.stopPropagation();editMediaInp.click();};
+        imgBox.appendChild(editMediaBtn);
+        imgBox.appendChild(editMediaInp);
       }
       card.appendChild(imgBox);
       // ── ດາວ + ຄຳອະທິບາຍ ໃຕ້ຮູບ (ຮູບແບບດຽວກັບ "ຮີວິວຂອງຂ້ອຍ" ທີ່ຂໍໄວ້) ──

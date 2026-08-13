@@ -17,6 +17,7 @@
 if(/Android/i.test(navigator.userAgent)){
   var _vpTag=document.querySelector('meta[name="viewport"]');
   if(_vpTag) _vpTag.setAttribute('content', _vpTag.getAttribute('content')+',viewport-fit=cover');
+  document.documentElement.classList.add('is-android');
 }
 </script>
 <title>LaoH | ລາວເຮັດ</title>
@@ -24,7 +25,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v658 -->
+<!-- LaoH Marketplace v659 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -136,6 +137,7 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 
 /* ── LIVE FEED (TikTok style) ─────────────────────────── */
 .feed-page{position:fixed;inset:0;top:0;background:#000;z-index:150;overflow:hidden;padding-top:env(safe-area-inset-top);}
+html.is-android .feed-page{padding-top:28px;bottom:48px;}
 .feed-page-bnav{bottom:74px;}
 .feed-scroll{height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior-y:contain;}
 .feed-scroll::-webkit-scrollbar{display:none;}
@@ -3142,7 +3144,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.8")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.5.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -3791,7 +3793,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
 
     // bottom info bar
     const info=document.createElement("div");
-    info.style.cssText="padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(0,0,0,.85);color:#fff;";
+    info.style.cssText="padding:10px 12px;background:rgba(0,0,0,.85);color:#fff;";
 
     // reviewer avatar + name (top row) — กดดูโปรไฟล์ reviewer
     const revRow=document.createElement("div");
@@ -4057,7 +4059,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
 
     // ── Bottom info bar (ตามแบบ review card) ──
     const info=document.createElement("div");
-    info.style.cssText="padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(0,0,0,.85);color:#fff;";
+    info.style.cssText="padding:10px 12px;background:rgba(0,0,0,.85);color:#fff;";
 
     // Caption
     if(post.caption){
@@ -5893,7 +5895,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.8")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.5.9")
   );
 
   // Icon style helper

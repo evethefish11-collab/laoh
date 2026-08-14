@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support - LaoH ລາວເຮັດ</title>
+<style>
+  :root {
+    --green-dark: #14532d;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --text: #1f2937;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Noto Sans Lao", "Noto Sans SC", "Phetsarath", sans-serif;
+    background: var(--green-light);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  header {
+    background: linear-gradient(135deg, var(--green-dark), var(--green));
+    color: white;
+    padding: 40px 20px 24px;
+    text-align: center;
+  }
+  header h1 { font-size: 26px; margin-bottom: 4px; }
+  header p { opacity: 0.9; font-size: 14px; margin-bottom: 20px; }
+
+  .lang-switch {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .lang-switch button {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .lang-switch button.active {
+    background: white;
+    color: var(--green-dark);
+    font-weight: 700;
+  }
+
+  main {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+  .lang-block { display: none; }
+  .lang-block.active { display: block; }
+
+  .contact-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    margin-bottom: 32px;
+  }
+  .contact-card h2 { font-size: 18px; margin-bottom: 8px; color: var(--green-dark); }
+  .contact-card p { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+  .btn {
+    display: inline-block;
+    background: var(--green);
+    color: white;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .btn:hover { background: var(--green-dark); }
+
+  section { margin-bottom: 28px; }
+  section h3 { font-size: 17px; color: var(--green-dark); margin-bottom: 10px; }
+
+  .faq-item {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .faq-item .q { font-weight: 600; margin-bottom: 6px; }
+  .faq-item .a { color: var(--muted); font-size: 15px; }
+
+  footer {
+    text-align: center;
+    padding: 24px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LaoH | ລາວເຮັດ</h1>
+  <p>Support &amp; FAQ</p>
+  <div class="lang-switch">
+    <button data-lang="en" class="active">English</button>
+    <button data-lang="lo">ລາວ</button>
+    <button data-lang="zh">中文</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ENGLISH -->
+  <div class="lang-block active" id="lang-en">
+    <div class="contact-card">
+      <h2>📱 Contact Support</h2>
+      <p>For order issues, delivery questions, or anything else, chat with our admin team directly on WhatsApp.</p>
+      <a class="btn" href="https://api.whatsapp.com/send/?phone=8562059826333&text&type=phone_number&app_absent=0" target="_blank" rel="noopener">💬 Chat with Admin (WhatsApp)</a>
+    </div>
+
+    <section>
+      <h3>❓ Frequently Asked Questions</h3>
+
+      <div class="faq-item">
+        <div class="q">How do I place an order?</div>
+        <div class="a">Choose your items, add them to your cart, then pay via QR code or bank transfer and upload your payment slip to confirm the order.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">How can I track my order?</div>
+        <div class="a">Go to "My Orders" in the app to see the current status, from the shop preparing your items to final delivery.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">What payment methods are supported?</div>
+        <div class="a">You can pay via QR code or bank transfer, then upload your payment slip for confirmation.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">Where do you deliver?</div>
+        <div class="a">We deliver nationwide across Laos through the LaoH rider team. Delivery times may vary by shop and location.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">How do I request a return or report an order issue?</div>
+        <div class="a">Please contact our admin team via the "Contact Admin" button in the app or website, and include your order number so we can help resolve it.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">Can I message a shop directly?</div>
+        <div class="a">Yes, you can chat directly with any shop from its shop page inside the LaoH app.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- LAO -->
+  <div class="lang-block" id="lang-lo">
+    <div class="contact-card">
+      <h2>📱 ຕິດຕໍ່ທີມງານ</h2>
+      <p>ຖ້າມີບັນຫາການສັ່ງຊື້ ການຈັດສົ່ງ ຫຼືຄຳຖາມອື່ນໆ ສາມາດແຊັດກັບແອດມິນຜ່ານ WhatsApp ໄດ້ໂດຍກົດປຸ່ມລຸ່ມນີ້</p>
+      <a class="btn" href="https://api.whatsapp.com/send/?phone=8562059826333&text&type=phone_number&app_absent=0" target="_blank" rel="noopener">💬 ແຊັດກັບແອດມິນ (WhatsApp)</a>
+    </div>
+
+    <section>
+      <h3>❓ ຄຳຖາມທີ່ພົບເລື້ອຍ</h3>
+
+      <div class="faq-item">
+        <div class="q">ຈະສັ່ງຊື້ສິນຄ້າແນວໃດ?</div>
+        <div class="a">ເລືອກສິນຄ້າທີ່ຕ້ອງການ ໃສ່ຕະກ້າ ແລ້ວກົດຊຳລະເງິນຜ່ານ QR Code ຫຼືໂອນເງິນ ພ້ອມອັບໂຫຼດສະລິບເພື່ອຢືນຢັນການສັ່ງຊື້</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">ຈະຕິດຕາມສະຖານະການສັ່ງຊື້ໄດ້ແນວໃດ?</div>
+        <div class="a">ເຂົ້າໄປທີ່ໜ້າ "ຄຳສັ່ງຊື້ຂອງຂ້ອຍ" ໃນແອັບ ຈະເຫັນສະຖານະລ່າສຸດ ຕັ້ງແຕ່ຮ້ານຄ້າກຽມສິນຄ້າ ຈົນເຖິງຈັດສົ່ງເຖິງມື</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">ຮອງຮັບການຊຳລະເງິນແບບໃດແດ່?</div>
+        <div class="a">ຊຳລະຜ່ານ QR Code ຫຼືການໂອນເງິນຜ່ານທະນາຄານ ພ້ອມອັບໂຫຼດສະລິບການໂອນເພື່ອຢືນຢັນ</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">ຈັດສົ່ງເຖິງໃສແດ່?</div>
+        <div class="a">ຈັດສົ່ງທົ່ວປະເທດລາວ ໂດຍທີມ Rider ຂອງ LaoH ໄລຍະເວລາຈັດສົ່ງອາດແຕກຕ່າງກັນຕາມແຕ່ລະຮ້ານຄ້າ ແລະ ພື້ນທີ່</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">ຕ້ອງການຄືນສິນຄ້າ ຫຼືມີບັນຫາກ່ຽວກັບການສັ່ງຊື້ ຕ້ອງເຮັດແນວໃດ?</div>
+        <div class="a">ກະລຸນາຕິດຕໍ່ແອດມິນຜ່ານປຸ່ມ "ຕິດຕໍ່ແອດມິນ" ໃນແອັບ ຫຼືເວັບໄຊທ໌ ພ້ອມແຈ້ງເລກທີ່ຄຳສັ່ງຊື້ ເພື່ອໃຫ້ທີມງານຊ່ວຍແກ້ໄຂ</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">ຈະຕິດຕໍ່ຮ້ານຄ້າໂດຍກົງໄດ້ບໍ?</div>
+        <div class="a">ໄດ້ ສາມາດແຊັດກັບຮ້ານຄ້າໂດຍກົງໄດ້ຜ່ານໜ້າຮ້ານຄ້ານັ້ນໆ ໃນແອັບ LaoH</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- CHINESE -->
+  <div class="lang-block" id="lang-zh">
+    <div class="contact-card">
+      <h2>📱 联系客服</h2>
+      <p>如有订单、配送或其他相关问题，可直接通过 WhatsApp 联系我们的客服团队。</p>
+      <a class="btn" href="https://api.whatsapp.com/send/?phone=8562059826333&text&type=phone_number&app_absent=0" target="_blank" rel="noopener">💬 联系客服（WhatsApp）</a>
+    </div>
+
+    <section>
+      <h3>❓ 常见问题</h3>
+
+      <div class="faq-item">
+        <div class="q">如何下单？</div>
+        <div class="a">选择商品并加入购物车，然后通过二维码扫码支付或银行转账，并上传付款凭证以确认订单。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">如何查询订单状态？</div>
+        <div class="a">在应用内进入"我的订单"，即可查看从商家备货到配送完成的最新状态。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">支持哪些支付方式？</div>
+        <div class="a">支持二维码扫码支付或银行转账，转账后请上传付款凭证以完成确认。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">配送范围是哪里？</div>
+        <div class="a">我们通过 LaoH 骑手团队为老挝全境配送，具体配送时间可能因商家和地区而异。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">需要退货或订单出现问题该怎么办？</div>
+        <div class="a">请通过应用或网站内的"联系客服"按钮联系我们，并提供订单号，以便我们协助处理。</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">可以直接联系店铺吗？</div>
+        <div class="a">可以，您可以在 LaoH 应用内的店铺页面直接与店铺聊天沟通。</div>
+      </div>
+    </section>
+  </div>
+
+</main>
+
+<footer>
+  &copy; 2026 LaoH | ລາວເຮັດ — laohmarket.com
+</footer>
+
+<script>
+  const buttons = document.querySelectorAll('.lang-switch button');
+  const blocks = document.querySelectorAll('.lang-block');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.getAttribute('data-lang');
+      buttons.forEach(b => b.classList.remove('active'));
+      blocks.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('lang-' + lang).classList.add('active');
+      document.documentElement.lang = lang;
+    });
+  });
+</script>
+
+</body>
+</html>

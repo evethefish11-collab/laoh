@@ -25,7 +25,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v660 -->
+<!-- LaoH Marketplace v661 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -419,6 +419,18 @@ try{
 function isNativeApp(){
   try{ return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()); }catch(e){ return false; }
 }
+// ── ตั้ง listener รอรับ FCM token จาก Capacitor Push Notifications plugin (ถ้ามีติดตั้งไว้) — เก็บไว้ใน window._nativePushToken ให้ requestPushPermission() เอาไปใช้ต่อ ──
+// ── ตั้งไว้ตั้งแต่ตอนโหลดแอป ไม่ต้องรอให้ผู้ใช้กดปุ่มก่อน เพราะ event 'registration' อาจเกิดขึ้นได้ทุกเมื่อหลัง register() ──
+try{
+  if(isNativeApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+    window.Capacitor.Plugins.PushNotifications.addListener('registration', function(tokenData){
+      window._nativePushToken = tokenData && tokenData.value;
+    });
+    window.Capacitor.Plugins.PushNotifications.addListener('registrationError', function(err){
+      console.error('Native push registration error:', err);
+    });
+  }
+}catch(e){console.warn('Native push listener setup failed:',e);}
 // ── ตรวจสอบ username/password ฝั่งเซิร์ฟเวอร์ (ระยะที่ 2 — ความปลอดภัยของระบบล็อกอิน) ──
 // ── คืนค่า {success,role,id,shopId,name,isShopViewer} ถ้าสำเร็จ, null ถ้าเรียกไม่สำเร็จ/หาไม่เจอ (ตอนนี้ผู้เรียกใช้จะขึ้นป๊อบอัพแจ้งเตือนแทนการล็อกอิน ไม่มีระบบเก่าให้ตกไปใช้อีกต่อไป) ──
 async function serverVerifyLogin(username,password,loginMode){
@@ -575,6 +587,69 @@ function removeDeviceTokenFromAccount(targetUser,onDone){
   }).catch(function(){if(onDone)onDone();});
 }
 function requestPushPermission(){
+  // ══════════════════════════════════════════════════════════════
+  // ส่วนใหม่: ทาง Native App (Android/iOS ผ่าน Capacitor) — ใช้ Plugin แทน Web Notification API
+  // เพราะ Web Notification API ใช้งานไม่ได้จริงในบริบทแอป Native (โดยเฉพาะ iOS ไม่รองรับเลย)
+  // ถ้าเข้าเงื่อนไขนี้ จะ return ออกก่อนถึงโค้ดเดิมด้านล่างเสมอ (โค้ดเดิมสำหรับเว็บไม่ถูกแตะเลย)
+  // ══════════════════════════════════════════════════════════════
+  if(isNativeApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+    if(!user||!user.id){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ":"Please log in first");return;}
+    const PN=window.Capacitor.Plugins.PushNotifications;
+    if(isPushEnabledForThisDevice()){
+      // ── ปิดแจ้งเตือน: ใช้ token ที่เก็บไว้จาก listener 'registration' ตอนเปิดใช้งานครั้งก่อน ──
+      if(window._nativePushToken){
+        const u=users.find(function(x){return x.id===user.id;});
+        const existingTokens=(u&&u.fcmTokens)||user.fcmTokens||[];
+        const newTokens=existingTokens.filter(function(t){return t!==window._nativePushToken;});
+        if(u)u.fcmTokens=newTokens;
+        user.fcmTokens=newTokens;
+        const ref=_pushFcmDocRef(user);
+        if(ref)ref.update({fcmTokens:newTokens}).catch(function(){if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});});
+      }
+      try{localStorage.setItem(_pushEnabledStorageKey(),"0");}catch(e){}
+      toast("🔕 "+(_lang==="lo"?"ປິດການແຈ້ງເຕືອນແລ້ວ":"Push notifications turned off"));
+      if(typeof render==="function")render();
+      return;
+    }
+    PN.requestPermissions().then(function(result){
+      if(result.receive!=="granted"){toast(_lang==="lo"?"❌ ບໍ່ອະນຸຍາດການແຈ້ງເຕືອນ":"❌ Notification permission denied");return;}
+      PN.register();
+      // ── รอ token จาก event 'registration' (เป็น async event แยกต่างหาก) — เช็คทุก 500ms นานสุด 10 วินาที ──
+      let _waitCount=0;
+      const _waitToken=setInterval(function(){
+        _waitCount++;
+        if(window._nativePushToken){
+          clearInterval(_waitToken);
+          const token=window._nativePushToken;
+          const u=users.find(function(x){return x.id===user.id;});
+          const existingTokens=(u&&u.fcmTokens)||[];
+          if(existingTokens.indexOf(token)===-1){
+            const newTokens=existingTokens.concat([token]);
+            if(u)u.fcmTokens=newTokens;
+            user.fcmTokens=newTokens;
+            const ref=_pushFcmDocRef(user);
+            if(ref)ref.update({fcmTokens:newTokens}).catch(function(){
+              if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});
+            });
+          }
+          try{localStorage.setItem(_pushEnabledStorageKey(),"1");}catch(e){}
+          toast("✅ "+(_lang==="lo"?"ເປີດການແຈ້ງເຕືອນສຳເລັດ":"Push notifications enabled"));
+          if(typeof render==="function")render();
+        } else if(_waitCount>20){
+          clearInterval(_waitToken);
+          toast("⚠️ "+(_lang==="lo"?"ບໍ່ໄດ້ຮັບໂທເຄັນ ລອງໃໝ່ອີກຄັ້ງ":"Could not get device token, please try again"));
+        }
+      },500);
+    }).catch(function(err){
+      console.error("Native push permission error:",err);
+      toast("⚠️ "+(err&&err.message?err.message:"Error enabling notifications"));
+    });
+    return;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // โค้ดเดิมทั้งหมดด้านล่างนี้ (สำหรับเว็บเบราว์เซอร์) — ไม่แก้ไขแม้แต่ตัวอักษรเดียว
+  // ══════════════════════════════════════════════════════════════
   if(!messaging){toast(_lang==="lo"?"⚠️ ອຸປະກອນນີ້ບໍ່ຮອງຮັບການແຈ້ງເຕືອນ":"⚠️ Push notifications not supported on this device");return;}
   if(!user||!user.id){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ":"Please log in first");return;}
   if(FCM_VAPID_KEY.indexOf("ໃສ່")===0){console.warn("FCM_VAPID_KEY ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ — ໄປທີ່ Firebase Console ເພື່ອສ້າງ VAPID Key ກ່ອນ");toast("⚠️ ຍັງບໍ່ໄດ້ຕັ້ງຄ່າລະບົບແຈ້ງເຕືອນ (ຕິດຕໍ່ຜູ້ພັດທະນາ)");return;}
@@ -3145,7 +3220,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.6.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.6.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5896,7 +5971,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.6.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.6.1")
   );
 
   // Icon style helper

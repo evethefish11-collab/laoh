@@ -420,10 +420,15 @@ try{
 function isNativeApp(){
   try{ return !!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()); }catch(e){ return false; }
 }
+// ── เช็คว่าเป็น iOS native โดยเฉพาะ — ใช้แยก flow รับ push token เพราะ iOS ต้องใช้ @capacitor-firebase/messaging (FirebaseMessaging plugin) แทน @capacitor/push-notifications เนื่องจาก PushNotifications plugin บน iOS ให้แค่ APNs raw token ไม่ใช่ FCM token ──
+function isIOSNative(){
+  try{ return isNativeApp() && window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()==="ios"; }catch(e){ return false; }
+}
 // ── ตั้ง listener รอรับ FCM token จาก Capacitor Push Notifications plugin (ถ้ามีติดตั้งไว้) — เก็บไว้ใน window._nativePushToken ให้ requestPushPermission() เอาไปใช้ต่อ ──
 // ── ตั้งไว้ตั้งแต่ตอนโหลดแอป ไม่ต้องรอให้ผู้ใช้กดปุ่มก่อน เพราะ event 'registration' อาจเกิดขึ้นได้ทุกเมื่อหลัง register() ──
+// ── หมายเหตุ: บล็อกนี้ใช้กับ Android เท่านั้น (!isIOSNative()) — พฤติกรรม Android เดิมทุกจุดไม่ถูกแตะ ──
 try{
-  if(isNativeApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+  if(isNativeApp() && !isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
     window.Capacitor.Plugins.PushNotifications.addListener('registration', function(tokenData){
       window._nativePushToken = tokenData && tokenData.value;
     });
@@ -432,6 +437,14 @@ try{
     });
   }
 }catch(e){console.warn('Native push listener setup failed:',e);}
+// ── ตั้ง listener รอรับ FCM token สำหรับ iOS โดยเฉพาะ ผ่าน @capacitor-firebase/messaging (FirebaseMessaging plugin) — เก็บไว้ใน window._nativePushToken ตัวแปรเดียวกับ Android เพื่อให้ requestPushPermission() ใช้โค้ดร่วมกันได้โดยไม่ต้องแก้ไขส่วนอื่น ──
+try{
+  if(isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging){
+    window.Capacitor.Plugins.FirebaseMessaging.addListener('tokenReceived', function(tokenData){
+      window._nativePushToken = tokenData && tokenData.token;
+    });
+  }
+}catch(e){console.warn('iOS FirebaseMessaging listener setup failed:',e);}
 // ── ตรวจสอบ username/password ฝั่งเซิร์ฟเวอร์ (ระยะที่ 2 — ความปลอดภัยของระบบล็อกอิน) ──
 // ── คืนค่า {success,role,id,shopId,name,isShopViewer} ถ้าสำเร็จ, null ถ้าเรียกไม่สำเร็จ/หาไม่เจอ (ตอนนี้ผู้เรียกใช้จะขึ้นป๊อบอัพแจ้งเตือนแทนการล็อกอิน ไม่มีระบบเก่าให้ตกไปใช้อีกต่อไป) ──
 async function serverVerifyLogin(username,password,loginMode){
@@ -593,7 +606,66 @@ function requestPushPermission(){
   // เพราะ Web Notification API ใช้งานไม่ได้จริงในบริบทแอป Native (โดยเฉพาะ iOS ไม่รองรับเลย)
   // ถ้าเข้าเงื่อนไขนี้ จะ return ออกก่อนถึงโค้ดเดิมด้านล่างเสมอ (โค้ดเดิมสำหรับเว็บไม่ถูกแตะเลย)
   // ══════════════════════════════════════════════════════════════
-  if(isNativeApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+  // ══════════════════════════════════════════════════════════════
+  // ส่วนใหม่: ทาง iOS โดยเฉพาะ — ใช้ @capacitor-firebase/messaging (FirebaseMessaging plugin) แทน
+  // @capacitor/push-notifications เพราะปลั๊กอินเดิมบน iOS ให้แค่ APNs raw token ไม่ใช่ FCM token
+  // ที่ Cloud Functions ต้องการ ทำให้ backend ส่ง push ไม่ถึงเครื่อง iOS ได้เลย (Android ไม่กระทบ)
+  // ถ้าเข้าเงื่อนไขนี้ จะ return ออกก่อนถึงโค้ด Android/Web ด้านล่างเสมอ (ไม่ถูกแตะเลย)
+  // ══════════════════════════════════════════════════════════════
+  if(isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging){
+    if(!user||!user.id){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ":"Please log in first");return;}
+    const FM=window.Capacitor.Plugins.FirebaseMessaging;
+    if(isPushEnabledForThisDevice()){
+      if(window._nativePushToken){
+        const u=users.find(function(x){return x.id===user.id;});
+        const existingTokens=(u&&u.fcmTokens)||user.fcmTokens||[];
+        const newTokens=existingTokens.filter(function(t){return t!==window._nativePushToken;});
+        if(u)u.fcmTokens=newTokens;
+        user.fcmTokens=newTokens;
+        const ref=_pushFcmDocRef(user);
+        if(ref)ref.update({fcmTokens:newTokens}).catch(function(){if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});});
+      }
+      try{localStorage.setItem(_pushEnabledStorageKey(),"0");}catch(e){}
+      toast("🔕 "+(_lang==="lo"?"ປິດການແຈ້ງເຕືອນແລ້ວ":"Push notifications turned off"));
+      if(typeof render==="function")render();
+      return;
+    }
+    FM.requestPermissions().then(function(result){
+      if(result.receive!=="granted"){toast(_lang==="lo"?"❌ ບໍ່ອະນຸຍາດການແຈ້ງເຕືອນ":"❌ Notification permission denied");return;}
+      // ── ขอ FCM token โดยตรงผ่าน getToken() — เป็น Promise รอผลได้ทันที ไม่ต้อง poll เหมือนฝั่ง Android ──
+      FM.getToken().then(function(tokenResult){
+        const token=tokenResult&&tokenResult.token;
+        if(!token){
+          toast("⚠️ "+(_lang==="lo"?"ບໍ່ໄດ້ຮັບໂທເຄັນ ລອງໃໝ່ອີກຄັ້ງ":"Could not get device token, please try again"));
+          return;
+        }
+        window._nativePushToken=token;
+        const u=users.find(function(x){return x.id===user.id;});
+        const existingTokens=(u&&u.fcmTokens)||[];
+        if(existingTokens.indexOf(token)===-1){
+          const newTokens=existingTokens.concat([token]);
+          if(u)u.fcmTokens=newTokens;
+          user.fcmTokens=newTokens;
+          const ref=_pushFcmDocRef(user);
+          if(ref)ref.update({fcmTokens:newTokens}).catch(function(){
+            if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});
+          });
+        }
+        try{localStorage.setItem(_pushEnabledStorageKey(),"1");}catch(e){}
+        toast("✅ "+(_lang==="lo"?"ເປີດການແຈ້ງເຕືອນສຳເລັດ":"Push notifications enabled"));
+        if(typeof render==="function")render();
+      }).catch(function(err){
+        console.error("iOS FirebaseMessaging getToken error:",err);
+        toast("⚠️ "+(_lang==="lo"?"ບໍ່ໄດ້ຮັບໂທເຄັນ ລອງໃໝ່ອີກຄັ້ງ":"Could not get device token, please try again"));
+      });
+    }).catch(function(err){
+      console.error("iOS FirebaseMessaging permission error:",err);
+      toast("⚠️ "+(err&&err.message?err.message:"Error enabling notifications"));
+    });
+    return;
+  }
+
+  if(isNativeApp() && !isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
     if(!user||!user.id){toast(_lang==="lo"?"ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນ":"Please log in first");return;}
     const PN=window.Capacitor.Plugins.PushNotifications;
     if(isPushEnabledForThisDevice()){

@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v672 -->
+<!-- LaoH Marketplace v673 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -643,21 +643,38 @@ function requestPushPermission(){
       if(result.receive!=="granted"){toast(_lang==="lo"?"❌ ບໍ່ອະນຸຍາດການແຈ້ງເຕືອນ":"❌ Notification permission denied");return;}
       PN.register();
       // ── ฟังก์ชันย่อย: บันทึก token ที่ได้ (ใช้ร่วมกันทั้ง Android/iOS) ──
+      // ── รอผลจริงจาก Firestore ก่อนขึ้น toast (เดิมขึ้น "สำเร็จ" ทันทีโดยไม่รอผล ทำให้มองไม่เห็น error จริงถ้าเขียนไม่ผ่าน เช่น ติด Security Rules) ──
       function _saveNativePushToken(token){
         const u=users.find(function(x){return x.id===user.id;});
         const existingTokens=(u&&u.fcmTokens)||[];
-        if(existingTokens.indexOf(token)===-1){
-          const newTokens=existingTokens.concat([token]);
+        function _onSaveSuccess(newTokens){
           if(u)u.fcmTokens=newTokens;
           user.fcmTokens=newTokens;
-          const ref=_pushFcmDocRef(user);
-          if(ref)ref.update({fcmTokens:newTokens}).catch(function(){
-            if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});
-          });
+          try{localStorage.setItem(_pushEnabledStorageKey(),"1");}catch(e){}
+          toast("✅ "+(_lang==="lo"?"ເປີດການແຈ້ງເຕືອນສຳເລັດ":"Push notifications enabled"));
+          if(typeof render==="function")render();
         }
-        try{localStorage.setItem(_pushEnabledStorageKey(),"1");}catch(e){}
-        toast("✅ "+(_lang==="lo"?"ເປີດການແຈ້ງເຕືອນສຳເລັດ":"Push notifications enabled"));
-        if(typeof render==="function")render();
+        function _onSaveFail(err){
+          console.error("Save FCM token to Firestore failed:",err);
+          toast("⚠️ "+(_lang==="lo"?"ບັນທຶກໂທເຄັນລົ້ມເຫຼວ: ":"Failed to save token: ")+(err&&err.message?err.message:String(err)));
+        }
+        if(existingTokens.indexOf(token)===-1){
+          const newTokens=existingTokens.concat([token]);
+          const ref=_pushFcmDocRef(user);
+          if(!ref){_onSaveFail(new Error("no document reference"));return;}
+          ref.update({fcmTokens:newTokens}).then(function(){
+            _onSaveSuccess(newTokens);
+          }).catch(function(updateErr){
+            ref.set({fcmTokens:newTokens},{merge:true}).then(function(){
+              _onSaveSuccess(newTokens);
+            }).catch(function(setErr){
+              _onSaveFail(setErr||updateErr);
+            });
+          });
+        } else {
+          // ── token นี้เคยถูกบันทึกไว้แล้ว ไม่ต้องเขียนซ้ำ ──
+          _onSaveSuccess(existingTokens);
+        }
       }
       // ══════════════════════════════════════════════════════════════
       // ทาง iOS โดยเฉพาะ: event 'registration' ของ PushNotifications ให้แค่ APNs raw token
@@ -3284,7 +3301,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.7.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.7.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5878,11 +5895,29 @@ function render(){
   // ── เช็คเบาๆ ทุกครั้งที่ render แต่ยิง requestPushPermission() จริงแค่ครั้งเดียวต่อบัญชีต่อเครื่อง (กันด้วย localStorage) ──
   // ── ไม่ยิงซ้ำถ้าเปิดใช้งานอยู่แล้ว (isPushEnabledForThisDevice) ──
   try{
-    if(isNativeApp() && user && user.id && !isPushEnabledForThisDevice()){
-      const _autoPushKey="laoh_auto_push_asked_"+user.id;
-      if(!localStorage.getItem(_autoPushKey)){
-        localStorage.setItem(_autoPushKey,"1");
-        setTimeout(function(){ try{ requestPushPermission(); }catch(e){} },800);
+    if(isNativeApp() && user && user.id){
+      if(!isPushEnabledForThisDevice()){
+        const _autoPushKey="laoh_auto_push_asked_"+user.id;
+        if(!localStorage.getItem(_autoPushKey)){
+          localStorage.setItem(_autoPushKey,"1");
+          setTimeout(function(){ try{ requestPushPermission(); }catch(e){} },800);
+        }
+      } else if(!window._nativePushToken && !window._nativePushTokenRefreshing){
+        // ── เคยเปิดแจ้งเตือนไว้แล้วจาก session ก่อนหน้า แต่ window._nativePushToken เป็นตัวแปรในหน่วยความจำ
+        // รีเซ็ตทุกครั้งที่เปิดแอปใหม่ — ต้องดึง token กลับมาเก็บใหม่แบบเงียบๆ (ไม่ขอ permission ซ้ำ เพราะ OS
+        // จะไม่เด้ง popup อีกถ้าเคยอนุญาตแล้ว) ไม่งั้นตอน logout removeDeviceTokenFromAccount() จะหา token ไม่เจอ
+        window._nativePushTokenRefreshing=true;
+        if(isIOSNative() && window.Capacitor.Plugins.FCM){
+          window.Capacitor.Plugins.FCM.getToken().then(function(r){
+            if(r&&r.token)window._nativePushToken=r.token;
+            window._nativePushTokenRefreshing=false;
+          }).catch(function(){window._nativePushTokenRefreshing=false;});
+        } else if(!isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+          window.Capacitor.Plugins.PushNotifications.register();
+          window._nativePushTokenRefreshing=false;
+        } else {
+          window._nativePushTokenRefreshing=false;
+        }
       }
     }
   }catch(e){}
@@ -6047,7 +6082,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.7.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.7.3")
   );
 
   // Icon style helper

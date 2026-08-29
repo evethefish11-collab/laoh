@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v674 -->
+<!-- LaoH Marketplace v676 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -581,6 +581,30 @@ function _pushEnabledStorageKey(){
 function isPushEnabledForThisDevice(){
   try{ return localStorage.getItem(_pushEnabledStorageKey())==="1"; }catch(e){ return false; }
 }
+// ── ดึง native push token สดใหม่แบบ async — ใช้ตอนที่ window._nativePushToken ยังว่างอยู่
+// (เช่น เพิ่งเปิดแอปแล้ว logout ทันทีก่อนที่ render() จะดึง token เสร็จ — race condition)
+// ไม่ขอ permission ซ้ำ แค่ดึง token ที่มีอยู่แล้วกลับมา ──
+function _getFreshNativePushToken(cb){
+  try{
+    if(isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FCM){
+      window.Capacitor.Plugins.FCM.getToken().then(function(r){
+        cb((r&&r.token)||null);
+      }).catch(function(){cb(null);});
+      return;
+    }
+    if(!isIOSNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+      window.Capacitor.Plugins.PushNotifications.register();
+      let _tries=0;
+      const _poll=setInterval(function(){
+        _tries++;
+        if(window._nativePushToken){clearInterval(_poll);cb(window._nativePushToken);}
+        else if(_tries>10){clearInterval(_poll);cb(null);} // นานสุด 5 วินาที
+      },500);
+      return;
+    }
+    cb(null);
+  }catch(e){cb(null);}
+}
 // ── ลบรหัสอุปกรณ์ของเครื่องนี้ออกจากบัญชีที่ระบุ (ใช้ทั้งตอนกด "ปิดแจ้งเตือน" และตอนล็อกเอาท์) ──
 function removeDeviceTokenFromAccount(targetUser,onDone){
   if(!targetUser){if(onDone)onDone();return;}
@@ -589,18 +613,28 @@ function removeDeviceTokenFromAccount(targetUser,onDone){
   // ใช้ token จาก window._nativePushToken โดยตรง เพราะ messaging.getToken() ของ Firebase
   // Web SDK (ต้องการ vapidKey) ใช้ไม่ได้ในบริบทแอป native — ก่อนหน้านี้ฟังก์ชันนี้จึงไม่เคย
   // ลบ token ของแอป native ออกจริงตอน logout ทำให้บัญชีเก่ายังมี token ค้างอยู่
+  // (v675) ถ้า window._nativePushToken ยังว่างอยู่ (race condition) ให้ดึง token สดใหม่ก่อนค่อยลบ
   // ══════════════════════════════════════════════════════════════
   if(isNativeApp()){
-    const token=window._nativePushToken;
-    if(!token){if(onDone)onDone();return;}
-    const u=users.find(function(x){return x.id===targetUser.id;});
-    const existingTokens=(u&&u.fcmTokens)||targetUser.fcmTokens||[];
-    const newTokens=existingTokens.filter(function(t){return t!==token;});
-    if(u)u.fcmTokens=newTokens;
-    if(targetUser)targetUser.fcmTokens=newTokens;
-    const ref=_pushFcmDocRef(targetUser);
-    if(ref)ref.update({fcmTokens:newTokens}).catch(function(){if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});});
-    if(onDone)onDone();
+    function _doRemove(token){
+      if(!token){if(onDone)onDone();return;}
+      const u=users.find(function(x){return x.id===targetUser.id;});
+      const existingTokens=(u&&u.fcmTokens)||targetUser.fcmTokens||[];
+      const newTokens=existingTokens.filter(function(t){return t!==token;});
+      if(u)u.fcmTokens=newTokens;
+      if(targetUser)targetUser.fcmTokens=newTokens;
+      const ref=_pushFcmDocRef(targetUser);
+      if(ref)ref.update({fcmTokens:newTokens}).catch(function(){if(ref)ref.set({fcmTokens:newTokens},{merge:true}).catch(function(){});});
+      if(onDone)onDone();
+    }
+    if(window._nativePushToken){
+      _doRemove(window._nativePushToken);
+    } else {
+      _getFreshNativePushToken(function(token){
+        if(token)window._nativePushToken=token;
+        _doRemove(token);
+      });
+    }
     return;
   }
   // ══════════════════════════════════════════════════════════════
@@ -3306,7 +3340,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.7.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.7.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6087,7 +6121,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.7.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.7.6")
   );
 
   // Icon style helper
@@ -10376,7 +10410,11 @@ function showProduct(p){
     // ── เก็บตำแหน่งที่เลื่อนไว้ของส่วนข้อมูลสินค้าไว้ก่อน (ถ้ามีอยู่แล้วจากการ draw() ครั้งก่อน) เพื่อคืนตำแหน่งเดิมหลังสร้างป๊อบอัพใหม่ กันไม่ให้กระโดดกลับไปบนสุดตอนเลือกสี/ขนาด ──
     const _prevScrollEl=document.getElementById("prodInfoScroll");
     const _prevScrollTop=_prevScrollEl?_prevScrollEl.scrollTop:0;
-    const qN=selColor&&selSize?gQ(selColor,selSize):null;
+    // ── (v676) แก้ query stock: เดิมต้องเลือกทั้งสีและไซส์ถึงจะคำนวณ qN ได้ ทำให้สินค้าที่มีสีอย่างเดียว
+    // (ไม่มีไซส์) ไม่เคยแสดงกล่องแจ้งสต๊อก/พรีออเดอร์เลย — ตอนนี้ถ้าสินค้าไม่มีไซส์ (sz.length===0)
+    // แค่เลือกสีก็ query ได้เลยด้วย key "สี|" (ตรงกับที่ฟอร์มแก้ไขสินค้าบันทึกไว้จริง) —
+    // เคสมีทั้งสีและไซส์ยังคงต้องเลือกครบทั้งคู่เหมือนเดิมทุกจุด ไม่เปลี่ยนแปลง ──
+    const qN=selColor?(sz.length>0?(selSize?gQ(selColor,selSize):null):gQ(selColor,"")):null;
     const dp=promo?promo.price:p.price;
     showFullBleedOv(el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation(),style:{padding:"0",display:"flex",flexDirection:"column",overflow:"visible"}},
       el("button",{className:"mcl",style:{left:"12px",right:"auto",zIndex:"20",background:"rgba(0,0,0,.45)",color:"#fff",border:"none"},onclick:closeOv},"✕"),
@@ -14169,6 +14207,8 @@ function buildShopAddProductForm(){
       el("label",{className:"lbl"},"🖼 ຮູບພາບ (ເພີ່ມໄດ້ຫຼາຍຮູບ)"),prev,imgBtns,fiGallery,fiCamera,
       el("button",{className:"btn btn-p",onclick:async function(){
         if(!v.name||!v.price){toast("ກະລຸນາໃສ່ຊື່ ແລະ ລາຄາ");return;}
+        // ── (v676) บังคับใส่สีอย่างน้อย 1 สีตอนสร้างสินค้าใหม่ — ให้ตรงกับฟอร์มแก้ไขสินค้าที่บังคับอยู่แล้ว ──
+        if(!v.colors||v.colors.length===0){toast("🎨 ກະລຸນາເລືອກສີ / ກິ່ນ / ລົດຊາດ ຢ່າງໜ້ອຍ 1 ລາຍການ");return;}
         const cs=v.colors.length?v.colors:[];
         const sz=v.sizes.length?v.sizes:[];
         const cat=v.mainCat||(v.cats&&v.cats.length?v.cats[0]:(PCATS[0]||""));

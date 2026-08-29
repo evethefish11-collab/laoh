@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v681 -->
+<!-- LaoH Marketplace v682 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3340,7 +3340,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.8.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.8.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6121,7 +6121,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.8.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.8.2")
   );
 
   // Icon style helper
@@ -7231,13 +7231,22 @@ function buildShopProfile(shopId){
     (filteredProds.length!==shopProds.length)?el("button",{style:{background:"none",border:"none",color:"#1B6B3A",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){fShopSubCat="all";window._fShopMainCat="all";fShopSort="new";fShopStock="all";render();}},_lang==="lo"?"ລ້າງ":"Clear"):null
   );
 
+  let _oosTourTaggedOnce=false, _scTourTaggedOnce=false;
   const grid = filteredProds.length===0
     ? el("div",{style:{textAlign:"center",padding:"32px",color:"#6B8F75"}},fShopSubCat!=="all"?(_lang==="lo"?"ບໍ່ມີສິນຄ້າໃນໝວດນີ້":"No products in this category"):"ຍັງບໍ່ມີສິນຄ້າ")
     : el("div",{className:"grid",style:{padding:"0 14px 20px"}},filteredProds.map(function(p,pIdx){
         const card=buildCard(p,PM);
         // ── (v679) Badge "หมดสต๊อก ไม่สามารถพรีออเดอร์ได้" กลางรูป — เฉพาะหน้าโปรไฟล์ร้านค้าเท่านั้น (ไม่แตะ buildCard() ที่ใช้ทั่วระบบ)
         // แสดงทั้งตอนลูกค้าดูร้าน และร้านค้าดูโปรไฟล์ตัวเอง ──
-        if(!rdy(p) && !p.allowPreorder){
+        // (v682) เพิ่ม badge "ปิดการขายอยู่" — ถ้าปิดการขายอยู่ให้โชว์อันนี้แทน ไม่ซ้อนกับ badge หมดสต๊อก ──
+        if(p.saleClosed){
+          const _cimg=card.querySelector(".cimg");
+          if(_cimg){
+            _cimg.appendChild(el("div",{style:{position:"absolute",top:"0",left:"0",right:"0",bottom:"0",background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"6",padding:"8px",textAlign:"center"}},
+              el("span",{style:{color:"#fff",fontWeight:"800",fontSize:".7rem",lineHeight:"1.35",whiteSpace:"pre-line"}},_lang==="lo"?"ປິດການຂາຍຢູ່":"Sale Closed")
+            ));
+          }
+        } else if(!rdy(p) && !p.allowPreorder){
           const _cimg=card.querySelector(".cimg");
           if(_cimg){
             _cimg.appendChild(el("div",{style:{position:"absolute",top:"0",left:"0",right:"0",bottom:"0",background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:"6",padding:"8px",textAlign:"center"}},
@@ -7253,9 +7262,19 @@ function buildShopProfile(shopId){
             addBtn.style.background="#1B6B3A";
             addBtn.onclick=function(e){e.stopPropagation();showEditProd(p);};
             if(pIdx===0)addBtn.id="tourShopEditBtn";
+            // (v682) tag ปุ่มแก้ไขของสินค้าตัวแรกที่หมดสต๊อก+ไม่เปิดพรีออเดอร์+ไม่ได้ปิดการขาย ไว้ให้ทัวร์ชี้ ──
+            if(!_oosTourTaggedOnce && !p.saleClosed && !rdy(p) && !p.allowPreorder){
+              addBtn.id="tourOosEditBtn";
+              _oosTourTaggedOnce=true;
+            }
             // ── ปุ่มปิด/เปิดการขายสินค้าชั่วคราว — วางในแถวเดียวกับปุ่มแก้ไข (ใช้ flex row เดิม ไม่พึ่งการคำนวณตำแหน่งแบบ absolute) ──
             const toggleBtn=el("button",{style:{width:"26px",height:"26px",borderRadius:"50%",background:p.saleClosed?"#8A7A9E":"#C0392B",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".7rem",marginRight:"6px"},title:p.saleClosed?(_lang==="lo"?"ເປີດຂາຍຄືນ":"Reopen sale"):(_lang==="lo"?"ປິດການຂາຍຊົ່ວຄາວ":"Close sale temporarily")},p.saleClosed?"🔓":"🔒");
             if(pIdx===0)toggleBtn.id="tourShopToggleBtn";
+            // (v682) tag ปุ่มเปิด/ปิดขายของสินค้าตัวแรกที่ปิดการขายอยู่ ไว้ให้ทัวร์ชี้ ──
+            if(!_scTourTaggedOnce && p.saleClosed){
+              toggleBtn.id="tourSaleClosedBtn";
+              _scTourTaggedOnce=true;
+            }
             toggleBtn.onclick=function(e){
               e.stopPropagation();
               const pidx=prods.findIndex(function(x){return x.id===p.id;});
@@ -7443,6 +7462,10 @@ function buildShopProfile(shopId){
   } else {
     if(subCatBarEl)parts.push(subCatBarEl);
     parts.push(sortBar,stockBar,prodHeader,grid);
+    // (v682) เช็คว่าควรโชว์ทัวร์เตือนหมดสต๊อก/ปิดการขายไหม — เฉพาะตอนร้านค้าดูโปรไฟล์ตัวเอง ──
+    if(isMyShopViaCustomerChannel){
+      setTimeout(_checkAndShowStockTours,500);
+    }
   }
   return el("div",null,...parts);
 }
@@ -11278,6 +11301,83 @@ function _removeShopViewerTourCard(){
   if(c)c.remove();
   document.querySelectorAll('[data-shop-viewer-tour-arrow="1"]').forEach(function(a){a.remove();});
   document.querySelectorAll('[data-shop-viewer-tour-highlighted="1"]').forEach(function(a){a.style.outline="";a.style.outlineOffset="";a.removeAttribute("data-shop-viewer-tour-highlighted");});
+}
+// ══════════════════════════════════════════════════════════════════
+// (v682) ทัวร์แบบขั้นตอนเดียว — ใช้ร่วมกันสำหรับ "เตือนเพิ่มสต๊อก/พรีออเดอร์" และ "เตือนเปิดการขาย"
+// ต่อยอดจาก _buildMascotBubble เดิม ไม่แตะระบบทัวร์เดิม (showShopViewerTour ฯลฯ) เลย
+// ══════════════════════════════════════════════════════════════════
+function _drawGenericTourCard(targetEl,cardInnerArr){
+  _removeGenericTourCard();
+  const {wrap:bubbleWrap}=_buildMascotBubble(cardInnerArr);
+  const card=el("div",{id:"genericTourCard",style:{position:"fixed",left:"50%",transform:"translateX(-50%)",zIndex:"210",width:"min(88vw,380px)"}});
+  const r=targetEl.getBoundingClientRect();
+  const spaceBelow=window.innerHeight-r.bottom;
+  const showBelow=spaceBelow>220;
+  if(showBelow){card.style.top=(r.bottom+16)+"px";}
+  else{card.style.bottom=(window.innerHeight-r.top+16)+"px";}
+  card.appendChild(bubbleWrap);
+  document.body.appendChild(card);
+  const arrow=el("div",{"data-generic-tour-arrow":"1",style:{position:"fixed",left:(r.left+r.width/2-9)+"px",fontSize:"1.1rem",color:"#1B6B3A",zIndex:"210",pointerEvents:"none",textShadow:"0 1px 3px rgba(255,255,255,.9)"}},showBelow?"↑":"↓");
+  arrow.style.top=showBelow?(r.bottom+2)+"px":(r.top-24)+"px";
+  document.body.appendChild(arrow);
+  targetEl.setAttribute("data-generic-tour-highlighted","1");
+  targetEl.style.outline="3px solid #E0A900";
+  targetEl.style.outlineOffset="2px";
+  targetEl.style.borderRadius=targetEl.style.borderRadius||"8px";
+}
+function _removeGenericTourCard(){
+  const c=document.getElementById("genericTourCard");
+  if(c)c.remove();
+  document.querySelectorAll('[data-generic-tour-arrow="1"]').forEach(function(a){a.remove();});
+  document.querySelectorAll('[data-generic-tour-highlighted="1"]').forEach(function(a){a.style.outline="";a.style.outlineOffset="";a.removeAttribute("data-generic-tour-highlighted");});
+}
+// ── ทัวร์เตือน "หมดสต๊อก+ไม่เปิดพรีออเดอร์" — ชี้ปุ่มแก้ไข (✏️) ของสินค้าตัวแรกที่เข้าเงื่อนไข ──
+function _showOosStockTourBubble(targetEl){
+  targetEl.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(function(){
+    if(!document.body.contains(targetEl))return; // เผื่อ DOM เปลี่ยนไปแล้วระหว่างรอเลื่อนจอ
+    const msg=el("div",{style:{fontSize:".78rem",color:"#333",lineHeight:"1.55",marginBottom:"4px"}},
+      _lang==="lo"?"ສິນຄ້ານີ້ໝົດສະຕ໊ອກ ແລະ ບໍ່ໄດ້ເປີດພຣີໂອເດີ ລູກຄ້າຈຶ່ງສັ່ງຊື້ບໍ່ໄດ້ — ກະລຸນາເພີ່ມສະຕ໊ອກ ຫຼື ຕິກເປີດພຣີໂອເດີ":"This product is out of stock and pre-order isn't enabled, so customers can't order it — please add stock or enable pre-order"
+    );
+    const gotItBtn=el("button",{className:"btn btn-p",style:{width:"100%",marginTop:"10px"},onclick:function(){
+      try{localStorage.setItem("laoh_oos_tour_dismissed","1");}catch(e){}
+      window._oosTourPendingStockPoint=true; // ให้ตอนเปิดฟอร์มแก้ไขสินค้าต่อ ชี้ทัวร์ไปที่ปุ่มเพิ่มสต๊อก
+      _removeGenericTourCard();
+    }},"✅ "+(_lang==="lo"?"ເຂົ້າໃຈແລ້ວ":"Got it"));
+    _drawGenericTourCard(targetEl,[msg,gotItBtn]);
+  },350);
+}
+// ── ทัวร์เตือน "ปิดการขายอยู่" — ชี้ปุ่ม 🔒 (เปิด/ปิดขาย) ของสินค้าตัวแรกที่ปิดการขายอยู่ ──
+function _showSaleClosedTourBubble(targetEl){
+  targetEl.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(function(){
+    if(!document.body.contains(targetEl))return;
+    const msg=el("div",{style:{fontSize:".78rem",color:"#333",lineHeight:"1.55",marginBottom:"4px"}},
+      _lang==="lo"?"ສິນຄ້ານີ້ປິດການຂາຍຢູ່ ລູກຄ້າຈຶ່ງເຫັນສິນຄ້ານີ້ບໍ່ໄດ້ — ກົດປຸ່ມນີ້ຖ້າຕ້ອງການເປີດຂາຍຄືນ":"This product's sale is closed, so customers can't see it — tap this button if you want to reopen it for sale"
+    );
+    const gotItBtn=el("button",{className:"btn btn-p",style:{width:"100%",marginTop:"10px"},onclick:function(){
+      try{localStorage.setItem("laoh_saleclosed_tour_dismissed","1");}catch(e){}
+      _removeGenericTourCard();
+    }},"✅ "+(_lang==="lo"?"ເຂົ້າໃຈແລ້ວ":"Got it"));
+    _drawGenericTourCard(targetEl,[msg,gotItBtn]);
+  },350);
+}
+// ── เช็คว่าควรโชว์ทัวร์ไหนก่อน — ทัวร์หมดสต๊อกมาก่อนเสมอ ถ้าไม่มีค่อยเช็คทัวร์ปิดการขาย ไม่ให้ซ้อนกัน ──
+// ── window._stockToursShownThisVisit กันไม่ให้เด้งซ้ำทุกครั้งที่ render() ทำงาน (เรียกบ่อยมากในระบบนี้) ──
+function _checkAndShowStockTours(){
+  if(window._stockToursShownThisVisit)return;
+  window._stockToursShownThisVisit=true;
+  let _oosDismissed=false,_scDismissed=false;
+  try{_oosDismissed=localStorage.getItem("laoh_oos_tour_dismissed")==="1";}catch(e){}
+  try{_scDismissed=localStorage.getItem("laoh_saleclosed_tour_dismissed")==="1";}catch(e){}
+  if(!_oosDismissed){
+    const oosEl=document.querySelector("#tourOosEditBtn");
+    if(oosEl){_showOosStockTourBubble(oosEl);return;}
+  }
+  if(!_scDismissed){
+    const scEl=document.querySelector("#tourSaleClosedBtn");
+    if(scEl){_showSaleClosedTourBubble(scEl);return;}
+  }
 }
 // ══════════════════════════════════════════════════════════════════
 // ── ทัวร์แนะนำ Dashboard ของแอดมิน/ร้านค้า (ล็อกอินตรงผ่านแท็บ "แอดมิน") — หน้าตาเหมือนทัวร์โหมดดูร้านเป๊ะ แต่แยกระบบเป็นเอกเทศ ไม่ปนกัน ──
@@ -21720,6 +21820,7 @@ function showEditProd(p){
   modal.appendChild(barcodeSection);
   function refreshBarcodeInputs(){
     barcodeSection.innerHTML="";
+    let _firstAddStockBtnTagged=false;
     const cs_b=fm.selectedColors.length?fm.selectedColors:[""];
     const sz_b=fm.selectedSizes.length?fm.selectedSizes:[""];
     const combos_b=cs_b.flatMap(function(c){return sz_b.map(function(s){return {k:c+"|"+s,c:c,s:s};});});
@@ -21736,6 +21837,7 @@ function showEditProd(p){
       const stockLabel=el("span",{style:{fontSize:".72rem",color:"#1B6B3A",fontWeight:"700"}},"📦 ສະຕັອກ: "+(fm.stock[cb.k]||0)+" ຊິ້ນ");
       stockRow.appendChild(stockLabel);
       const addStockBtn=el("button",{type:"button",style:{background:"#E8F5EE",color:"#1B6B3A",border:"1.5px solid #1B6B3A",borderRadius:"8px",padding:"3px 9px",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},"➕ ເພີ່ມສະຕັອກ");
+      if(!_firstAddStockBtnTagged){addStockBtn.id="tourOosAddStockBtn";_firstAddStockBtnTagged=true;}
       addStockBtn.onclick=function(){
         const addMod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{padding:"18px",maxWidth:"320px",textAlign:"center"}});
         addMod.appendChild(el("button",{className:"mcl",onclick:function(){var ov=document.getElementById("ov");if(ov)ov.remove();showOv(modal,null);}},"✕"));
@@ -21994,6 +22096,14 @@ function showEditProd(p){
     }catch(err){toast("Error: "+err.message);}
   }},"💾 ບັນທຶກ"));
   showOv(modal,null);
+  // (v682) ต่อทัวร์จากทัวร์หมดสต๊อก — ถ้ามี flag ค้างอยู่ ให้ชี้ต่อไปที่ปุ่มเพิ่มสต๊อกตัวแรกในฟอร์มนี้ ──
+  if(window._oosTourPendingStockPoint){
+    window._oosTourPendingStockPoint=false;
+    setTimeout(function(){
+      const stockBtnEl=document.querySelector("#tourOosAddStockBtn");
+      if(stockBtnEl)_showOosStockTourBubble(stockBtnEl);
+    },500);
+  }
 }
 
 // ── PROFILE ────────────────────────────────────────────────────────

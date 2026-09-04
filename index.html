@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v689 -->
+<!-- LaoH Marketplace v690 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2553,6 +2553,16 @@ async function uploadFile(base64Data, path, contentType){
   }
 }
 
+// (v690) อัปโหลด Blob ขึ้น Firebase Storage ตรงๆ ไม่ผ่านการแปลงเป็น base64 แล้วแปลงกลับ (dataURItoBlob ใช้ atob()
+// ซึ่งพังกับ string ยาวมากบน iOS WebView — วิดีโอที่บีบอัดแล้วยังมีขนาดหลาย MB ทำให้ base64 string ยาวเกินไป)
+// ไม่มี fallback เป็น base64 เหมือน uploadFile() เพราะจุดประสงค์คือเลี่ยง atob() โดยเฉพาะ ──
+async function uploadBlobToStorage(blob, path, contentType){
+  if(!storage) throw new Error("Storage not ready");
+  const ref = storage.ref(path);
+  const snap = await ref.put(blob, {contentType: contentType||blob.type||"application/octet-stream", cacheControl: "public, max-age=604800"});
+  return snap.ref.getDownloadURL();
+}
+
 // ══════════════════════════════════════════════════════════════════
 // (v688) บีบอัดวิดีโอก่อนอัปโหลด — Firebase Storage rules จำกัดไฟล์ไม่เกิน 20MB
 // วิดีโอต้นฉบับ (ไม่บีบอัด) มักเกินขนาดนี้ได้ง่าย ทำให้อัปโหลดล้มเหลว
@@ -3402,7 +3412,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.8.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.9.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6301,7 +6311,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.8.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.9.0")
   );
 
   // Icon style helper
@@ -8678,12 +8688,14 @@ function buildUserProfile(uid){
                 if(compressedBlob.size>18*1024*1024){
                   throw new Error(_lang==="lo"?"ວິດີໂອຍັງໃຫຍ່ເກີນໄປ ແມ່ນຫຼັງບີບອັດແລ້ວ ກະລຸນາຖ່າຍວິດີໂອທີ່ສັ້ນກວ່ານີ້":"Video still too large even after compression, please record a shorter video");
                 }
-                return _blobToBase64(compressedBlob);
-              }).then(function(b64c){
+                // (v690) แสดงตัวอย่างจาก Blob ตรงๆ ผ่าน URL.createObjectURL ไม่ต้องแปลงเป็น base64 ก่อน ──
                 prevDiv.innerHTML="";
-                const v=document.createElement("video");v.src=b64c;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.controls=true;prevDiv.appendChild(v);
+                const previewUrl=URL.createObjectURL(compressedBlob);
+                const v=document.createElement("video");v.src=previewUrl;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.controls=true;prevDiv.appendChild(v);
                 toast("⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video..."));
-                return uploadVideoToStorage(b64c, Date.now()+".webm").then(function(url){
+                // (v690) อัปโหลด Blob ตรงๆ ผ่าน uploadBlobToStorage — ไม่ผ่าน base64/atob() เลย แก้ error
+                // "The string contains invalid characters" ที่เกิดจาก atob() พังกับ string ยาวมากบน iOS WebView ──
+                return uploadBlobToStorage(compressedBlob, "laoh/reviews/videos/"+Date.now()+".webm", "video/webm").then(function(url){
                   rv.mediaUrl=url;
                   rv.mediaType="video";
                   toast("✅ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ":"Video uploaded")+" ✓");

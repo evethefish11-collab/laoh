@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v697 -->
+<!-- LaoH Marketplace v700 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2723,6 +2723,38 @@ function buildShareGraphicUploadField(stateObj, fieldName, uploadFolder){
   return wrap;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// (v699) Modal แก้ไขคำอธิบาย + รูปกราฟิกสำหรับแชร์ — ใช้แทน prompt() เดิมที่ใส่ปุ่มอัปโหลดรูปไม่ได้
+// ใช้ซ้ำได้ทั้งโพสต์ร้านค้า/โพสต์ลูกค้า/รีวิว — item ต้องมี .caption และ .shareGraphicUrl (หรือ undefined ก็ได้)
+// onSave(newValues) จะถูกเรียกพร้อม {caption, shareGraphicUrl} หลังกดบันทึก
+// ══════════════════════════════════════════════════════════════════
+function showEditCaptionAndShareGraphicModal(item, onSave){
+  const state={caption:item.caption||"", shareGraphicUrl:item.shareGraphicUrl||null};
+  const mod=el("div",{className:"mod",style:{maxWidth:"360px"},onclick:function(e){e.stopPropagation();}});
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"✏️ "+(_lang==="lo"?"ແກ້ໄຂໂພສ":"Edit post")));
+  mod.appendChild(el("label",{className:"lbl"},_lang==="lo"?"ຄຳອະທິບາຍ":"Caption"));
+  const capTa=document.createElement("textarea");
+  capTa.value=state.caption;
+  capTa.rows=3;
+  capTa.style.cssText="width:100%;padding:10px;border-radius:10px;border:1.5px solid #ddd;font-family:inherit;font-size:.85rem;resize:vertical;margin-bottom:4px;box-sizing:border-box;";
+  capTa.oninput=function(){state.caption=this.value;};
+  mod.appendChild(capTa);
+  mod.appendChild(buildShareGraphicUploadField(state,"shareGraphicUrl","laoh/shareGraphics/edits"));
+  const btnRow=el("div",{style:{display:"flex",gap:"8px",marginTop:"14px"}});
+  const cancelBtn=el("button",{style:{flex:"1",padding:"10px",borderRadius:"10px",border:"1.5px solid #ddd",background:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".82rem"},onclick:function(){closeOv();}},
+    _lang==="lo"?"ຍົກເລີກ":"Cancel");
+  const saveBtn=el("button",{style:{flex:"1",padding:"10px",borderRadius:"10px",background:"#1B6B3A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".82rem",fontWeight:"700"}},
+    "💾 "+(_lang==="lo"?"ບັນທຶກ":"Save"));
+  saveBtn.onclick=function(){
+    const result={caption:state.caption.trim(), shareGraphicUrl:state.shareGraphicUrl};
+    closeOv();
+    onSave(result);
+  };
+  btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
+  mod.appendChild(btnRow);
+  showOv(mod,null);
+}
+
 async function uploadAudio(base64Data, filename){
   return uploadFile(base64Data, "laoh/audiobooks/"+(filename||Date.now()+".mp3"), "audio/mpeg");
 }
@@ -3508,7 +3540,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.9.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.0")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5267,7 +5299,9 @@ function saveShopPost(post){
   const idx=window._shopPosts.findIndex(function(p){return p.id===post.id;});
   if(idx>=0){window._shopPosts[idx]=post;}else{window._shopPosts.unshift(post);}
   try{localStorage.setItem("laoh_shopPosts",JSON.stringify(window._shopPosts));}catch(e){}
-  saveToCloud("shopPosts",post.id,post);
+  // (v700) เพิ่ม return เพื่อให้จุดที่เรียกใช้สามารถ .then()/await เช็คผลลัพธ์การบันทึกจริงได้
+  // จุดอื่นที่เรียกใช้แบบยิงแล้วลืม (ไม่ต่อ .then) ไม่ได้รับผลกระทบ เพราะแค่เพิ่ม return เฉยๆ ──
+  return saveToCloud("shopPosts",post.id,post);
 }
 function deleteShopPost(postId){
   window._shopPosts=(window._shopPosts||[]).filter(function(p){return p.id!==postId;});
@@ -6407,7 +6441,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.9.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.0")
   );
 
   // Icon style helper
@@ -7145,15 +7179,18 @@ function buildShopProfile(shopId){
           const isPostItem=shopVideoPosts.indexOf(vItem)>=0;
           if(isPostItem&&isMyShopViaCustomerChannel){
             const editCapBtn=document.createElement("button");
-            editCapBtn.textContent="✏️ "+(_lang==="lo"?"ແກ້ໄຂຄຳອະທິບາຍ":"Edit caption");
+            editCapBtn.textContent="✏️ "+(_lang==="lo"?"ແກ້ໄຂໂພສ":"Edit post");
             editCapBtn.style.cssText="margin-top:8px;background:none;border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:5px 12px;font-size:.72rem;cursor:pointer;font-family:inherit;";
             editCapBtn.onclick=function(e){
               e.stopPropagation();
-              const newCaption=prompt(_lang==="lo"?"ແກ້ໄຂຄຳອະທິບາຍ:":"Edit caption:",vItem.caption||"");
-              if(newCaption===null)return;
-              saveShopPost(Object.assign({},vItem,{caption:newCaption.trim()}));
-              toast(_lang==="lo"?"✅ ແກ້ໄຂແລ້ວ":"✅ Updated");
-              closeOv();render();
+              showEditCaptionAndShareGraphicModal(vItem,function(result){
+                toast(_lang==="lo"?"⏳ ກຳລັງບັນທຶກ...":"⏳ Saving...");
+                saveShopPost(Object.assign({},vItem,result)).then(function(saveResult){
+                  if(saveResult instanceof Error){return;} // toast แจ้ง error แสดงจาก saveToCloud() กลางแล้วอัตโนมัติ
+                  toast(_lang==="lo"?"✅ ແກ້ໄຂແລ້ວ":"✅ Updated");
+                  render();
+                });
+              });
             };
             vmInfo.appendChild(editCapBtn);
             // ── ปุ่มลบโพสต์ — จุดที่ขาดหายไปในโหมดดูร้าน (มีแค่ในหน้า Dashboard เต็มรูปแบบมาก่อนหน้านี้) ──
@@ -9100,18 +9137,22 @@ function buildUserProfile(uid){
         editCapBtn.textContent="✏️";
         editCapBtn.onclick=function(e){
           e.stopPropagation();
-          const newCaption=prompt(_lang==="lo"?"ແກ້ໄຂຄຳອະທິບາຍ:":"Edit caption:",rv.caption||"");
-          if(newCaption===null)return;
-          rv.caption=newCaption;
-          if(window._reviews){
-            const idx=window._reviews.findIndex(function(x){return x.id===rv.id;});
-            if(idx>=0)window._reviews[idx]=Object.assign({},window._reviews[idx],{caption:newCaption});
-            try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e2){}
-          }
-          // ── (แก้บั๊ก) บันทึกลง Firestore จริงด้วย — เดิมแก้แค่ในเครื่อง พอโหลดใหม่คำอธิบายจะย้อนกลับของเดิม ──
-          saveToCloud("reviews",rv.id,{caption:newCaption});
-          toast(_lang==="lo"?"✅ ບັນທຶກແລ້ວ":"✅ Saved");
-          render();
+          showEditCaptionAndShareGraphicModal(rv,function(result){
+            rv.caption=result.caption;
+            rv.shareGraphicUrl=result.shareGraphicUrl;
+            if(window._reviews){
+              const idx=window._reviews.findIndex(function(x){return x.id===rv.id;});
+              if(idx>=0)window._reviews[idx]=Object.assign({},window._reviews[idx],result);
+              try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e2){}
+            }
+            toast(_lang==="lo"?"⏳ ກຳລັງບັນທຶກ...":"⏳ Saving...");
+            // ── (แก้บั๊ก) บันทึกลง Firestore จริงด้วย — เดิมแก้แค่ในเครื่อง พอโหลดใหม่คำอธิบายจะย้อนกลับของเดิม ──
+            saveToCloud("reviews",rv.id,result).then(function(saveResult){
+              if(saveResult instanceof Error){return;} // toast แจ้ง error แสดงจาก saveToCloud() กลางแล้วอัตโนมัติ
+              toast(_lang==="lo"?"✅ ບັນທຶກແລ້ວ":"✅ Saved");
+              render();
+            });
+          });
         };
         imgBox.appendChild(editCapBtn);
         // ── ปุ่มใหม่: เปลี่ยนรูป/วิดีโอของรีวิว — ไม่ต้องลบรีวิวทิ้งแล้วเสียสิทธิ์รีวิวใหม่ ──
@@ -13954,7 +13995,7 @@ function buildRiderDashboard(){
       const formCard=el("div",{style:{background:"#fff",borderRadius:"14px",padding:"14px",marginBottom:"12px",boxShadow:"0 2px 8px rgba(0,0,0,.07)",border:"1px solid #E0E0E0"}});
       formCard.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"➕ ສ້າງໂພສໃໝ່"));
 
-      const npost={shopId:myShopId2,shopName:myShop2.name||"",shopEmoji:myShop2.emoji||"🏪",caption:"",mediaUrl:null,mediaType:"image",shareGraphicUrl:null,pinnedProdId:null,at:null,likes:0,hidden:false};
+      const npost={shopId:myShopId2,shopName:myShop2.name||"",shopEmoji:myShop2.emoji||"🏪",caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,pinnedProdId:null,at:null,likes:0,hidden:false};
 
       // Media upload
       formCard.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75",fontWeight:"700",marginBottom:"6px"}},"📷 ຮູບ / ວິດີໂອ *"));
@@ -14054,6 +14095,15 @@ function buildRiderDashboard(){
                       if(url&&url.startsWith("http")){
                         npost.mediaUrl=url;
                         toast(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ ✓":"Video uploaded ✓");
+                        // (v698) ดึง+อัปโหลดภาพปกจากวินาทีที่ 2 แยกต่างหาก — ไม่กระทบผลลัพธ์วิดีโอหลักถ้าล้มเหลว
+                        // ใช้เป็น Preview ตอนแชร์โพสต์นี้ไปแพลตฟอร์มอื่น ถ้าร้านค้าไม่ได้อัปโหลดรูปกราฟิกเอง ──
+                        captureVideoPosterFrame(compressedBlob,2).then(function(posterBlob){
+                          return uploadBlobToStorage(posterBlob,"laoh/shopPosts/posters/"+Date.now()+".jpg","image/jpeg");
+                        }).then(function(posterUrl){
+                          npost.mediaPoster=posterUrl;
+                        }).catch(function(posterErr){
+                          console.warn("Poster frame capture/upload failed (ไม่กระทบวิดีโอหลัก):",posterErr);
+                        });
                       } else {
                         npost.mediaUrl=null;
                         toast("❌ ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ — Firebase Storage ປະຕິເສດ (ກວດ Rules ຫຼື content-type)");
@@ -14086,6 +14136,15 @@ function buildRiderDashboard(){
                   npost.voiceoverUrl=result.voiceoverUrl;
                   npost.voiceoverMusicName=result.musicName||null;
                   npost.voiceoverMusicUrl=result.musicUrl||null;
+                  // (v698) ดึง+อัปโหลดภาพปกจากวินาทีที่ 2 ของไฟล์ต้นฉบับ (เนื้อหาภาพไม่เปลี่ยนจากการพากย์เสียงใหม่)
+                  // แยกอิสระ ไม่กระทบวิดีโอหลักถ้าล้มเหลว ──
+                  captureVideoPosterFrame(file,2).then(function(posterBlob){
+                    return uploadBlobToStorage(posterBlob,"laoh/shopPosts/posters/"+Date.now()+".jpg","image/jpeg");
+                  }).then(function(posterUrl){
+                    npost.mediaPoster=posterUrl;
+                  }).catch(function(posterErr){
+                    console.warn("Poster frame capture/upload failed (ไม่กระทบวิดีโอหลัก):",posterErr);
+                  });
                   mediaPreview.innerHTML="";
                   const v=document.createElement("video");v.src=npost.mediaUrl;v.style.cssText="width:100%;max-height:200px;object-fit:cover;";v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;
                   mediaPreview.appendChild(v);
@@ -20691,10 +20750,13 @@ function buildAdminTab(){
           el("button",{
             style:{background:"none",border:"1.5px solid #1B6B3A",color:"#1B6B3A",borderRadius:"6px",padding:"2px 8px",fontSize:".62rem",cursor:"pointer",fontFamily:"inherit"},
             onclick:function(){
-              const newCaption=prompt(_lang==="lo"?"ແກ້ໄຂຄຳອະທິບາຍ:":"Edit caption:",post.caption||"");
-              if(newCaption===null)return; // ກົດ cancel
-              saveShopPost(Object.assign({},post,{caption:newCaption.trim()}));
-              toast(_lang==="lo"?"✅ ແກ້ໄຂແລ້ວ":"✅ Updated");render();
+              showEditCaptionAndShareGraphicModal(post,function(result){
+                toast(_lang==="lo"?"⏳ ກຳລັງບັນທຶກ...":"⏳ Saving...");
+                saveShopPost(Object.assign({},post,result)).then(function(saveResult){
+                  if(saveResult instanceof Error){return;} // toast แจ้ง error แสดงจาก saveToCloud() กลางแล้วอัตโนมัติ
+                  toast(_lang==="lo"?"✅ ແກ້ໄຂແລ້ວ":"✅ Updated");render();
+                });
+              });
             }
           },"✏️ "+(_lang==="lo"?"ແກ້ໄຂ":"Edit")),
           el("button",{

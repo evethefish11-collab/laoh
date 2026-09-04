@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v694 -->
+<!-- LaoH Marketplace v697 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -839,7 +839,15 @@ function saveToCloud(col,id,data){
     _incSave();
     return db.collection(col).doc(String(id)).set(d,{merge:true})
       .then(function(r){_decSave();return r;})
-      .catch(function(e){_decSave();return e;});
+      .catch(function(e){
+        _decSave();
+        // (v697) แจ้ง error กลางระบบทันทีที่บันทึกไม่ผ่าน — เดิมเงียบหายไปเฉยๆ ไม่มีใครรู้เลยว่าบันทึกไม่สำเร็จ
+        // ยังคง return error object เหมือนเดิม (ไม่เปลี่ยนเป็น throw) เพื่อไม่ให้จุดที่เช็ค
+        // "result instanceof Error" อยู่แล้ว (เช่น สมัครสมาชิก, ยื่นคำขอเปิดร้าน) พังจากการเปลี่ยนพฤติกรรม ──
+        console.error("saveToCloud failed ["+col+"/"+id+"]:",e);
+        toast("⚠️ "+(_lang==="lo"?"ບັນທຶກຂໍ້ມູນລົ້ມເຫຼວ ("+col+"): ":"Failed to save ("+col+"): ")+((e&&e.message)?e.message:String(e)));
+        return e;
+      });
   }catch(e){return Promise.resolve();}
 }
 function makeSaveIndicator(){
@@ -2659,6 +2667,62 @@ async function uploadImage(base64Data, folder){
   return uploadFile(base64Data, (folder||"laoh/misc")+"/"+ts+"."+ext, base64Data.split(";")[0].replace("data:",""));
 }
 
+// ══════════════════════════════════════════════════════════════════
+// (v695) ช่องอัปโหลดรูปกราฟิกสำหรับแชร์ (ไม่บังคับ) — ใช้ซ้ำได้กับฟอร์มสินค้า/รีวิว/โพสต์ร้านค้า
+// ถ้าเจ้าของโพสต์อัปโหลดรูปนี้ไว้ Cloud Function ogPreview จะดึงรูปนี้ไปใช้แทนรูปสินค้า/ภาพปกวิดีโอ
+// เพื่อการันตีว่า preview ตอนแชร์จะสวยงามตามที่ออกแบบไว้เอง แนะนำขนาด 1200×630 พิกเซล (มาตรฐาน Facebook)
+// ══════════════════════════════════════════════════════════════════
+function buildShareGraphicUploadField(stateObj, fieldName, uploadFolder){
+  const wrap=el("div",{style:{marginTop:"10px"}});
+  wrap.appendChild(el("label",{className:"lbl"},"📢 "+(_lang==="lo"?"ຮູບກຣາຟິກສຳລັບແຊ (ບໍ່ບັງຄັບ)":"Share graphic (optional)")));
+  wrap.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"6px"}},
+    _lang==="lo"?"ແນະນຳຂະໜາດ 1200×630 ພິກເຊວ — ຖ້າອັບໂຫຼດໄວ້ ຈະໃຊ້ຮູບນີ້ຕອນແຊລິງຂ໌ໄປ Facebook/LINE ແທນຮູບປົກກະຕິ":"Recommended size 1200×630px — if uploaded, this image will be used when sharing to Facebook/LINE instead of the default image"
+  ));
+  const previewBox=el("div",{style:{width:"100%",aspectRatio:"1200/630",borderRadius:"10px",overflow:"hidden",background:"#F0F7F2",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",marginBottom:"6px"}});
+  function renderPreview(){
+    previewBox.innerHTML="";
+    if(stateObj[fieldName]){
+      previewBox.appendChild(el("img",{src:stateObj[fieldName],style:{width:"100%",height:"100%",objectFit:"cover"}}));
+      const rmBtn=el("button",{type:"button",style:{position:"absolute",top:"6px",right:"6px",background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:"24px",height:"24px",cursor:"pointer",fontSize:".7rem"}},"✕");
+      rmBtn.onclick=function(e){e.stopPropagation();stateObj[fieldName]=null;renderPreview();};
+      previewBox.appendChild(rmBtn);
+    } else {
+      previewBox.style.color="#6B8F75";previewBox.style.fontSize="1.6rem";previewBox.textContent="📢";
+    }
+  }
+  renderPreview();
+  const fi=document.createElement("input");fi.type="file";fi.accept="image/*";fi.style.display="none";
+  fi.onchange=function(e){
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=function(ev){
+      const b64=ev.target.result;
+      stateObj[fieldName]=b64;renderPreview();
+      uploadImage(b64,uploadFolder||"laoh/shareGraphics").then(function(url){
+        // (v696) uploadImage() มี fallback คืนค่าเป็น base64 เดิมถ้าอัปโหลดขึ้น Storage ไม่สำเร็จ (ออกแบบไว้สำหรับรูปสินค้า/รีวิวทั่วไป)
+        // ตรงนี้ต้องเช็คให้แน่ใจว่าเป็น URL จริง (http) เท่านั้น ไม่งั้นจะเก็บ base64 ยาวๆ ไว้แทน ทำให้ ogPreview
+        // เช็คไม่เจอว่าเป็น URL จริง (isHttpUrl) แล้วเงียบๆ ไม่ใช้รูปนี้เลย โดยที่ผู้ใช้ไม่รู้ตัวว่าอัปโหลดไม่สำเร็จจริง ──
+        if(url && url.indexOf("http")===0){
+          stateObj[fieldName]=url;renderPreview();
+        } else {
+          stateObj[fieldName]=null;renderPreview();
+          toast("⚠️ "+(_lang==="lo"?"ອັບໂຫຼດຮູບບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່":"Image upload failed, please try again"));
+        }
+      }).catch(function(){
+        stateObj[fieldName]=null;renderPreview();
+        toast("⚠️ "+(_lang==="lo"?"ອັບໂຫຼດຮູບບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່":"Image upload failed, please try again"));
+      });
+    };
+    r.readAsDataURL(file);
+  };
+  const pickBtn=el("button",{type:"button",style:{width:"100%",padding:"9px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){fi.click();}},
+    "📁 "+(_lang==="lo"?"ເລືອກຮູບ":"Choose image"));
+  wrap.appendChild(previewBox);
+  wrap.appendChild(pickBtn);
+  wrap.appendChild(fi);
+  return wrap;
+}
+
 async function uploadAudio(base64Data, filename){
   return uploadFile(base64Data, "laoh/audiobooks/"+(filename||Date.now()+".mp3"), "audio/mpeg");
 }
@@ -3444,7 +3508,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.9.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.9.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6343,7 +6407,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.9.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.9.7")
   );
 
   // Icon style helper
@@ -8555,7 +8619,7 @@ function buildUserProfile(uid){
       // เพราะตอนนี้ค้นหาสินค้าที่ไม่ได้ซื้อมารีวิวได้แล้ว (จำกัดวันละ 1 ครั้ง) ──
       const addBtn=el("button",{style:{width:"100%",padding:"10px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
         onclick:function(){
-          const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,at:Date.now(),isFreeReview:false};
+          const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,at:Date.now(),isFreeReview:false};
           const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
           mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
           mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📸 "+(_lang==="lo"?"ເພີ່ມຮີວິວ":"Add Review")));
@@ -8847,6 +8911,8 @@ function buildUserProfile(uid){
           mediaRow.appendChild(el("button",{className:"btn btn-g",style:{flex:"1",padding:"8px",fontSize:".76rem"},onclick:function(){fiImg.click();}},"🖼 ຮູບ"));
           mediaRow.appendChild(el("button",{className:"btn btn-g",style:{flex:"1",padding:"8px",fontSize:".76rem"},onclick:function(){fiVid.click();}},"🎬 ວິດີໂອ"));
           mod.appendChild(mediaRow); mod.appendChild(fiImg); mod.appendChild(fiVid);
+
+          mod.appendChild(buildShareGraphicUploadField(rv,"shareGraphicUrl","laoh/shareGraphics/reviews"));
 
           // submit
           mod.appendChild(el("button",{className:"btn btn-p",onclick:function(){
@@ -13188,7 +13254,9 @@ function buildStaffDashboard(){
           if(idx2>=0) orders[idx2]=Object.assign({},orders[idx2],{status:HUB_STATUS,hubAt:Date.now(),statusLog:newLog});
           // Add to hubLog
           hubLog.unshift({id:Date.now(),orderId:ord.id,type:"in",at:at,by:user.name,status:HUB_STATUS});
-          saveToCloud("orders",ord.id,orders[idx2]).then(function(){
+          saveToCloud("orders",ord.id,orders[idx2]).then(function(result){
+            // (v697) เช็คก่อนว่าบันทึกสำเร็จจริง ไม่ใช่โชว์ "สำเร็จ" ทันทีโดยไม่เช็คเหมือนเดิม ──
+            if(result instanceof Error){return;}
             toast("✅ ຮັບ #"+code+" ເຂົ້າສູນ LaoH ແລ້ວ");
             inp2.value="";
             render();
@@ -13295,7 +13363,8 @@ function buildStaffDashboard(){
         const idx3=orders.findIndex(function(x){return x.id===ord.id;});
         if(idx3>=0) orders[idx3]=Object.assign({},orders[idx3],{status:newStatus,statusLog:newLog},extraFields);
         hubLog.unshift({id:Date.now(),orderId:ord.id,type:"out",outType:outType,at:at,by:user.name,status:newStatus});
-        saveToCloud("orders",ord.id,orders[idx3]).then(function(){
+        saveToCloud("orders",ord.id,orders[idx3]).then(function(result){
+          if(result instanceof Error){return;}
           toast("✅ ສ່ງ #"+code+" ອອກ: "+newStatus);
           inp.value="";
           render();
@@ -13749,7 +13818,7 @@ function buildRiderDashboard(){
         btnAction=function(){
           o = riderUpdateStatus(o,"ສິນຄ້າອອກຈາກຮ້ານແລ້ວ",{leftShopAt:Date.now()});
           toast("⏳ ບັນທຶກ...");
-          saveToCloud("orders",o.id,o).then(function(){toast("✅ ສິນຄ້າອອກຈາກຮ້ານແລ້ວ");render();});
+          saveToCloud("orders",o.id,o).then(function(result){if(result instanceof Error)return;toast("✅ ສິນຄ້າອອກຈາກຮ້ານແລ້ວ");render();});
         };
       } else {
         btnLabel="⏳ ລໍແອດມິນຢືນຢັນຮອດສູນ"; btnColor="#999";
@@ -13760,14 +13829,14 @@ function buildRiderDashboard(){
       btnAction=function(){
         o = riderUpdateStatus(o,"ກຳລັງຈັດສົ່ງໃຫ້ລູກຄ້າ",{deliveryStartAt:Date.now()});
         toast("⏳ ບັນທຶກ...");
-        saveToCloud("orders",o.id,o).then(function(){toast("✅ ກຳລັງຈັດສົ່ງ!");render();});
+        saveToCloud("orders",o.id,o).then(function(result){if(result instanceof Error)return;toast("✅ ກຳລັງຈັດສົ່ງ!");render();});
       };
     } else {
       btnLabel="✅ ສົ່ງຮອດ — ສຳເລັດ"; btnColor="#1B6B3A";
       btnAction=function(){
         o = riderUpdateStatus(o,"ອໍເດີສຳເລັດແລ້ວ",{deliveredAt:Date.now()});
         toast("⏳ ບັນທຶກ...");
-        saveToCloud("orders",o.id,o).then(function(){toast("✅ ສົ່ງສຳເລັດ! 🎉");render();});
+        saveToCloud("orders",o.id,o).then(function(result){if(result instanceof Error)return;toast("✅ ສົ່ງສຳເລັດ! 🎉");render();});
       };
     }
 
@@ -13885,7 +13954,7 @@ function buildRiderDashboard(){
       const formCard=el("div",{style:{background:"#fff",borderRadius:"14px",padding:"14px",marginBottom:"12px",boxShadow:"0 2px 8px rgba(0,0,0,.07)",border:"1px solid #E0E0E0"}});
       formCard.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"➕ ສ້າງໂພສໃໝ່"));
 
-      const npost={shopId:myShopId2,shopName:myShop2.name||"",shopEmoji:myShop2.emoji||"🏪",caption:"",mediaUrl:null,mediaType:"image",pinnedProdId:null,at:null,likes:0,hidden:false};
+      const npost={shopId:myShopId2,shopName:myShop2.name||"",shopEmoji:myShop2.emoji||"🏪",caption:"",mediaUrl:null,mediaType:"image",shareGraphicUrl:null,pinnedProdId:null,at:null,likes:0,hidden:false};
 
       // Media upload
       formCard.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75",fontWeight:"700",marginBottom:"6px"}},"📷 ຮູບ / ວິດີໂອ *"));
@@ -14102,6 +14171,8 @@ function buildRiderDashboard(){
         pinGrid2.appendChild(g2);
       }
       renderPinGrid2("");pinSrch2.oninput=function(){renderPinGrid2(this.value);};
+
+      formCard.appendChild(buildShareGraphicUploadField(npost,"shareGraphicUrl","laoh/shareGraphics/posts"));
 
       // Post button
       formCard.appendChild(el("button",{
@@ -14622,6 +14693,7 @@ function buildShopAddProductForm(){
         (()=>{const cb=document.createElement("input");cb.type="checkbox";cb.style.cssText="width:18px;height:18px;cursor:pointer;accent-color:#5D2D7A;";cb.checked=!!v.refundable;cb.addEventListener("change",function(){v.refundable=this.checked;});return cb;})(),
         el("span",{style:{fontSize:".85rem",fontWeight:"600",color:"#1A2B5F"}},"🔄 ຄືນສິນຄ້າໄດ້ 3 ວັນ")
       ),
+      buildShareGraphicUploadField(v,"shareGraphicUrl","laoh/shareGraphics/products"),
       el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px 12px",marginBottom:"8px",border:"1.5px solid #FFD54F"}},
         el("div",{style:{fontSize:".78rem",fontWeight:"700",color:"#8B5E00",marginBottom:"8px"}},"📦 Pre-order ເມື່ອໝົດ stock — ເລືອກລະຍະເວລາ:"),
         el("div",{style:{display:"flex",flexDirection:"column",gap:"6px"}},
@@ -14662,7 +14734,7 @@ function buildShopAddProductForm(){
         if(cat&&!PCATS.includes(cat)){PCATS.push(cat);CATS.push(cat);}
         const st={};cs.forEach(c=>sz.forEach(s=>{st[c+"|"+s]=0;}));
         const _npId=Date.now();
-        const np={id:_npId,name:v.name,cat:cat,subCat:v.subCat||"",price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colorImgs:v.colorImgs||{},colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,skus:_generateSkus(_npId,cs,sz),refundable:v.refundable||false,allowPreorder:v.allowPreorder||false,preorderDays:v.preorderDays||"",desc:v.desc||"",usage:v.usage||"",relatedIds:v.relatedIds||[],boxSize:v.boxSize||"",shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
+        const np={id:_npId,name:v.name,cat:cat,subCat:v.subCat||"",price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colorImgs:v.colorImgs||{},colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,skus:_generateSkus(_npId,cs,sz),refundable:v.refundable||false,allowPreorder:v.allowPreorder||false,preorderDays:v.preorderDays||"",desc:v.desc||"",usage:v.usage||"",relatedIds:v.relatedIds||[],boxSize:v.boxSize||"",shareGraphicUrl:v.shareGraphicUrl||null,shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
         prods.unshift(np);
         try{
           if(np.img&&np.img.startsWith("data:")){
@@ -16830,14 +16902,17 @@ function buildAdminTab(){
             curCombos.forEach(function(cb){newStock[cb.k]=Math.max(0,parseInt(inputs[cb.k].value)||0);});
             const updated=Object.assign({},prods[pidx],{stock:newStock});
             prods[pidx]=updated;
-            saveToCloud("prods",updated.id,updated).then(function(){
+            saveToCloud("prods",updated.id,updated).then(function(result){
+              // (v697) saveToCloud ไม่เคย reject จริง (return error object แทน) — ต้องเช็คตรงนี้แทน .catch() ที่ไม่เคยทำงาน
+              if(result instanceof Error){
+                saveBtn.disabled=false;
+                saveBtn.textContent=_lang==="lo"?"💾 ບັນທຶກ Stock":"Save Stock";
+                toast(_lang==="lo"?"❌ ບັນທຶກບໍ່ສຳເລັດ":"❌ Save failed");
+                return;
+              }
               toast("💾 "+(_lang==="lo"?"ບັນທຶກ Stock ສຳເລັດ ✓":"Stock saved ✓"));
               closeOv();
               renderStockList();
-            }).catch(function(){
-              saveBtn.disabled=false;
-              saveBtn.textContent=_lang==="lo"?"💾 ບັນທຶກ Stock":"Save Stock";
-              toast(_lang==="lo"?"❌ ບັນທຶກບໍ່ສຳເລັດ":"❌ Save failed");
             });
           };
           mod.appendChild(saveBtn);
@@ -19888,7 +19963,7 @@ function buildAdminTab(){
               if(hIdx>=0){orders[hIdx]=Object.assign({},orders[hIdx],{status:"ສິນຄ້າຮອດສູນ LaoH ແລ້ວ",hubAt:Date.now(),statusLog:newLog});}
               else{try{o.status="ສິນຄ້າຮອດສູນ LaoH ແລ້ວ";}catch(e){}}
               toast("⏳...");
-              saveToCloud("orders",o.id,orders[hIdx]||o).then(function(){toast("✅ ຢືນຢັນຮອດສູນ!");render();});
+              saveToCloud("orders",o.id,orders[hIdx]||o).then(function(result){if(result instanceof Error)return;toast("✅ ຢືນຢັນຮອດສູນ!");render();});
             }
           },"✅ ຢືນຢັນຮອດສູນ"));
         }
@@ -21964,6 +22039,7 @@ function showEditProd(p){
     colorImgs:p.colorImgs?{...p.colorImgs}:{},
     desc:p.desc||"",usage:p.usage||"",boxSize:p.boxSize||"",
     refundable:p.refundable||false,
+    shareGraphicUrl:p.shareGraphicUrl||null,
     barcodes:p.barcodes?Object.assign({},p.barcodes):{},
     skus:p.skus?Object.assign({},p.skus):{},
     stock:p.stock?Object.assign({},p.stock):{}
@@ -22272,6 +22348,7 @@ function showEditProd(p){
     (()=>{const cb=document.createElement("input");cb.type="checkbox";cb.style.cssText="width:18px;height:18px;cursor:pointer;accent-color:#5D2D7A;";cb.checked=fm.refundable;cb.onchange=function(){fm.refundable=this.checked;};return cb;})(),
     el("span",{style:{fontSize:".85rem",fontWeight:"600",color:"#1A2B5F"}},"🔄 ຄືນສິນຄ້າໄດ້ 3 ວັນ")
   ));
+  modal.appendChild(buildShareGraphicUploadField(fm,"shareGraphicUrl","laoh/shareGraphics/products"));
   (()=>{
     const preBox=el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px 12px",marginBottom:"8px",border:"1.5px solid #FFD54F"}});
     preBox.appendChild(el("div",{style:{fontSize:".78rem",fontWeight:"700",color:"#8B5E00",marginBottom:"8px"}},"📦 Pre-order ເມື່ອໝົດ stock — ເລືອກລະຍະເວລາ:"));
@@ -22413,7 +22490,7 @@ function showEditProd(p){
         cat:fm.selectedMainCat||fm.selectedCat,subCat:fm.selectedSubCat||"",tag:fm.selectedTag||null,
         imgs:fm.imgs||[],img:fm.img||p.img,colorImgs:fm.colorImgs||{},
         desc:fm.desc||"",usage:fm.usage||"",relatedIds:fm.relatedIds||[],
-        boxSize:fm.boxSize||"",refundable:fm.refundable||false,allowPreorder:fm.allowPreorder||false,preorderDays:fm.preorderDays||"10-15",changeLog:newLog,
+        boxSize:fm.boxSize||"",refundable:fm.refundable||false,allowPreorder:fm.allowPreorder||false,preorderDays:fm.preorderDays||"10-15",shareGraphicUrl:fm.shareGraphicUrl||null,changeLog:newLog,
         barcodes:fm.barcodes||{},
         skus:(function(){const existing=p.skus||{};const merged=_generateSkus(p.id,cs,sz);Object.keys(merged).forEach(function(k){if(existing[k])merged[k]=existing[k];});return merged;})()
       });
@@ -22426,7 +22503,9 @@ function showEditProd(p){
         }
         // Show saving indicator
         toast(_lang==="lo"?"⏳ ກຳລັງບັນທຶກ...":"⏳ Saving...");
-        await saveToCloud("prods",p.id,updated);
+        const _saveRes=await saveToCloud("prods",p.id,updated);
+        // (v697) เช็คก่อนว่าบันทึกสำเร็จจริง — เดิมไม่เคยเช็คเลย ขึ้น "บันทึกแล้ว ✓" เสมอแม้บันทึกไม่ผ่านจริง ──
+        if(_saveRes instanceof Error){throw _saveRes;}
         closeOv();render();toast(changeLog.length>0?(_lang==="lo"?"ບັນທຶກ "+changeLog.length+" ການປ່ຽນແປງ ✓":"Saved "+changeLog.length+" changes ✓"):(_lang==="lo"?"ບັນທຶກແລ້ວ ✓":"Saved ✓"));
       })();
     }catch(err){toast("Error: "+err.message);}

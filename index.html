@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v687 -->
+<!-- LaoH Marketplace v689 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2553,6 +2553,68 @@ async function uploadFile(base64Data, path, contentType){
   }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// (v688) บีบอัดวิดีโอก่อนอัปโหลด — Firebase Storage rules จำกัดไฟล์ไม่เกิน 20MB
+// วิดีโอต้นฉบับ (ไม่บีบอัด) มักเกินขนาดนี้ได้ง่าย ทำให้อัปโหลดล้มเหลว
+// วิธีทำ: เล่นวิดีโอต้นฉบับ → วาดแต่ละเฟรมลง Canvas ที่ลดความละเอียดเหลือไม่เกิน 720p
+// → บันทึกใหม่ผ่าน MediaRecorder (รวมเสียงต้นฉบับด้วย) → ได้ไฟล์ .webm ขนาดเล็กลงมาก
+// ══════════════════════════════════════════════════════════════════
+function compressVideoFile(file){
+  return new Promise(function(resolve,reject){
+    try{
+      if(typeof MediaRecorder==="undefined"){reject(new Error("MediaRecorder not supported"));return;}
+      const video=document.createElement("video");
+      video.muted=false;video.playsInline=true;video.src=URL.createObjectURL(file);
+      video.onloadedmetadata=function(){
+        const scale=Math.min(1,720/video.videoWidth);
+        const targetW=Math.round(video.videoWidth*scale);
+        const targetH=Math.round(video.videoHeight*scale);
+        const canvas=document.createElement("canvas");
+        canvas.width=targetW;canvas.height=targetH;
+        const ctx=canvas.getContext("2d");
+        let videoStream;
+        try{ videoStream=canvas.captureStream(30); }catch(capErr){ reject(capErr); return; }
+        let audioTracks=[];
+        try{
+          const srcStream=(video.captureStream||video.mozCaptureStream);
+          if(srcStream)audioTracks=srcStream.call(video).getAudioTracks();
+        }catch(audErr){/* ไม่มีเสียงก็ยังบีบอัดต่อได้ */}
+        const combinedStream=new MediaStream(videoStream.getVideoTracks().concat(audioTracks));
+        let mimeType="video/webm;codecs=vp8,opus";
+        if(!MediaRecorder.isTypeSupported(mimeType))mimeType="video/webm";
+        if(!MediaRecorder.isTypeSupported(mimeType)){reject(new Error("webm not supported"));return;}
+        const recorder=new MediaRecorder(combinedStream,{mimeType:mimeType,videoBitsPerSecond:1500000});
+        const chunks=[];
+        recorder.ondataavailable=function(e){if(e.data&&e.data.size>0)chunks.push(e.data);};
+        recorder.onstop=function(){
+          URL.revokeObjectURL(video.src);
+          resolve(new Blob(chunks,{type:mimeType}));
+        };
+        recorder.onerror=function(e){reject((e&&e.error)||new Error("MediaRecorder error"));};
+        let drawing=false;
+        function drawFrame(){
+          if(!drawing)return;
+          ctx.drawImage(video,0,0,targetW,targetH);
+          requestAnimationFrame(drawFrame);
+        }
+        video.onplay=function(){drawing=true;drawFrame();};
+        video.onended=function(){drawing=false;recorder.stop();};
+        recorder.start();
+        video.play().catch(function(playErr){reject(playErr);});
+      };
+      video.onerror=function(){reject(new Error("ໂຫຼດວິດີໂອບໍ່ສຳເລັດ"));};
+    }catch(err){reject(err);}
+  });
+}
+function _blobToBase64(blob){
+  return new Promise(function(resolve,reject){
+    const r=new FileReader();
+    r.onload=function(){resolve(r.result);};
+    r.onerror=reject;
+    r.readAsDataURL(blob);
+  });
+}
+
 async function uploadImage(base64Data, folder){
   const ts = Date.now();
   const ext = base64Data.includes("image/png") ? "png" : "jpg";
@@ -3340,7 +3402,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.8.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.8.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4534,6 +4596,32 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       return _feedItemSearchText(fi).indexOf(_feedSearchQ)!==-1;
     });
   }
+  // ══════════════════════════════════════════════════════════════
+  // (v689) สลับโพสต์ทีละ 2 ต่อ Account (round-robin) — กันไม่ให้เจ้าของคนเดียวโผล่รัวๆ ติดกันยาว
+  // เพราะตอนนี้ user โพสต์ยังน้อย ทำให้เห็นโพสต์คนเดียวจนจบก่อนจะไปเห็นคนอื่น
+  // จัดกลุ่มตามเจ้าของ (uid สำหรับรีวิว เพราะคือตัวคนเขียนจริง ไม่ใช่ร้านของสินค้าที่ถูกรีวิว,
+  // shopId สำหรับโพสต์ร้าน/หนังสือเสียง/live) เรียงภายในกลุ่มตามลำดับเดิม (ล่าสุดก่อนอยู่แล้วจากการ merge)
+  // แล้วหยิบทีละ 2 จากแต่ละกลุ่มสลับกันไปเรื่อยๆ จนกว่าจะหมด — ไม่แตะ logic การรวม/กรองเดิมเลย ──
+  filteredFeedItems=(function(items,chunkSize){
+    const groups={};const order=[];
+    items.forEach(function(fi){
+      const key=fi.type==="review"?("u_"+(fi.data&&fi.data.uid)):("s_"+(fi.data&&fi.data.shopId));
+      if(!groups[key]){groups[key]=[];order.push(key);}
+      groups[key].push(fi);
+    });
+    const result=[];let anyLeft=true;
+    while(anyLeft){
+      anyLeft=false;
+      order.forEach(function(key){
+        const g=groups[key];
+        if(g.length>0){
+          anyLeft=true;
+          for(let i=0;i<chunkSize && g.length>0;i++){result.push(g.shift());}
+        }
+      });
+    }
+    return result;
+  })(filteredFeedItems,2);
   // ── (v686) กรองแล้วไม่พบผลลัพธ์เลย (ค้นหาไม่เจอ / ยังไม่ได้ติดตามใครเลย) แสดงข้อความแจ้งแทนหน้าว่างเปล่า ──
   if(filteredFeedItems.length===0){
     return el("div",{className:"feed-page"+((!user||!(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")||view!=="admin")?" feed-page-bnav":"")},
@@ -5093,8 +5181,13 @@ function saveReview(rv){
   if(idx>=0){window._reviews[idx]=rv;}
   else{window._reviews.unshift(rv);}
   try{localStorage.setItem("laoh_reviews",JSON.stringify(window._reviews));}catch(e){}
-  // sync to Firestore
-  if(db){try{db.collection("reviews").doc(String(rv.id)).set(rv);}catch(e){}}
+  // sync to Firestore — (v688) ไม่กลืน error เงียบๆ อีกต่อไป (เดิม catch ว่างเปล่า ไม่ await เลยจับ error ไม่ได้จริง)
+  if(db){
+    db.collection("reviews").doc(String(rv.id)).set(rv).catch(function(err){
+      console.error("saveReview Firestore error:",err);
+      toast("⚠️ "+(_lang==="lo"?"ບັນທຶກຮີວິວລົ້ມເຫຼວ: ":"Failed to save review: ")+((err&&err.message)?err.message:String(err)));
+    });
+  }
 }
 // โหลดจาก localStorage (ครั้งเดียวตอน init เท่านั้น)
 if(!window._reviewsLoaded){
@@ -6208,7 +6301,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.8.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.8.9")
   );
 
   // Icon style helper
@@ -8574,30 +8667,47 @@ function buildUserProfile(uid){
           mod.appendChild(prevDiv);
           const mediaRow=el("div",{style:{display:"flex",gap:"8px",marginBottom:"10px"}});
           function handleMedia(file,isVid){
+            if(isVid){
+              // ══════════════════════════════════════════════════════════
+              // (v688) วิดีโอ: บีบอัดก่อนอัปโหลดเสมอ (Storage จำกัดไม่เกิน 20MB วิดีโอต้นฉบับมักเกิน)
+              // ไม่ fallback เป็น base64 ถ้าล้มเหลว — แจ้ง error ชัดเจนแทน (เดิมเงียบหายไปเฉยๆ)
+              // ══════════════════════════════════════════════════════════
+              prevDiv.innerHTML="";
+              prevDiv.appendChild(el("div",{style:{fontSize:".75rem",color:"#6B8F75",padding:"8px",textAlign:"center"}},"⏳ "+(_lang==="lo"?"ກຳລັງບີບອັດວິດີໂອ...":"Compressing video...")));
+              compressVideoFile(file).then(function(compressedBlob){
+                if(compressedBlob.size>18*1024*1024){
+                  throw new Error(_lang==="lo"?"ວິດີໂອຍັງໃຫຍ່ເກີນໄປ ແມ່ນຫຼັງບີບອັດແລ້ວ ກະລຸນາຖ່າຍວິດີໂອທີ່ສັ້ນກວ່ານີ້":"Video still too large even after compression, please record a shorter video");
+                }
+                return _blobToBase64(compressedBlob);
+              }).then(function(b64c){
+                prevDiv.innerHTML="";
+                const v=document.createElement("video");v.src=b64c;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.controls=true;prevDiv.appendChild(v);
+                toast("⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video..."));
+                return uploadVideoToStorage(b64c, Date.now()+".webm").then(function(url){
+                  rv.mediaUrl=url;
+                  rv.mediaType="video";
+                  toast("✅ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ":"Video uploaded")+" ✓");
+                });
+              }).catch(function(err){
+                console.error("Video compress/upload error:",err);
+                prevDiv.innerHTML="";
+                toast("❌ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ: ":"Video upload failed: ")+((err&&err.message)?err.message:String(err)));
+                rv.mediaUrl=null;
+              });
+              return;
+            }
+            // ── รูปภาพ: โค้ดเดิมทุกจุด ไม่แตะ ──
             const r=new FileReader();
             r.onload=function(e){
               const b64=e.target.result;
               rv.mediaUrl=b64;
-              rv.mediaType=isVid?"video":"image";
+              rv.mediaType="image";
               prevDiv.innerHTML="";
-              if(isVid){const v=document.createElement("video");v.src=b64;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.controls=true;prevDiv.appendChild(v);}
-              else{prevDiv.appendChild(el("img",{src:b64,style:{width:"100%",borderRadius:"8px",maxHeight:"120px",objectFit:"cover"}}));}
-              // upload ไป Firebase Storage
-              if(!isVid){
-                // รูปภาพ → Firebase Storage
-                uploadImage(b64,"laoh/reviews").then(function(url){
-                  rv.mediaUrl=url;
-                  toast("ອັບໂຫຼດຮູບສຳເລັດ ✓");
-                }).catch(function(){rv.mediaUrl=b64;});
-              } else {
-                // วิดีโอ → Firebase Storage
-                toast("ກຳລັງອັບໂຫຼດວິດີໂອ...");
-                uploadVideoToStorage(b64, Date.now()+".mp4").then(function(url){
-                  rv.mediaUrl=url;
-                  rv.mediaType="video";
-                  toast("ອັບໂຫຼດວິດີໂອສຳເລັດ ✓");
-                }).catch(function(){rv.mediaUrl=b64;});
-              }
+              prevDiv.appendChild(el("img",{src:b64,style:{width:"100%",borderRadius:"8px",maxHeight:"120px",objectFit:"cover"}}));
+              uploadImage(b64,"laoh/reviews").then(function(url){
+                rv.mediaUrl=url;
+                toast("ອັບໂຫຼດຮູບສຳເລັດ ✓");
+              }).catch(function(){rv.mediaUrl=b64;});
             };
             r.readAsDataURL(file);
           }

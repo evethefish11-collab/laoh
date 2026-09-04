@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v690 -->
+<!-- LaoH Marketplace v691 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2563,6 +2563,34 @@ async function uploadBlobToStorage(blob, path, contentType){
   return snap.ref.getDownloadURL();
 }
 
+// (v691) ดึงภาพนิ่งจากวินาทีที่กำหนด (default 2 วิ) ของวิดีโอมาเป็นภาพปก (poster) — ใช้แก้ปัญหา
+// วิดีโอไม่มีเสียง/จอดำในหน้ากริดรีวิว เพราะ <video> ที่ไม่มี poster จะโชว์จอดำจนกว่าจะเล่น ──
+function captureVideoPosterFrame(videoBlobOrFile, seekTime){
+  seekTime = (seekTime==null) ? 2 : seekTime;
+  return new Promise(function(resolve,reject){
+    const url=URL.createObjectURL(videoBlobOrFile);
+    const video=document.createElement("video");
+    video.muted=true;video.playsInline=true;video.src=url;
+    video.onloadedmetadata=function(){
+      const target=Math.min(seekTime, Math.max(0,(video.duration||seekTime)-0.1));
+      video.currentTime=target;
+    };
+    video.onseeked=function(){
+      try{
+        const canvas=document.createElement("canvas");
+        canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        canvas.toBlob(function(blob){
+          URL.revokeObjectURL(url);
+          if(blob)resolve(blob);else reject(new Error("toBlob failed"));
+        },"image/jpeg",0.8);
+      }catch(e){URL.revokeObjectURL(url);reject(e);}
+    };
+    video.onerror=function(){URL.revokeObjectURL(url);reject(new Error("ໂຫຼດວິດີໂອບໍ່ສຳເລັດ (ພາບປົກ)"));};
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════
 // (v688) บีบอัดวิดีโอก่อนอัปโหลด — Firebase Storage rules จำกัดไฟล์ไม่เกิน 20MB
 // วิดีโอต้นฉบับ (ไม่บีบอัด) มักเกินขนาดนี้ได้ง่าย ทำให้อัปโหลดล้มเหลว
@@ -3412,7 +3440,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.9.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v6.9.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6311,7 +6339,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.9.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v6.9.1")
   );
 
   // Icon style helper
@@ -8523,7 +8551,7 @@ function buildUserProfile(uid){
       // เพราะตอนนี้ค้นหาสินค้าที่ไม่ได้ซื้อมารีวิวได้แล้ว (จำกัดวันละ 1 ครั้ง) ──
       const addBtn=el("button",{style:{width:"100%",padding:"10px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
         onclick:function(){
-          const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",at:Date.now(),isFreeReview:false};
+          const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,at:Date.now(),isFreeReview:false};
           const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
           mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
           mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📸 "+(_lang==="lo"?"ເພີ່ມຮີວິວ":"Add Review")));
@@ -8684,7 +8712,23 @@ function buildUserProfile(uid){
               // ══════════════════════════════════════════════════════════
               prevDiv.innerHTML="";
               prevDiv.appendChild(el("div",{style:{fontSize:".75rem",color:"#6B8F75",padding:"8px",textAlign:"center"}},"⏳ "+(_lang==="lo"?"ກຳລັງບີບອັດວິດີໂອ...":"Compressing video...")));
-              compressVideoFile(file).then(function(compressedBlob){
+              // (v691) เปลี่ยนจาก compressVideoFile (ของใหม่ จับเสียงไม่สมบูรณ์) เป็น compressVideoWithAudioToBlob
+              // (ฟังก์ชันเดิมที่ผ่านการทดสอบแล้ว ใช้กับฟีเจอร์โพสต์ร้านค้าอยู่แล้ว) — ถ้าวิดีโอต้นฉบับไม่มีเสียงจริงๆ
+              // จะ fallback ไปบีบอัดแบบไม่มีเสียงแทน ไม่ error ไปเลย ──
+              compressVideoWithAudioToBlob(file,720,function(pct){
+                prevDiv.innerHTML="";
+                prevDiv.appendChild(el("div",{style:{fontSize:".75rem",color:"#6B8F75",padding:"8px",textAlign:"center"}},"⏳ "+(_lang==="lo"?"ກຳລັງບີບອັດວິດີໂອ... ":"Compressing video... ")+Math.round(pct*100)+"%"));
+              }).catch(function(err){
+                const msg=(err&&err.message)?err.message:String(err);
+                if(msg.indexOf("ບໍ່ພົບແທຣັກສຽງ")!==-1){
+                  // ── วิดีโอต้นฉบับไม่มีเสียงจริงๆ → บีบอัดแบบไม่มีเสียงแทน ──
+                  return compressVideoToBlob(file,720,function(pct){
+                    prevDiv.innerHTML="";
+                    prevDiv.appendChild(el("div",{style:{fontSize:".75rem",color:"#6B8F75",padding:"8px",textAlign:"center"}},"⏳ "+(_lang==="lo"?"ກຳລັງບີບອັດວິດີໂອ... ":"Compressing video... ")+Math.round(pct*100)+"%"));
+                  });
+                }
+                throw err;
+              }).then(function(compressedBlob){
                 if(compressedBlob.size>18*1024*1024){
                   throw new Error(_lang==="lo"?"ວິດີໂອຍັງໃຫຍ່ເກີນໄປ ແມ່ນຫຼັງບີບອັດແລ້ວ ກະລຸນາຖ່າຍວິດີໂອທີ່ສັ້ນກວ່ານີ້":"Video still too large even after compression, please record a shorter video");
                 }
@@ -8699,6 +8743,14 @@ function buildUserProfile(uid){
                   rv.mediaUrl=url;
                   rv.mediaType="video";
                   toast("✅ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ":"Video uploaded")+" ✓");
+                  // (v691) ดึง+อัปโหลดภาพปกจากวินาทีที่ 2 แยกต่างหาก — ไม่กระทบผลลัพธ์วิดีโอหลักถ้าล้มเหลว ──
+                  captureVideoPosterFrame(compressedBlob,2).then(function(posterBlob){
+                    return uploadBlobToStorage(posterBlob,"laoh/reviews/posters/"+Date.now()+".jpg","image/jpeg");
+                  }).then(function(posterUrl){
+                    rv.mediaPoster=posterUrl;
+                  }).catch(function(posterErr){
+                    console.warn("Poster frame capture/upload failed (ไม่กระทบวิดีโอหลัก):",posterErr);
+                  });
                 });
               }).catch(function(err){
                 console.error("Video compress/upload error:",err);
@@ -8914,7 +8966,9 @@ function buildUserProfile(uid){
       // Media
       const imgBox=el("div",{style:{aspectRatio:"3/4",overflow:"hidden",background:"#E8F5EE",position:"relative"}});
       if(rv.mediaType==="video"&&rv.mediaUrl){
-        const v=document.createElement("video");v.src=rv.mediaUrl;v.muted=true;v.style.cssText="width:100%;height:100%;object-fit:cover;";v.setAttribute("playsinline","");imgBox.appendChild(v);
+        const v=document.createElement("video");v.src=rv.mediaUrl;v.muted=true;v.style.cssText="width:100%;height:100%;object-fit:cover;";v.setAttribute("playsinline","");
+        if(rv.mediaPoster)v.poster=rv.mediaPoster; // (v691) ภาพปกจากวินาทีที่ 2 — กันจอดำก่อนเล่น (รีวิวเก่าที่ไม่มี poster จะยังทำงานเหมือนเดิม)
+        imgBox.appendChild(v);
         imgBox.appendChild(el("div",{style:{position:"absolute",top:"6px",left:"6px",fontSize:"0.9rem",opacity:".5",pointerEvents:"none"}},"▶"));
       } else if(rv.mediaUrl){
         imgBox.appendChild(el("img",{src:rv.mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover"}}));

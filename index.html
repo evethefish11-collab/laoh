@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v707 -->
+<!-- LaoH Marketplace v708 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2724,12 +2724,87 @@ function buildShareGraphicUploadField(stateObj, fieldName, uploadFolder){
 }
 
 // ══════════════════════════════════════════════════════════════════
+// (v708) ช่องอัปโหลดวิดีโอสั้นสำหรับแชร์ (ไม่บังคับ) — แยกจากรูปกราฟิก อัปโหลดได้ทั้งคู่พร้อมกัน
+// ถ้ามีวิดีโอ ogPreview จะใส่ og:video ให้ (เล่นได้ในหน้า Facebook เลย) โดยยังมีรูปเป็นตัวสำรอง
+// เผื่อ Facebook เล่นวิดีโอไม่ได้ — จำกัดความยาวไม่เกิน 15 วินาที ขนาดไม่เกิน 8MB เพื่อความเสถียร
+// ══════════════════════════════════════════════════════════════════
+function buildShareVideoUploadField(stateObj, fieldName, uploadFolder){
+  const MAX_SEC=15, MAX_MB=8;
+  const wrap=el("div",{style:{marginTop:"10px"}});
+  wrap.appendChild(el("label",{className:"lbl"},"🎬 "+(_lang==="lo"?"ວິດີໂອສັ້ນສຳລັບແຊ (ບໍ່ບັງຄັບ)":"Short video for share (optional)")));
+  wrap.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginBottom:"6px"}},
+    _lang==="lo"?"ຍາວບໍ່ເກີນ "+MAX_SEC+" ວິນາທີ, ຂະໜາດບໍ່ເກີນ "+MAX_MB+"MB — ຖ້າອັບໂຫຼດໄວ້ Facebook ຈະໃຫ້ກົດຫຼິ້ນວິດີໂອນີ້ໄດ້ເລີຍ (ຍັງມີຮູບເປັນຕົວສຳຮອງ ຖ້າຫຼິ້ນວິດີໂອບໍ່ໄດ້)":"Max "+MAX_SEC+"s, "+MAX_MB+"MB — if uploaded, Facebook lets people play it inline (image stays as fallback if video can't play)"
+  ));
+  const previewBox=el("div",{style:{width:"100%",aspectRatio:"1200/630",borderRadius:"10px",overflow:"hidden",background:"#F0F7F2",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",marginBottom:"6px"}});
+  function renderPreview(){
+    previewBox.innerHTML="";
+    if(stateObj[fieldName]){
+      const v=document.createElement("video");v.src=stateObj[fieldName];v.controls=true;v.style.cssText="width:100%;height:100%;object-fit:cover;";
+      previewBox.appendChild(v);
+      const rmBtn=el("button",{type:"button",style:{position:"absolute",top:"6px",right:"6px",background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:"24px",height:"24px",cursor:"pointer",fontSize:".7rem",zIndex:"2"}},"✕");
+      rmBtn.onclick=function(e){e.stopPropagation();stateObj[fieldName]=null;renderPreview();};
+      previewBox.appendChild(rmBtn);
+    } else {
+      previewBox.style.color="#6B8F75";previewBox.style.fontSize="1.6rem";previewBox.textContent="🎬";
+    }
+  }
+  renderPreview();
+  const fi=document.createElement("input");fi.type="file";fi.accept="video/*";fi.style.display="none";
+  fi.onchange=function(e){
+    const file=e.target.files[0];if(!file)return;
+    if(file.size>MAX_MB*1024*1024){
+      toast("⚠️ "+(_lang==="lo"?"ວິດີໂອໃຫຍ່ເກີນ "+MAX_MB+"MB ກະລຸນາເລືອກໄຟລ໌ນ້ອຍກວ່ານີ້":"Video exceeds "+MAX_MB+"MB, please choose a smaller file"));
+      fi.value="";return;
+    }
+    // ── เช็คความยาววิดีโอก่อนอัปโหลด ──
+    const _checkUrl=URL.createObjectURL(file);
+    const _checkVid=document.createElement("video");
+    _checkVid.preload="metadata";
+    _checkVid.onloadedmetadata=function(){
+      URL.revokeObjectURL(_checkUrl);
+      if(_checkVid.duration>MAX_SEC){
+        toast("⚠️ "+(_lang==="lo"?"ວິດີໂອຍາວເກີນ "+MAX_SEC+" ວິນາທີ ກະລຸນາເລືອກໄຟລ໌ສັ້ນກວ່ານີ້":"Video exceeds "+MAX_SEC+" seconds, please choose a shorter clip"));
+        fi.value="";return;
+      }
+      // ── ผ่านเงื่อนไขแล้ว อัปโหลดเป็น Blob ตรงๆ ไม่ผ่าน base64 (กันปัญหา atob กับไฟล์ใหญ่) ──
+      const previewUrl=URL.createObjectURL(file);
+      stateObj[fieldName]=previewUrl;renderPreview();
+      toast("⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video..."));
+      uploadBlobToStorage(file,(uploadFolder||"laoh/shareVideos")+"/"+Date.now()+".mp4",file.type||"video/mp4").then(function(url){
+        if(url&&url.indexOf("http")===0){
+          stateObj[fieldName]=url;renderPreview();
+          toast("✅ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ":"Video uploaded")+" ✓");
+        } else {
+          stateObj[fieldName]=null;renderPreview();
+          toast("⚠️ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່":"Video upload failed, please try again"));
+        }
+      }).catch(function(){
+        stateObj[fieldName]=null;renderPreview();
+        toast("⚠️ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່":"Video upload failed, please try again"));
+      });
+    };
+    _checkVid.onerror=function(){
+      URL.revokeObjectURL(_checkUrl);
+      toast("⚠️ "+(_lang==="lo"?"ອ່ານໄຟລ໌ວິດີໂອບໍ່ໄດ້":"Could not read video file"));
+      fi.value="";
+    };
+    _checkVid.src=_checkUrl;
+  };
+  const pickBtn2=el("button",{type:"button",style:{width:"100%",padding:"9px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){fi.click();}},
+    "📁 "+(_lang==="lo"?"ເລືອກວິດີໂອ":"Choose video"));
+  wrap.appendChild(previewBox);
+  wrap.appendChild(pickBtn2);
+  wrap.appendChild(fi);
+  return wrap;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // (v699) Modal แก้ไขคำอธิบาย + รูปกราฟิกสำหรับแชร์ — ใช้แทน prompt() เดิมที่ใส่ปุ่มอัปโหลดรูปไม่ได้
 // ใช้ซ้ำได้ทั้งโพสต์ร้านค้า/โพสต์ลูกค้า/รีวิว — item ต้องมี .caption และ .shareGraphicUrl (หรือ undefined ก็ได้)
 // onSave(newValues) จะถูกเรียกพร้อม {caption, shareGraphicUrl} หลังกดบันทึก
 // ══════════════════════════════════════════════════════════════════
 function showEditCaptionAndShareGraphicModal(item, onSave){
-  const state={caption:item.caption||"", shareGraphicUrl:item.shareGraphicUrl||null};
+  const state={caption:item.caption||"", shareGraphicUrl:item.shareGraphicUrl||null, shareVideoUrl:item.shareVideoUrl||null};
   const mod=el("div",{className:"mod",style:{maxWidth:"360px"},onclick:function(e){e.stopPropagation();}});
   mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"12px"}},"✏️ "+(_lang==="lo"?"ແກ້ໄຂໂພສ":"Edit post")));
   mod.appendChild(el("label",{className:"lbl"},_lang==="lo"?"ຄຳອະທິບາຍ":"Caption"));
@@ -2740,13 +2815,14 @@ function showEditCaptionAndShareGraphicModal(item, onSave){
   capTa.oninput=function(){state.caption=this.value;};
   mod.appendChild(capTa);
   mod.appendChild(buildShareGraphicUploadField(state,"shareGraphicUrl","laoh/shareGraphics/edits"));
+  mod.appendChild(buildShareVideoUploadField(state,"shareVideoUrl","laoh/shareVideos/edits"));
   const btnRow=el("div",{style:{display:"flex",gap:"8px",marginTop:"14px"}});
   const cancelBtn=el("button",{style:{flex:"1",padding:"10px",borderRadius:"10px",border:"1.5px solid #ddd",background:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".82rem"},onclick:function(){closeOv();}},
     _lang==="lo"?"ຍົກເລີກ":"Cancel");
   const saveBtn=el("button",{style:{flex:"1",padding:"10px",borderRadius:"10px",background:"#1B6B3A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".82rem",fontWeight:"700"}},
     "💾 "+(_lang==="lo"?"ບັນທຶກ":"Save"));
   saveBtn.onclick=function(){
-    const result={caption:state.caption.trim(), shareGraphicUrl:state.shareGraphicUrl};
+    const result={caption:state.caption.trim(), shareGraphicUrl:state.shareGraphicUrl, shareVideoUrl:state.shareVideoUrl};
     closeOv();
     onSave(result);
   };
@@ -3540,7 +3616,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.7")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.8")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6441,7 +6517,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.7")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.8")
   );
 
   // Icon style helper
@@ -8656,7 +8732,7 @@ function buildUserProfile(uid){
       // เพราะตอนนี้ค้นหาสินค้าที่ไม่ได้ซื้อมารีวิวได้แล้ว (จำกัดวันละ 1 ครั้ง) ──
       const addBtn=el("button",{style:{width:"100%",padding:"10px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"10px"},
         onclick:function(){
-          const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,at:Date.now(),isFreeReview:false};
+          const rv={uid:user.id,userName:user.name||user.username,userAvatar:null,shopId:null,prodId:null,orderId:null,stars:5,caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,shareVideoUrl:null,at:Date.now(),isFreeReview:false};
           const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
           mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
           mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"📸 "+(_lang==="lo"?"ເພີ່ມຮີວິວ":"Add Review")));
@@ -8950,6 +9026,7 @@ function buildUserProfile(uid){
           mod.appendChild(mediaRow); mod.appendChild(fiImg); mod.appendChild(fiVid);
 
           mod.appendChild(buildShareGraphicUploadField(rv,"shareGraphicUrl","laoh/shareGraphics/reviews"));
+          mod.appendChild(buildShareVideoUploadField(rv,"shareVideoUrl","laoh/shareVideos/reviews"));
 
           // submit
           mod.appendChild(el("button",{className:"btn btn-p",onclick:function(){
@@ -9140,6 +9217,7 @@ function buildUserProfile(uid){
           showEditCaptionAndShareGraphicModal(rv,function(result){
             rv.caption=result.caption;
             rv.shareGraphicUrl=result.shareGraphicUrl;
+            rv.shareVideoUrl=result.shareVideoUrl;
             if(window._reviews){
               const idx=window._reviews.findIndex(function(x){return x.id===rv.id;});
               if(idx>=0)window._reviews[idx]=Object.assign({},window._reviews[idx],result);
@@ -14001,7 +14079,7 @@ function buildRiderDashboard(){
       const formCard=el("div",{style:{background:"#fff",borderRadius:"14px",padding:"14px",marginBottom:"12px",boxShadow:"0 2px 8px rgba(0,0,0,.07)",border:"1px solid #E0E0E0"}});
       formCard.appendChild(el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F",marginBottom:"12px"}},"➕ ສ້າງໂພສໃໝ່"));
 
-      const npost={shopId:myShopId2,shopName:myShop2.name||"",shopEmoji:myShop2.emoji||"🏪",caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,pinnedProdId:null,at:null,likes:0,hidden:false};
+      const npost={shopId:myShopId2,shopName:myShop2.name||"",shopEmoji:myShop2.emoji||"🏪",caption:"",mediaUrl:null,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,shareVideoUrl:null,pinnedProdId:null,at:null,likes:0,hidden:false};
 
       // Media upload
       formCard.appendChild(el("div",{style:{fontSize:".7rem",color:"#6B8F75",fontWeight:"700",marginBottom:"6px"}},"📷 ຮູບ / ວິດີໂອ *"));
@@ -14238,6 +14316,7 @@ function buildRiderDashboard(){
       renderPinGrid2("");pinSrch2.oninput=function(){renderPinGrid2(this.value);};
 
       formCard.appendChild(buildShareGraphicUploadField(npost,"shareGraphicUrl","laoh/shareGraphics/posts"));
+      formCard.appendChild(buildShareVideoUploadField(npost,"shareVideoUrl","laoh/shareVideos/posts"));
 
       // Post button
       formCard.appendChild(el("button",{
@@ -14759,6 +14838,7 @@ function buildShopAddProductForm(){
         el("span",{style:{fontSize:".85rem",fontWeight:"600",color:"#1A2B5F"}},"🔄 ຄືນສິນຄ້າໄດ້ 3 ວັນ")
       ),
       buildShareGraphicUploadField(v,"shareGraphicUrl","laoh/shareGraphics/products"),
+      buildShareVideoUploadField(v,"shareVideoUrl","laoh/shareVideos/products"),
       el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px 12px",marginBottom:"8px",border:"1.5px solid #FFD54F"}},
         el("div",{style:{fontSize:".78rem",fontWeight:"700",color:"#8B5E00",marginBottom:"8px"}},"📦 Pre-order ເມື່ອໝົດ stock — ເລືອກລະຍະເວລາ:"),
         el("div",{style:{display:"flex",flexDirection:"column",gap:"6px"}},
@@ -14799,7 +14879,7 @@ function buildShopAddProductForm(){
         if(cat&&!PCATS.includes(cat)){PCATS.push(cat);CATS.push(cat);}
         const st={};cs.forEach(c=>sz.forEach(s=>{st[c+"|"+s]=0;}));
         const _npId=Date.now();
-        const np={id:_npId,name:v.name,cat:cat,subCat:v.subCat||"",price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colorImgs:v.colorImgs||{},colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,skus:_generateSkus(_npId,cs,sz),refundable:v.refundable||false,allowPreorder:v.allowPreorder||false,preorderDays:v.preorderDays||"",desc:v.desc||"",usage:v.usage||"",relatedIds:v.relatedIds||[],boxSize:v.boxSize||"",shareGraphicUrl:v.shareGraphicUrl||null,shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
+        const np={id:_npId,name:v.name,cat:cat,subCat:v.subCat||"",price:Number(v.price),cost:Number(v.cost)||0,img:v.img||"🏋️",imgs:v.imgs||[],colorImgs:v.colorImgs||{},colors:cs,sizes:sz,tag:v.tag||null,bg:"linear-gradient(135deg,#E8D8F5,#B89AC8)",stock:st,skus:_generateSkus(_npId,cs,sz),refundable:v.refundable||false,allowPreorder:v.allowPreorder||false,preorderDays:v.preorderDays||"",desc:v.desc||"",usage:v.usage||"",relatedIds:v.relatedIds||[],boxSize:v.boxSize||"",shareGraphicUrl:v.shareGraphicUrl||null,shareVideoUrl:v.shareVideoUrl||null,shopId:(user&&user.shopId)||null,shopName:(user&&user.shopName)||(user&&user.role==="admin"?"LaoH":null)};
         prods.unshift(np);
         try{
           if(np.img&&np.img.startsWith("data:")){
@@ -22108,6 +22188,7 @@ function showEditProd(p){
     desc:p.desc||"",usage:p.usage||"",boxSize:p.boxSize||"",
     refundable:p.refundable||false,
     shareGraphicUrl:p.shareGraphicUrl||null,
+    shareVideoUrl:p.shareVideoUrl||null,
     barcodes:p.barcodes?Object.assign({},p.barcodes):{},
     skus:p.skus?Object.assign({},p.skus):{},
     stock:p.stock?Object.assign({},p.stock):{}
@@ -22417,6 +22498,7 @@ function showEditProd(p){
     el("span",{style:{fontSize:".85rem",fontWeight:"600",color:"#1A2B5F"}},"🔄 ຄືນສິນຄ້າໄດ້ 3 ວັນ")
   ));
   modal.appendChild(buildShareGraphicUploadField(fm,"shareGraphicUrl","laoh/shareGraphics/products"));
+  modal.appendChild(buildShareVideoUploadField(fm,"shareVideoUrl","laoh/shareVideos/products"));
   (()=>{
     const preBox=el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px 12px",marginBottom:"8px",border:"1.5px solid #FFD54F"}});
     preBox.appendChild(el("div",{style:{fontSize:".78rem",fontWeight:"700",color:"#8B5E00",marginBottom:"8px"}},"📦 Pre-order ເມື່ອໝົດ stock — ເລືອກລະຍະເວລາ:"));
@@ -22558,7 +22640,7 @@ function showEditProd(p){
         cat:fm.selectedMainCat||fm.selectedCat,subCat:fm.selectedSubCat||"",tag:fm.selectedTag||null,
         imgs:fm.imgs||[],img:fm.img||p.img,colorImgs:fm.colorImgs||{},
         desc:fm.desc||"",usage:fm.usage||"",relatedIds:fm.relatedIds||[],
-        boxSize:fm.boxSize||"",refundable:fm.refundable||false,allowPreorder:fm.allowPreorder||false,preorderDays:fm.preorderDays||"10-15",shareGraphicUrl:fm.shareGraphicUrl||null,changeLog:newLog,
+        boxSize:fm.boxSize||"",refundable:fm.refundable||false,allowPreorder:fm.allowPreorder||false,preorderDays:fm.preorderDays||"10-15",shareGraphicUrl:fm.shareGraphicUrl||null,shareVideoUrl:fm.shareVideoUrl||null,changeLog:newLog,
         barcodes:fm.barcodes||{},
         skus:(function(){const existing=p.skus||{};const merged=_generateSkus(p.id,cs,sz);Object.keys(merged).forEach(function(k){if(existing[k])merged[k]=existing[k];});return merged;})()
       });

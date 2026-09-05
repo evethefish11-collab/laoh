@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v701 -->
+<!-- LaoH Marketplace v702 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3540,7 +3540,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.1")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.2")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6441,7 +6441,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.1")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.2")
   );
 
   // Icon style helper
@@ -22903,6 +22903,26 @@ render();
   }catch(e){}
 })();
 // ── ทางลัดสำหรับลิงก์รีวิว/โพสต์ร้านค้าที่แชร์มา (?rv=... / ?post=...) — เปิดป๊อบอัพรายละเอียดตรงๆ (ตัวเดียวกับที่ใช้ในหน้าโปรไฟล์) แทนวิธีเลื่อนหาใน Feed แบบเดิม ไม่ว่าจะก๊อปปี้ลิงก์มาจากจุดไหนในเว็บก็ตาม ──
+// (v702) ทางลัดนี้เปิดป๊อบอัพ "ก่อน" prods (ข้อมูลสินค้าทั้งหมด) จะโหลดเสร็จด้วยซ้ำ (เพื่อความเร็ว) ทำให้การ์ดสินค้าปักหมุด
+// (สีเขียว มีรูป+ชื่อ+ราคา) หาสินค้าไม่เจอแล้วไม่โผล่มาเลย — เพิ่มฟังก์ชันช่วยรอสินค้าโหลดเสร็จแล้วเปิดป๊อบอัพซ้ำ
+// ให้การ์ดสินค้าปรากฏขึ้นมาทีหลัง โดยไม่กระทบความเร็วในการเห็นเนื้อหาหลัก (รูป/คำอธิบาย) ที่ยังเปิดทันทีเหมือนเดิม ──
+function _reopenDetailWhenProdsReady(itemType,itemData){
+  if(prods&&prods.length>0)return; // สินค้าพร้อมอยู่แล้วตอนเปิดครั้งแรก ไม่ต้องทำอะไรเพิ่ม
+  let _tries=0;
+  const _waitProds=setInterval(function(){
+    _tries++;
+    if(prods&&prods.length>0){
+      clearInterval(_waitProds);
+      // ── เปิดซ้ำเฉพาะถ้ายังมีป๊อบอัพเปิดค้างอยู่จริง (ผู้ใช้ยังไม่ได้ปิดไปเอง) ──
+      if(document.querySelector(".mod")){
+        closeOv();
+        showReviewDetail(itemType,itemData);
+      }
+    } else if(_tries>25){ // รอสูงสุด ~5 วินาที ยังไม่มาก็เลิกรอ
+      clearInterval(_waitProds);
+    }
+  },200);
+}
 (function(){
   try{
     const _fastParams=new URLSearchParams(location.search);
@@ -22913,6 +22933,7 @@ render();
         if(!rdoc.exists)return;
         window._fastPathOpenedRvId=String(_fastRvId);
         showReviewDetail("review",rdoc.data());
+        _reopenDetailWhenProdsReady("review",rdoc.data());
       }).catch(function(){});
     }
     if(_fastPostId&&db){
@@ -22920,6 +22941,7 @@ render();
         if(!pdoc.exists)return;
         window._fastPathOpenedPostId=String(_fastPostId);
         showReviewDetail("shoppost",pdoc.data());
+        _reopenDetailWhenProdsReady("shoppost",pdoc.data());
       }).catch(function(){});
     }
   }catch(e){}

@@ -10569,6 +10569,7 @@ function buildReviewDetailItemContent(itemType,itemData){
   const sh=shops.find(function(s){return s.id===itemData.shopId;})||{};
   const pinnedId=isPost?itemData.pinnedProdId:itemData.prodId;
   const pp=pinnedId?prods.find(function(x){return x.id===pinnedId||String(x.id)===String(pinnedId);}):null;
+  if(window._dbg)window._dbg("⑤ ใน buildReviewDetailItemContent: pinnedId="+JSON.stringify(pinnedId)+" (type:"+typeof pinnedId+") prods.length="+(typeof prods!=="undefined"?prods.length:"undefined")+" pp พบไหม="+(!!pp)+(pp?(" ชื่อ:"+pp.name):""));
   const mediaUrl=isPost?(itemData.mediaUrl||(itemData.imgs&&itemData.imgs[0])||null):itemData.mediaUrl;
   const mediaType=isPost?(itemData.mediaType||"image"):itemData.mediaType;
   const userName=isPost?(sh.name||"ຮ້ານຄ້າ"):(itemData.userName||"ລູກຄ້າ");
@@ -22928,6 +22929,22 @@ function _reopenDetailWhenProdsReady(itemType,itemData){
     const _fastParams=new URLSearchParams(location.search);
     const _fastRvId=_fastParams.get("rv");
     const _fastPostId=_fastParams.get("post");
+    // (DEBUG ชั่วคราว) แสดงค่าจริงตอนรันบนหน้าจอ — จะลบออกทันทีหลังหาสาเหตุเจอ ──
+    if(_fastRvId||_fastPostId){
+      window._DBGLINES=[];
+      window._dbg=function(msg){
+        window._DBGLINES.push(msg);
+        let box=document.getElementById("_dbgbox");
+        if(!box){
+          box=document.createElement("div");
+          box.id="_dbgbox";
+          box.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999999;background:rgba(0,0,0,.92);color:#0f0;font-family:monospace;font-size:11px;padding:8px;max-height:45vh;overflow-y:auto;white-space:pre-wrap;word-break:break-all;";
+          document.body.appendChild(box);
+        }
+        box.textContent=window._DBGLINES.join("\n");
+      };
+      window._dbg("① เริ่มทำงาน: rv="+_fastRvId+" post="+_fastPostId+" db="+(!!db));
+    }
     // (v705) ปักธง "ทางลัดเปิดแล้ว" ทันทีตอนเริ่ม (synchronous) ไม่ต้องรอข้อมูลจาก Firestore โหลดเสร็จก่อน
     // เดิมปักธงหลังโหลดเสร็จ (async) ทำให้โค้ด "เลื่อนหาใน Feed" (ของเดิม ด้านล่าง) ที่เช็คธงนี้แบบทันที
     // (synchronous) เห็นธงยังไม่ถูกปัก จึงทำงานซ้อนกันทั้ง 2 ทาง แย่งกันควบคุมหน้าจอ ──
@@ -22935,10 +22952,13 @@ function _reopenDetailWhenProdsReady(itemType,itemData){
     if(_fastPostId)window._fastPathOpenedPostId=String(_fastPostId);
     if(_fastRvId&&db){
       db.collection("reviews").doc(String(_fastRvId)).get().then(function(rdoc){
+        if(window._dbg)window._dbg("② rdoc.exists="+rdoc.exists+(rdoc.exists?" prodId="+JSON.stringify(rdoc.data().prodId)+" (type:"+typeof rdoc.data().prodId+")":""));
         if(!rdoc.exists)return;
+        if(window._dbg)window._dbg("③ prods.length ตอนนี้="+(typeof prods!=="undefined"?prods.length:"prods ยังไม่มี"));
         showReviewDetail("review",rdoc.data());
+        if(window._dbg)window._dbg("④ เรียก showReviewDetail แล้ว");
         _reopenDetailWhenProdsReady("review",rdoc.data());
-      }).catch(function(){});
+      }).catch(function(err){if(window._dbg)window._dbg("❌ error: "+err.message);});
     }
     if(_fastPostId&&db){
       db.collection("shopPosts").doc(String(_fastPostId)).get().then(function(pdoc){
@@ -23001,6 +23021,7 @@ loadFromCloud().then(function(){
   }
   // Handle ?rv=reviewId from review share link
   const sharedRvId=urlParams.get("rv");
+  if(window._dbg)window._dbg("⑥ เช็คโค้ดเลื่อนหาใน Feed: sharedRvId="+sharedRvId+" _fastPathOpenedRvId="+window._fastPathOpenedRvId+" จะทำงานซ้อนไหม="+(sharedRvId&&window._fastPathOpenedRvId!==String(sharedRvId)));
   if(sharedRvId&&window._fastPathOpenedRvId!==String(sharedRvId)){
     view="feed";render();
     // (v701) re-render อีกครั้งก่อน scroll — กันปัญหาสินค้ายังโหลดไม่ครบตอนเปิดแอปแบบเย็น (cold start)

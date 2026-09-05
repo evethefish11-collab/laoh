@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v705 -->
+<!-- LaoH Marketplace v706 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3540,7 +3540,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.5")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.0.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6441,7 +6441,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.5")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.0.6")
   );
 
   // Icon style helper
@@ -10569,7 +10569,6 @@ function buildReviewDetailItemContent(itemType,itemData){
   const sh=shops.find(function(s){return s.id===itemData.shopId;})||{};
   const pinnedId=isPost?itemData.pinnedProdId:itemData.prodId;
   const pp=pinnedId?prods.find(function(x){return x.id===pinnedId||String(x.id)===String(pinnedId);}):null;
-  if(window._dbg)window._dbg("⑤ ใน buildReviewDetailItemContent: pinnedId="+JSON.stringify(pinnedId)+" (type:"+typeof pinnedId+") prods.length="+(typeof prods!=="undefined"?prods.length:"undefined")+" pp พบไหม="+(!!pp)+(pp?(" ชื่อ:"+pp.name):""));
   const mediaUrl=isPost?(itemData.mediaUrl||(itemData.imgs&&itemData.imgs[0])||null):itemData.mediaUrl;
   const mediaType=isPost?(itemData.mediaType||"image"):itemData.mediaType;
   const userName=isPost?(sh.name||"ຮ້ານຄ້າ"):(itemData.userName||"ລູກຄ້າ");
@@ -22907,44 +22906,54 @@ render();
 // (v702) ทางลัดนี้เปิดป๊อบอัพ "ก่อน" prods (ข้อมูลสินค้าทั้งหมด) จะโหลดเสร็จด้วยซ้ำ (เพื่อความเร็ว) ทำให้การ์ดสินค้าปักหมุด
 // (สีเขียว มีรูป+ชื่อ+ราคา) หาสินค้าไม่เจอแล้วไม่โผล่มาเลย — เพิ่มฟังก์ชันช่วยรอสินค้าโหลดเสร็จแล้วเปิดป๊อบอัพซ้ำ
 // ให้การ์ดสินค้าปรากฏขึ้นมาทีหลัง โดยไม่กระทบความเร็วในการเห็นเนื้อหาหลัก (รูป/คำอธิบาย) ที่ยังเปิดทันทีเหมือนเดิม ──
+// (v706) พบจาก debug ว่าเดิมเช็คแค่ "prods.length>0" (มีสินค้าอย่างน้อย 1 ตัว) แล้วคิดว่าโหลดเสร็จ ทั้งที่ตอนนั้น
+// อาจมีแค่สินค้าบางส่วน (เช่น 4 ตัว) ยังไม่ใช่ตัวที่ต้องการเลย — เปลี่ยนมาเช็คว่า "เจอสินค้าตัวที่ต้องการจริงๆ" โดยตรง
+// พร้อมดึงสินค้าตัวนั้นแบบเจาะจงจาก Firestore ควบคู่กันไปด้วย (เร็วกว่ารอสินค้าทั้งร้านโหลดครบมาก)
+// ไม่มีเพดานเวลาตัดจบ รอจนกว่าจะเจอจริงๆ หรือผู้ใช้ปิดป๊อบอัพไปเองก่อน ──
 function _reopenDetailWhenProdsReady(itemType,itemData){
-  if(prods&&prods.length>0)return; // สินค้าพร้อมอยู่แล้วตอนเปิดครั้งแรก ไม่ต้องทำอะไรเพิ่ม
-  let _tries=0;
-  const _waitProds=setInterval(function(){
-    _tries++;
-    if(prods&&prods.length>0){
-      clearInterval(_waitProds);
-      // ── เปิดซ้ำเฉพาะถ้ายังมีป๊อบอัพเปิดค้างอยู่จริง (ผู้ใช้ยังไม่ได้ปิดไปเอง) ──
-      if(document.querySelector(".mod")){
-        closeOv();
-        showReviewDetail(itemType,itemData);
-      }
-    } else if(_tries>25){ // รอสูงสุด ~5 วินาที ยังไม่มาก็เลิกรอ
-      clearInterval(_waitProds);
+  const pinnedId=itemType==="shoppost"?itemData.pinnedProdId:itemData.prodId;
+  if(!pinnedId)return; // ไม่มีสินค้าปักหมุดเลย ไม่ต้องทำอะไร
+  function _hasProd(){
+    return prods&&prods.some(function(x){return x.id===pinnedId||String(x.id)===String(pinnedId);});
+  }
+  if(_hasProd())return; // มีอยู่แล้วตอนเปิดครั้งแรก ไม่ต้องทำอะไรเพิ่ม
+  let _done=false;
+  let _waitProds=null;
+  function _reopenOnce(){
+    if(_done)return;
+    _done=true;
+    if(_waitProds)clearInterval(_waitProds);
+    // ── เปิดซ้ำเฉพาะถ้ายังมีป๊อบอัพเปิดค้างอยู่จริง (ผู้ใช้ยังไม่ได้ปิดไปเอง) ──
+    if(document.querySelector(".mod")){
+      closeOv();
+      showReviewDetail(itemType,itemData);
     }
-  },200);
+  }
+  // ── ดึงสินค้าตัวนี้โดยตรงจาก Firestore แบบเจาะจง — เร็วกว่ารอสินค้าทั้งร้านโหลดครบมาก ──
+  if(db){
+    db.collection("prods").doc(String(pinnedId)).get().then(function(pdoc){
+      if(pdoc.exists&&!_done){
+        const pdata=pdoc.data();
+        if(prods&&pdata&&!_hasProd())prods.push(pdata);
+        _reopenOnce();
+      }
+    }).catch(function(){});
+  }
+  // ── สำรอง: รอ prods array อัปเดตจาก realtime listener ปกติ เผื่อดึงตรงไม่สำเร็จด้วยเหตุผลอื่น
+  // ไม่มีเพดานเวลาตัดจบ — หยุดรอก็ต่อเมื่อเจอสินค้าแล้ว หรือผู้ใช้ปิดป๊อบอัพไปเองเท่านั้น ──
+  _waitProds=setInterval(function(){
+    if(_hasProd()){
+      _reopenOnce();
+    } else if(!document.querySelector(".mod")){
+      _done=true;clearInterval(_waitProds); // ผู้ใช้ปิดป๊อบอัพไปแล้ว เลิกรอไม่มีประโยชน์
+    }
+  },300);
 }
 (function(){
   try{
     const _fastParams=new URLSearchParams(location.search);
     const _fastRvId=_fastParams.get("rv");
     const _fastPostId=_fastParams.get("post");
-    // (DEBUG ชั่วคราว) แสดงค่าจริงตอนรันบนหน้าจอ — จะลบออกทันทีหลังหาสาเหตุเจอ ──
-    if(_fastRvId||_fastPostId){
-      window._DBGLINES=[];
-      window._dbg=function(msg){
-        window._DBGLINES.push(msg);
-        let box=document.getElementById("_dbgbox");
-        if(!box){
-          box=document.createElement("div");
-          box.id="_dbgbox";
-          box.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999999;background:rgba(0,0,0,.92);color:#0f0;font-family:monospace;font-size:11px;padding:8px;max-height:45vh;overflow-y:auto;white-space:pre-wrap;word-break:break-all;";
-          document.body.appendChild(box);
-        }
-        box.textContent=window._DBGLINES.join("\n");
-      };
-      window._dbg("① เริ่มทำงาน: rv="+_fastRvId+" post="+_fastPostId+" db="+(!!db));
-    }
     // (v705) ปักธง "ทางลัดเปิดแล้ว" ทันทีตอนเริ่ม (synchronous) ไม่ต้องรอข้อมูลจาก Firestore โหลดเสร็จก่อน
     // เดิมปักธงหลังโหลดเสร็จ (async) ทำให้โค้ด "เลื่อนหาใน Feed" (ของเดิม ด้านล่าง) ที่เช็คธงนี้แบบทันที
     // (synchronous) เห็นธงยังไม่ถูกปัก จึงทำงานซ้อนกันทั้ง 2 ทาง แย่งกันควบคุมหน้าจอ ──
@@ -22952,13 +22961,10 @@ function _reopenDetailWhenProdsReady(itemType,itemData){
     if(_fastPostId)window._fastPathOpenedPostId=String(_fastPostId);
     if(_fastRvId&&db){
       db.collection("reviews").doc(String(_fastRvId)).get().then(function(rdoc){
-        if(window._dbg)window._dbg("② rdoc.exists="+rdoc.exists+(rdoc.exists?" prodId="+JSON.stringify(rdoc.data().prodId)+" (type:"+typeof rdoc.data().prodId+")":""));
         if(!rdoc.exists)return;
-        if(window._dbg)window._dbg("③ prods.length ตอนนี้="+(typeof prods!=="undefined"?prods.length:"prods ยังไม่มี"));
         showReviewDetail("review",rdoc.data());
-        if(window._dbg)window._dbg("④ เรียก showReviewDetail แล้ว");
         _reopenDetailWhenProdsReady("review",rdoc.data());
-      }).catch(function(err){if(window._dbg)window._dbg("❌ error: "+err.message);});
+      }).catch(function(){});
     }
     if(_fastPostId&&db){
       db.collection("shopPosts").doc(String(_fastPostId)).get().then(function(pdoc){
@@ -23021,7 +23027,6 @@ loadFromCloud().then(function(){
   }
   // Handle ?rv=reviewId from review share link
   const sharedRvId=urlParams.get("rv");
-  if(window._dbg)window._dbg("⑥ เช็คโค้ดเลื่อนหาใน Feed: sharedRvId="+sharedRvId+" _fastPathOpenedRvId="+window._fastPathOpenedRvId+" จะทำงานซ้อนไหม="+(sharedRvId&&window._fastPathOpenedRvId!==String(sharedRvId)));
   if(sharedRvId&&window._fastPathOpenedRvId!==String(sharedRvId)){
     view="feed";render();
     // (v701) re-render อีกครั้งก่อน scroll — กันปัญหาสินค้ายังโหลดไม่ครบตอนเปิดแอปแบบเย็น (cold start)

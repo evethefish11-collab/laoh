@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v712 -->
+<!-- LaoH Marketplace v713 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2567,11 +2567,78 @@ async function uploadFile(base64Data, path, contentType){
 // (v711) สวิตช์เปิด/ปิดโหมด "พากย์เสียงใหม่" ตอนอัปโหลดวิดีโอ — ปิดไว้ชั่วคราวเพื่อให้ผู้ใช้อัปโหลดง่าย (ได้ต้นฉบับเลย ไม่ต้องเลือก)
 // จะเปิดกลับภายหลัง: เปลี่ยนเป็น true (โค้ดหน้าเลือกเส้นทาง + openVoiceoverStudio ยังอยู่ครบ ไม่ได้ลบ) ──
 const VOICEOVER_ENABLED = false;
-async function uploadBlobToStorage(blob, path, contentType){
+async function uploadBlobToStorage(blob, path, contentType, onProgress){
   if(!storage) throw new Error("Storage not ready");
   const ref = storage.ref(path);
-  const snap = await ref.put(blob, {contentType: contentType||blob.type||"application/octet-stream", cacheControl: "public, max-age=604800"});
+  const task = ref.put(blob, {contentType: contentType||blob.type||"application/octet-stream", cacheControl: "public, max-age=604800"});
+  // (v713) รายงานความคืบหน้า (0..1) ให้ UI แสดง % ขณะอัปโหลด — ไม่ส่ง onProgress = ทำงานเหมือนเดิมทุกประการ
+  if(typeof onProgress==="function"){
+    task.on("state_changed", function(s){
+      try{ if(s && s.totalBytes>0) onProgress(s.bytesTransferred/s.totalBytes); }catch(e){}
+    });
+  }
+  const snap = await task;
   return snap.ref.getDownloadURL();
+}
+
+// (v713) แถบสถานะอัปโหลดวิดีโอ: วงกลมหมุน + % ระหว่างอัปโหลด → เครื่องหมายติ๊กเขียว "อัปโหลดสำเร็จ" เมื่อเสร็จ
+// window._vidUploading นับจำนวนวิดีโอที่กำลังอัปโหลดอยู่ — ปุ่มโพสต์/ส่งรีวิวใช้เช็คเพื่อไม่ให้กดโพสต์ก่อนวิดีโออัปโหลดเสร็จ ──
+window._vidUploading = 0;
+function createVideoUploadStatus(parent, overlay){
+  const box = document.createElement("div");
+  box.style.cssText = "display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:10px;background:#F0F7F2;border:1.5px solid #C8E6D4;margin-top:6px;"+(overlay?"position:absolute;left:6px;right:6px;bottom:6px;margin-top:0;z-index:3;":"");
+  const row = document.createElement("div");
+  row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;color:#1B6B3A;";
+  const icon = document.createElement("div");
+  const label = document.createElement("div");
+  row.appendChild(icon); row.appendChild(label);
+  const barWrap = document.createElement("div");
+  barWrap.style.cssText = "height:6px;border-radius:3px;background:#D9EBDF;overflow:hidden;";
+  const bar = document.createElement("div");
+  bar.style.cssText = "height:100%;width:0%;background:#1B6B3A;transition:width .2s;";
+  barWrap.appendChild(bar);
+  box.appendChild(row); box.appendChild(barWrap);
+  parent.appendChild(box);
+  let active = false;
+  function setSpinner(){
+    icon.style.cssText = "width:16px;height:16px;border-radius:50%;border:2.5px solid #C8E6D4;border-top-color:#1B6B3A;animation:laohSpin .8s linear infinite;flex-shrink:0;";
+    icon.textContent = "";
+  }
+  function release(){ if(active){ active=false; window._vidUploading = Math.max(0,(window._vidUploading||0)-1); } }
+  const T = function(lo,en){ return _lang==="lo"?lo:en; };
+  const api = {
+    start: function(){
+      if(!active){ active=true; window._vidUploading=(window._vidUploading||0)+1; }
+      setSpinner(); barWrap.style.display="block"; bar.style.width="0%"; box.style.background="#F0F7F2"; box.style.borderColor="#C8E6D4";
+      label.textContent = T("ກຳລັງອັບໂຫຼດ 0%","Uploading 0%");
+    },
+    progress: function(p){
+      const pct = Math.max(0,Math.min(100,Math.round(p*100)));
+      bar.style.width = pct+"%";
+      label.textContent = T("ກຳລັງອັບໂຫຼດ ","Uploading ")+pct+"%";
+    },
+    done: function(){
+      release();
+      icon.style.cssText = "width:18px;height:18px;border-radius:50%;background:#27AE60;color:#fff;font-size:.7rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;";
+      icon.textContent = "✓";
+      label.textContent = T("ອັບໂຫຼດສຳເລັດແລ້ວ","Upload complete");
+      label.style.color = "#27AE60";
+      bar.style.width = "100%"; bar.style.background = "#27AE60";
+      box.style.background = "#EAF8EF"; box.style.borderColor = "#27AE60";
+    },
+    fail: function(){
+      release();
+      if(box.parentNode) box.parentNode.removeChild(box);
+    }
+  };
+  return api;
+}
+function blockIfVideoUploading(){
+  if((window._vidUploading||0) > 0){
+    toast("⏳ "+(_lang==="lo"?"ກະລຸນາລໍຖ້າວິດີໂອອັບໂຫຼດສຳເລັດກ່ອນ ແລ້ວຈຶ່ງກົດໂພສ":"Please wait for the video upload to finish before posting"));
+    return true;
+  }
+  return false;
 }
 
 // (v691) ดึงภาพนิ่งจากวินาทีที่กำหนด (default 2 วิ) ของวิดีโอมาเป็นภาพปก (poster) — ใช้แก้ปัญหา
@@ -3611,7 +3678,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.2")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6512,7 +6579,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.2")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.3")
   );
 
   // Icon style helper
@@ -8888,16 +8955,19 @@ function buildUserProfile(uid){
               // ══════════════════════════════════════════════════════════
               prevDiv.innerHTML="";
               // ── ฟังก์ชันช่วย: อัปโหลด Blob วิดีโอ + ดึงภาพปกวินาทีที่ 2 (ใช้ร่วมกันทั้ง 2 เส้นทาง: ไฟล์เล็ก/ไฟล์ที่บีบอัดแล้ว) ──
+              let _curUpStatus=null;
               function _uploadVideoBlob(blob, posterSourceBlob){
                 const previewUrl=URL.createObjectURL(blob);
                 prevDiv.innerHTML="";
                 const v=document.createElement("video");v.src=previewUrl;v.style.cssText="width:100%;border-radius:8px;max-height:120px;";v.controls=true;prevDiv.appendChild(v);
-                toast("⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video..."));
+                const upStatus=createVideoUploadStatus(prevDiv,false);
+                _curUpStatus=upStatus;
+                upStatus.start();
                 const ext=(blob.type&&blob.type.indexOf("webm")!==-1)?".webm":".mp4";
-                return uploadBlobToStorage(blob, "laoh/reviews/videos/"+Date.now()+ext, blob.type||"video/mp4").then(function(url){
+                return uploadBlobToStorage(blob, "laoh/reviews/videos/"+Date.now()+ext, blob.type||"video/mp4", upStatus.progress).then(function(url){
                   rv.mediaUrl=url;
                   rv.mediaType="video";
-                  toast("✅ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ":"Video uploaded")+" ✓");
+                  upStatus.done();
                   captureVideoPosterFrame(posterSourceBlob||blob,2).then(function(posterBlob){
                     return uploadBlobToStorage(posterBlob,"laoh/reviews/posters/"+Date.now()+".jpg","image/jpeg");
                   }).then(function(posterUrl){
@@ -8915,6 +8985,7 @@ function buildUserProfile(uid){
               // (v709) ไม่จำกัดขนาดไฟล์ — อัปโหลดต้นฉบับตรงๆ เป็น Blob (เสียงครบ ไม่ผ่าน base64) จำกัดแค่ความยาว ≤ 90 วินาที (ตรวจแล้วก่อนเข้ามาที่นี่)
               _uploadVideoBlob(file).catch(function(err){
                 console.error("Video upload error:",err);
+                if(_curUpStatus)_curUpStatus.fail();
                 prevDiv.innerHTML="";
                 toast("❌ "+(_lang==="lo"?"ອັບໂຫຼດວິດີໂອບໍ່ສຳເລັດ: ":"Video upload failed: ")+((err&&err.message)?err.message:String(err)));
                 rv.mediaUrl=null;
@@ -8993,6 +9064,7 @@ function buildUserProfile(uid){
 
           // submit
           mod.appendChild(el("button",{className:"btn btn-p",onclick:function(){
+            if(blockIfVideoUploading())return;
             if(!isReviewerAcct&&!rv.prodId){toast("ກະລຸນາເລືອກສິນຄ້າ");return;}
             if(!rv.caption){toast("ກະລຸນາໃສ່ຄຳເຫັນ");return;}
             // (v685) เช็ค rolling 24 ชม. เฉพาะตอนเลือกสินค้าที่ไม่ได้ซื้อ (isFreeReview) — ไม่กระทบรีวิวสินค้าที่ซื้อจริง (ไม่จำกัด) ──
@@ -9227,7 +9299,7 @@ function buildUserProfile(uid){
             saveMediaBtn.onclick=function(){
               saveMediaBtn.disabled=true;
               saveMediaBtn.textContent="⏳ "+(isVid?(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video..."):(_lang==="lo"?"ກຳລັງອັບໂຫຼດຮູບ...":"Uploading image..."));
-              const uploadPromise=isVid?uploadBlobToStorage(file,"laoh/reviews/videos/"+Date.now()+".mp4",file.type||"video/mp4"):uploadImage(b64,"laoh/reviews");
+              const uploadPromise=isVid?uploadBlobToStorage(file,"laoh/reviews/videos/"+Date.now()+".mp4",file.type||"video/mp4",function(p){saveMediaBtn.textContent="⏳ "+(_lang==="lo"?"ກຳລັງອັບໂຫຼດ ":"Uploading ")+Math.round(p*100)+"%";}):uploadImage(b64,"laoh/reviews");
               uploadPromise.then(function(url){
                 rv.mediaUrl=url;
                 rv.mediaType=isVid?"video":"image";
@@ -14087,11 +14159,12 @@ function buildRiderDashboard(){
           const cl=document.createElement("button");cl.style.cssText="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.7rem;";cl.textContent="✕";
           cl.onclick=function(e){e.stopPropagation();npost.mediaUrl=null;npost.mediaType="image";mediaPreview.innerHTML="";mediaPreview.appendChild(mediaPlaceholder);};
           mediaPreview.appendChild(cl);
-          toast(_lang==="lo"?"ກຳລັງອັບໂຫຼດວິດີໂອ...":"Uploading video...");
+          const upStatus=createVideoUploadStatus(mediaPreview,true);
+          upStatus.start();
           const ext=(blob.type&&blob.type.indexOf("webm")!==-1)?".webm":".mp4";
-          uploadBlobToStorage(blob,"laoh/reviews/videos/"+Date.now()+ext,blob.type||"video/mp4").then(function(url){
+          uploadBlobToStorage(blob,"laoh/reviews/videos/"+Date.now()+ext,blob.type||"video/mp4",upStatus.progress).then(function(url){
             npost.mediaUrl=url;
-            toast(_lang==="lo"?"ອັບໂຫຼດວິດີໂອສຳເລັດ ✓":"Video uploaded ✓");
+            upStatus.done();
             captureVideoPosterFrame(blob,2).then(function(posterBlob){
               return uploadBlobToStorage(posterBlob,"laoh/shopPosts/posters/"+Date.now()+".jpg","image/jpeg");
             }).then(function(posterUrl){
@@ -14100,6 +14173,7 @@ function buildRiderDashboard(){
               console.warn("Poster frame capture/upload failed (ไม่กระทบวิดีโอหลัก):",posterErr);
             });
           }).catch(function(err){
+            upStatus.fail();
             npost.mediaUrl=null;
             toast("❌ ອັບໂຫຼດວິດີໂອ error: "+(err&&err.message?err.message:"unknown"));
             console.error("Video upload error:",err);
@@ -14285,6 +14359,7 @@ function buildRiderDashboard(){
       formCard.appendChild(el("button",{
         style:{width:"100%",background:"#1A2B5F",color:"#fff",border:"none",borderRadius:"10px",padding:"11px",fontSize:".88rem",fontWeight:"800",cursor:"pointer",fontFamily:"inherit"},
         onclick:function(){
+          if(blockIfVideoUploading())return;
           if(!npost.mediaUrl){toast("ກະລຸນາເລືອກຮູບ ຫຼື ວິດີໂອ");return;}
           if(!npost.caption.trim()&&!npost.pinnedProdId){toast("ໃສ່ຄຳອະທິບາຍ ຫຼື ປັກສິນຄ້າ");return;}
           // ── ກວດສອບ: ຖ້າ mediaUrl ຍັງເປັນ base64 (ຍັງບໍ່ໄດ້ອັບໂຫຼດຂຶ້ນ Storage ສຳເລັດ) ແລະໃຫຍ່ເກີນຂີດຈຳກັດ Firestore (1MiB)

@@ -26,7 +26,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v714 -->
+<!-- LaoH Marketplace v716 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1455,9 +1455,12 @@ async function fetchNotifications(){
   try{
     let q;
     if(user.role==="admin"){
-      q=db.collection("notifications").where("toRole","==","admin").limit(100);
+      // (v716) เอา .limit(100) ออก — Firestore ที่ไม่มี orderBy เรียงตาม ID จากเก่า→ใหม่ (ID ขึ้นต้นด้วย timestamp)
+      // พอแจ้งเตือนเกิน 100 รายการ limit(100) จะคืนแต่ "เก่าสุด 100 อัน" ทำให้แจ้งเตือนใหม่ไม่โผล่ในรายการ ทั้งที่ตัวเลขแดงนับครบ
+      // (ตัวนับ/listener อ่านทั้งหมดอยู่แล้ว) — เรียงและตัดเหลือ 80 อันล่าสุดฝั่งแอปด้านล่างเหมือนเดิม
+      q=db.collection("notifications").where("toRole","==","admin");
     } else {
-      q=db.collection("notifications").where("toUid","==",String(user.id)).limit(100);
+      q=db.collection("notifications").where("toUid","==",String(user.id));
     }
     const snap=await q.get();
     return snap.docs.map(function(d){return d.data();})
@@ -3106,6 +3109,21 @@ async function mixVoiceAndMusic(voiceBlob,musicUrl,musicStart,duration,voiceVol,
   return audioBufferToWavBlob(rendered);
 }
 // ── เล่นวิดีโอ(ปิดเสียง)+ไฟล์เสียงพากย์พร้อมกัน แบบซิงค์ — รอทั้ง 2 ไฟล์พร้อมก่อนค่อยเล่น ──
+// (v715) ตัวหมุนแสดงสถานะ "กำลังโหลด/บัฟเฟอร์" ทับวิดีโอในหน้า Feed — เน็ตช้าจะรู้ว่าไม่ได้ค้าง ไม่กระทบการเล่นวิดีโอ
+function attachFeedBufferSpinner(vid, container){
+  const sp=document.createElement("div");
+  sp.style.cssText="position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;border:3.5px solid rgba(255,255,255,.3);border-top-color:#fff;animation:laohSpin .8s linear infinite;pointer-events:none;z-index:2;display:none;";
+  container.appendChild(sp);
+  const show=function(){ sp.style.display="block"; };
+  const hide=function(){ sp.style.display="none"; };
+  vid.addEventListener("waiting",show);
+  vid.addEventListener("stalled",show);
+  vid.addEventListener("playing",hide);
+  vid.addEventListener("canplay",hide);
+  vid.addEventListener("pause",hide);
+  vid.addEventListener("error",hide);
+  vid._showBufferSpinner=function(){ if(vid.readyState<3) show(); };
+}
 function playSyncedVoiceover(videoEl,audioEl,dbg){
   dbg=dbg||function(){};
   videoEl.muted=true;videoEl.loop=true;
@@ -3678,7 +3696,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4262,8 +4280,15 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
     media.style.cssText="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;";
     if(rv.mediaType==="video"&&rv.mediaUrl){
       const vid=document.createElement("video");
-      vid.src=rv.mediaUrl;
-      vid.preload="auto";
+      // (v715) ไม่โหลดวิดีโอทุกตัวพร้อมกันตอนสร้างการ์ด (เดิม preload=auto ทุกตัว ทำให้แย่งแบนด์วิดท์กัน ตัวที่ดูอยู่โหลดช้า/เน็ตช้าไม่ขึ้น)
+      // → แสดงภาพปก (poster) ทันที แล้วค่อยโหลดวิดีโอเมื่อการ์ดเลื่อนใกล้จอ (metadata) และโหลดเต็มเมื่อกำลังจะเล่น
+      const _rvPoster=(typeof rv.mediaPoster==="string"&&rv.mediaPoster.indexOf("http")===0)?rv.mediaPoster:"";
+      if(_rvPoster)vid.poster=_rvPoster;
+      vid.preload="none";
+      vid._ensureSrc=function(full){
+        if(!vid.getAttribute("src"))vid.src=_rvPoster?rv.mediaUrl:(rv.mediaUrl+"#t=0.1");
+        vid.preload=full?"auto":"metadata";
+      };
       vid.loop=true; vid.muted=true; // ເລີ່ມແບບປິດສຽງກ່ອນສະເໝີ ຮັບປະກັນເລີ່ມຫຼີ້ນສຳເລັດ
       vid.setAttribute("playsinline","");
       vid.setAttribute("webkit-playsinline","");
@@ -4275,6 +4300,8 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       // ── จดจำว่าผู้ใช้เปิด/ปิดเสียงล่าสุดไว้ตัวไหน เพื่อให้วิดีโอถัดไปเล่นต่อด้วยค่าเดียวกันทันที ไม่ต้องกดเปิดใหม่ทุกตัว ──
       var vidPlaying=false;
       function tryPlayFeedVid(){
+        if(vid._ensureSrc)vid._ensureSrc(true);
+        if(vid._showBufferSpinner)vid._showBufferSpinner();
         if(voiceoverAudio){
           playSyncedVoiceover(vid,voiceoverAudio);
           vidPlaying=true;
@@ -4296,6 +4323,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       vid._tryPlayFeedVid=tryPlayFeedVid;
       vid._setFeedVidPaused=function(){vidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
       media.appendChild(vid);
+      attachFeedBufferSpinner(vid,media);
     } else if(rv.mediaUrl){
       const img=document.createElement("img");
       img.src=rv.mediaUrl; img.style.cssText="width:100%;height:100%;object-fit:cover;";
@@ -4549,8 +4577,14 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
     if(post.mediaUrl){
       if(post.mediaType==="video"){
         const vid=document.createElement("video");
-        vid.src=post.mediaUrl;
-        vid.preload="auto";
+        // (v715) โหลดแบบเลื่อนเวลา + poster เหมือนการ์ดรีวิว (ดูคอมเมนต์ที่ buildReviewCard)
+        const _spPoster=(typeof post.mediaPoster==="string"&&post.mediaPoster.indexOf("http")===0)?post.mediaPoster:"";
+        if(_spPoster)vid.poster=_spPoster;
+        vid.preload="none";
+        vid._ensureSrc=function(full){
+          if(!vid.getAttribute("src"))vid.src=_spPoster?post.mediaUrl:(post.mediaUrl+"#t=0.1");
+          vid.preload=full?"auto":"metadata";
+        };
         vid.loop=true; vid.muted=true; // ເລີ່ມແບບປິດສຽງກ່ອນສະເໝີ ຮັບປະກັນເລີ່ມຫຼີ້ນສຳເລັດ
         vid.setAttribute("playsinline","");
         vid.setAttribute("webkit-playsinline","");
@@ -4562,6 +4596,8 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
         // ── ใช้ตัวจดจำเสียงตัวเดียวกับ buildReviewCard เพื่อให้ทุกวิดีโอใน Feed (ทั้งโพสต์ร้านค้าและรีวิว) ใช้การตั้งค่าเดียวกันต่อเนื่องกัน ──
         var vidPlaying=false;
         function tryPlayFeedVid(){
+          if(vid._ensureSrc)vid._ensureSrc(true);
+          if(vid._showBufferSpinner)vid._showBufferSpinner();
           if(voiceoverAudio){
             playSyncedVoiceover(vid,voiceoverAudio);
             vidPlaying=true;
@@ -4582,6 +4618,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
         vid._tryPlayFeedVid=tryPlayFeedVid;
         vid._setFeedVidPaused=function(){vidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
         mediaWrap.appendChild(vid);
+        attachFeedBufferSpinner(vid,mediaWrap);
       } else {
         const img=document.createElement("img");
         img.src=post.mediaUrl;img.loading="lazy";
@@ -5344,6 +5381,15 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       });
     },{root:scroll,threshold:0.6});
     scroll.querySelectorAll(".feed-item").forEach(function(it){feedVidObs.observe(it);});
+    // (v715) โหลดวิดีโอล่วงหน้า (เฉพาะ metadata/เฟรมแรก) เมื่อการ์ดอยู่ใกล้จอ ไม่เกิน 1 หน้าจอ — ที่เหลือไม่โหลดเลยจนกว่าจะเลื่อนมาใกล้
+    const feedLoadObs=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(!en.isIntersecting)return;
+        const lv=en.target.querySelector("video");
+        if(lv&&lv._ensureSrc)lv._ensureSrc(false);
+      });
+    },{root:scroll,rootMargin:"100% 0px 100% 0px",threshold:0});
+    scroll.querySelectorAll(".feed-item").forEach(function(it){feedLoadObs.observe(it);});
     // ── ตัวช่วยสำรอง (เฉพาะหน้า Feed เท่านั้น ไม่กระทบระบบอื่น): การ์ดแรกที่เห็นทันทีตอนเข้าหน้า ยังไม่มีการเลื่อนจอเกิดขึ้น จึงเช็คและสั่งเล่นตรงๆ อีกชั้นหนึ่งเผื่อระบบตรวจจับด้านบนยังไม่ทันทำงาน ──
     setTimeout(function(){
       const items=Array.from(scroll.querySelectorAll(".feed-item"));
@@ -6579,7 +6625,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.6")
   );
 
   // Icon style helper

@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v719 -->
+<!-- LaoH Marketplace v723 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -1044,6 +1044,152 @@ function getCancelledTotal(o){
   if(sub>0&&discP>0)return rawCancelled*(1-(discP/sub));
   return rawCancelled;
 }
+
+// ══════════════════════════════════════════════════════════════════
+// (v720) แก้ไขรายการสินค้าในออเดอร์ (ซูเปอร์แอดมิน) — ร้านส่งสินค้าผิด / คืนสินค้า / เปลี่ยนสินค้าใหม่
+// หลักการ: แก้ o.items จริง แล้วคำนวณ subtotal/discProd/discount/total ใหม่ → ยอดที่ร้านได้รับ (getShopNetTotal) และกำไร ปรับตามอัตโนมัติ
+// (v722) แก้ไขรายการได้ครั้งเดียวต่อออเดอร์ · editRefundAdj = max(0, ยอดบิลเดิม − ยอดบิลใหม่) ใช้ระบบคืนเงินเดิม (QR ลูกค้า → สลิปแอดมิน) ไม่มีการจ่ายเพิ่ม
+// ══════════════════════════════════════════════════════════════════
+function getRefundDue(o){
+  if(!o)return 0;
+  return getCancelledTotal(o)+(Number(o.editRefundAdj)||0); // (v722) ยอดคืน = รายการยกเลิก + ส่วนต่างจากการแก้ไขรายการ (แก้ไขได้ครั้งเดียว) //(v721) คืนเงินคิดจากรายการยกเลิกเท่านั้น — การแก้ไขรายการไม่เกี่ยวกับระบบคืนเงิน (ปุ่มคืนเงินจากการแก้ไขจะเพิ่มภายหลัง)
+}
+function isOrderWithdrawn(o){
+  if(!o)return false;
+  if(o.withdrawn)return true;
+  try{return (withdrawals||[]).some(function(w){return (w.orderIds||[]).some(function(x){return String(x)===String(o.id);});});}catch(e){return false;}
+}
+function _orderItemKey(i){return (i.n||"")+(i.c||"")+(i.s||"");}
+// คำนวณผลของการแก้ไข (ฟังก์ชันล้วน ไม่แตะข้อมูลจริง) — ใช้ทั้งพรีวิวและตอนบันทึกจริง
+function computeOrderEdit(o,removedIdx,added){
+  const items=o.items||[];
+  const rmSet={};(removedIdx||[]).forEach(function(i){rmSet[i]=true;});
+  const kept=items.filter(function(_,i){return !rmSet[i];});
+  const removedItems=items.filter(function(_,i){return !!rmSet[i];});
+  const newItems=kept.concat(added||[]);
+  const sum=function(arr){return arr.reduce(function(a,i){return a+(Number(i.p)||0)*(Number(i.q)||0);},0);};
+  const oldSubFromItems=sum(items);
+  const oldSub=o.subtotal!=null?Number(o.subtotal):oldSubFromItems;
+  const newSub=sum(newItems);
+  const oldDiscount=Number(o.discount)||0;
+  const oldDiscProd=o.discProd!=null?Number(o.discProd):((o.coupon&&!o.shipCoupon)?oldDiscount:0);
+  const shipDisc=Math.max(0,oldDiscount-oldDiscProd);
+  // ส่วนลดสินค้าคิดตามสัดส่วนยอดสินค้าที่เปลี่ยนไป (หลักเดียวกับ getCancelledTotal)
+  const newDiscProd=oldSub>0?Math.min(newSub,Math.round(oldDiscProd*newSub/oldSub)):0;
+  const newDiscount=newDiscProd+shipDisc;
+  const shipping=Number(o.shipping)||0;
+  const newTotal=Math.max(0,newSub+shipping-newDiscount);
+  const newKeys={};newItems.forEach(function(i){newKeys[_orderItemKey(i)]=true;});
+  const newCancelled=(o.cancelledItems||[]).filter(function(k){return !!newKeys[k];});
+  const oNew=Object.assign({},o,{items:newItems,subtotal:newSub,discProd:newDiscProd,discount:newDiscount,total:newTotal,
+    editRefundAdj:Math.max(0,(Number(o.total)||0)-newTotal),cancelledItems:newCancelled});
+  return {
+    kept:kept,removedItems:removedItems,newItems:newItems,
+    removedValue:sum(removedItems),addedValue:sum(added||[]),
+    oldTotal:Number(o.total)||0,newTotal:newTotal,newSub:newSub,
+    refundDueBefore:getRefundDue(o),refundDueAfter:getRefundDue(oNew),editRefund:oNew.editRefundAdj,
+    shopNetBefore:getShopNetTotal(o),shopNetAfter:getShopNetTotal(oNew),
+    updated:oNew
+  };
+}
+function _adjustProdStockForOrderEdit(it,delta){
+  try{
+    if(!it||it.preorder)return;
+    const idx=prods.findIndex(function(x){
+      if(!x)return false;
+      if(it.pid!=null&&it.pid!=="")return String(x.id)===String(it.pid);
+      return x.name===it.n;
+    });
+    if(idx<0)return;
+    const k=(it.c||"")+"|"+(it.s||"");
+    const st=Object.assign({},prods[idx].stock||{});
+    st[k]=Math.max(0,(Number(st[k])||0)+delta);
+    prods[idx]=Object.assign({},prods[idx],{stock:st});
+    saveToCloud("prods",prods[idx].id,prods[idx]);
+  }catch(e){console.warn("stock adjust failed:",e);}
+}
+function _describeOrderItems(arr){
+  return arr.map(function(i){return (i.n||"")+(i.c?" ("+i.c+(i.s?"/"+i.s:"")+")":"")+" ×"+i.q+" ₭"+fmt((Number(i.p)||0)*(Number(i.q)||0));}).join(", ");
+}
+// บันทึกการแก้ไขจริง: ปรับ items/ยอด/สต็อก + ประวัติ + แจ้งเตือน
+function applyOrderItemEdit(o,removedIdx,added,reason,note){
+  if((o.itemEdits||[]).length)throw new Error(_lang==='lo'?'ອໍເດີນີ້ຖືກແກ້ໄຂແລ້ວ (ແກ້ໄຂໄດ້ຄັ້ງດຽວ)':'This order was already edited (one edit only)');
+  const calc=computeOrderEdit(o,removedIdx,added);
+  const afterComplete=(o.status==="ອໍເດີສຳເລັດແລ້ວ");
+  const withdrawn=isOrderWithdrawn(o);
+  const reasonLabel=reason==="swap"?"ເປັນການປ່ຽນສິນຄ້າໃໝ່":"ມີການຄືນສິນຄ້າ";
+  const by=(user&&user.name)||"Admin";
+  const nowMs=Date.now();
+  const rec={
+    id:nowMs,at:new Date().toLocaleString("lo-LA"),atMs:nowMs,by:by,reason:reason,reasonLabel:reasonLabel,note:note||"",
+    afterComplete:afterComplete,withdrawnAtEdit:withdrawn,
+    removed:calc.removedItems.map(function(i){return {n:i.n||"",c:i.c||"",s:i.s||"",q:Number(i.q)||0,p:Number(i.p)||0};}),
+    added:(added||[]).map(function(i){return {n:i.n||"",c:i.c||"",s:i.s||"",q:Number(i.q)||0,p:Number(i.p)||0};}),
+    removedValue:calc.removedValue,addedValue:calc.addedValue,
+    oldTotal:calc.oldTotal,newTotal:calc.newTotal,
+    editRefund:calc.editRefund,shopNetBefore:calc.shopNetBefore,shopNetAfter:calc.shopNetAfter
+  };
+  let logNote="✏️ ແກ້ໄຂລາຍການສິນຄ້າ"+(afterComplete?" (ຫຼັງອໍເດີສຳເລັດແລ້ວ)":"")+" — "+reasonLabel;
+  if(calc.removedItems.length)logNote+=" | ລຶບ: "+_describeOrderItems(calc.removedItems);
+  if((added||[]).length)logNote+=" | ເພີ່ມ: "+_describeOrderItems(added);
+  logNote+=" | ຍອດລວມ ₭"+fmt(calc.oldTotal)+" → ₭"+fmt(calc.newTotal);
+  if(calc.editRefund>0)logNote+=" | ຕ້ອງຄືນເງິນລູກຄ້າ ₭"+fmt(calc.editRefund);
+  if(note)logNote+=" | ໝາຍເຫດ: "+note;
+  if(withdrawn)logNote+=" | ⚠️ ຮ້ານຖອນເງິນຂອງອໍເດີນີ້ໄປແລ້ວ — ບໍ່ໄດ້ປັບຍອດທີ່ຖອນຍ້ອນຫຼັງອັດຕະໂນມັດ";
+  const updated=Object.assign({},calc.updated);
+  updated.itemEdits=(o.itemEdits||[]).concat([rec]);
+  updated.statusLog=(o.statusLog||[]).concat([{at:rec.at,from:"-",to:"-",by:by,note:logNote,itemEdit:true}]);
+  // ถ้าออเดอร์เคยคืนเงินแล้ว (จากรายการยกเลิก) แต่ยอดคืนรวมเพิ่มขึ้น → เก็บสลิปเดิมไว้ แล้วเปิดให้อัปโหลดสลิปสำหรับส่วนที่เพิ่ม
+  if(o.refundDone&&calc.refundDueAfter>calc.refundDueBefore){
+    const paid=(o.refundPaidAmt!=null)?Number(o.refundPaidAmt):calc.refundDueBefore;
+    if(o.refundSlip)updated.refundSlipHistory=(o.refundSlipHistory||[]).concat([{url:o.refundSlip,amount:paid,at:rec.at}]);
+    updated.refundPaidAmt=paid;updated.refundDone=false;updated.refundSlip=null;
+  }
+  // สต็อก: รายการที่ลบ → คืนเข้าคลัง / รายการที่เพิ่ม → หักออกจากคลัง
+  calc.removedItems.forEach(function(i){_adjustProdStockForOrderEdit(i,Number(i.q)||1);});
+  (added||[]).forEach(function(i){_adjustProdStockForOrderEdit(i,-(Number(i.q)||1));});
+  const idx=orders.findIndex(function(x){return String(x.id)===String(o.id);});
+  if(idx>=0)orders[idx]=updated;
+  saveToCloud("orders",updated.id,updated);
+  // แจ้งเตือนลูกค้าและร้านค้า
+  try{
+    const orderNo="#"+String(o.id).slice(-6);
+    if(o.uid)pushNotif(o.uid,null,"order_edit","✏️ ອໍເດີ "+orderNo+" ມີການແກ້ໄຂລາຍການສິນຄ້າ",reasonLabel,o.id);
+    if(o.shopId){const sh=shops.find(function(s2){return String(s2.id)===String(o.shopId);});if(sh&&sh.id)pushNotif(sh.id,null,"order_edit","✏️ Order "+orderNo+" ມີການແກ້ໄຂລາຍການສິນຄ້າ",reasonLabel,o.id);}
+  }catch(e){}
+  return updated;
+}
+// ดู/ดาวน์โหลดสลิปโอนคืนเงิน — เรียกจากหน้าลูกค้าและซูเปอร์แอดมินเท่านั้น (ร้านค้าไม่มีปุ่มนี้)
+function showRefundSlipViewer(url,label){
+  if(!url)return;
+  const m=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
+  m.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  m.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"🧾 "+(label||(_lang==="lo"?"ສລິບໂອນຄືນເງິນ":"Refund transfer slip"))));
+  m.appendChild(el("img",{src:url,style:{width:"100%",borderRadius:"10px"},alt:"slip"}));
+  m.appendChild(el("button",{style:{width:"100%",marginTop:"10px",padding:"11px",borderRadius:"10px",border:"none",background:"#1B6B3A",color:"#fff",fontWeight:"700",fontSize:".85rem",cursor:"pointer",fontFamily:"inherit"},
+    onclick:function(){
+      // พยายามดาวน์โหลดเป็นไฟล์ ถ้าไม่ได้ (เช่น ติด CORS ใน WebView) → เปิดรูปให้กดค้างบันทึก
+      fetch(url).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.blob();}).then(function(b){
+        const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="refund-slip-"+Date.now()+".jpg";document.body.appendChild(a);a.click();
+        setTimeout(function(){URL.revokeObjectURL(u);a.remove();},1500);
+      }).catch(function(){window.open(url,"_blank");toast(_lang==="lo"?"ກົດຄ້າງທີ່ຮູບເພື່ອບັນທຶກ":"Press and hold the image to save");});
+    }},"⬇️ "+(_lang==="lo"?"ດາວໂຫຼດສລິບ":"Download slip")));
+  showOv(m);
+}
+function buildRefundSlipButtons(o){
+  // ปุ่มดาวน์โหลดสลิปคืนเงิน (สลิปปัจจุบัน + สลิปรอบก่อนๆ) — ใช้เฉพาะหน้าลูกค้า/ซูเปอร์แอดมิน
+  const wrap=el("div",{style:{display:"flex",flexDirection:"column",gap:"6px",marginTop:"6px"}});
+  const btnStyle={width:"100%",padding:"8px",borderRadius:"8px",border:"1.5px solid #1565c0",background:"#fff",color:"#1565c0",fontWeight:"700",fontSize:".76rem",cursor:"pointer",fontFamily:"inherit"};
+  (o.refundSlipHistory||[]).forEach(function(h,idx){
+    if(h&&h.url)wrap.appendChild(el("button",{style:btnStyle,onclick:function(){showRefundSlipViewer(h.url,(_lang==="lo"?"ສລິບໂອນຄືນເງິນ ຄັ້ງທີ ":"Refund slip #")+(idx+1)+(h.amount?" — ₭"+fmt(h.amount):""));}},
+      "⬇️ "+(_lang==="lo"?"ສລິບຄືນເງິນ ຄັ້ງທີ ":"Refund slip #")+(idx+1)+(h.amount?" (₭"+fmt(h.amount)+")":"")));
+  });
+  if(o.refundSlip){
+    wrap.appendChild(el("button",{style:btnStyle,onclick:function(){showRefundSlipViewer(o.refundSlip);}},
+      "⬇️ "+(_lang==="lo"?"ດາວໂຫຼດສລິບໂອນຄືນເງິນ":"Download refund slip")));
+  }
+  return wrap.childNodes.length?wrap:null;
+}
 // ── ຕົ້ນທຶນລາຍການທີ່ບໍ່ຖືກຍົກເລີກ ໃຊ້ຄິດກຳໄລໃຫ້ສອດຄ່ອງກັບ getCancelledTotal ──
 function getNonCancelledCost(o){
   if(!o)return 0;
@@ -1940,7 +2086,8 @@ function printOrder(o){
   const fmt2=function(n){return Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});};
   const isShopPrinting=(user&&user.role==="shop")||(user&&user.role==="c"&&user.isShopViewer);
   const cancelledKeys=o.cancelledItems||[];
-  const refundAmt=getCancelledTotal(o);
+  const refundAmt=getCancelledTotal(o);          // ยอดรายการที่ยกเลิก (ใช้คิด "ยอดที่ชำระ")
+  const refundDueInv=getRefundDue(o);            // (v720) ยอดต้องคืนลูกค้าทั้งหมด รวมส่วนต่างจากการแก้ไขรายการ
   const _cT2=Number(o.total)||0;const _cD2=Number(o.discount)||0;
   const subtotalAmt=o.subtotal!=null?Number(o.subtotal):_cT2+_cD2;
   const discProdAmt=o.discProd!=null?o.discProd:((o.coupon&&!o.shipCoupon)?o.discount||0:0);
@@ -1985,10 +2132,10 @@ function printOrder(o){
     summaryHtml+="<div class='sumrow'><span>⚙️ ຄ່າຈັດສົ່ງ</span><span>"+((o.shipping||0)===0?"ຟຣີ":fmt2(o.shipping||0)+" kip")+"</span></div>";
     if(discShipAmt>0)summaryHtml+="<div class='sumrow' style='color:#27ae60'><span>🏷 ສ່ວນຫຼຸດຄ່າຈັດສົ່ງ"+(o.shipCoupon?" ("+o.shipCoupon+")":"")+"</span><span>-"+fmt2(discShipAmt)+" kip</span></div>";
   }
-  if(refundAmt>0){
+  if(refundAmt>0||refundDueInv>0){
     summaryHtml+="<div style='border-top:1.5px dashed #c00;margin:6px 0'></div>";
     summaryHtml+="<div class='sumrow' style='color:#1A2B5F;font-weight:700'><span>✅ ຍອດທີ່ສົ່ງໄດ້</span><span>"+fmt2((o.total||0)-refundAmt)+" kip</span></div>";
-    summaryHtml+="<div class='sumrow' style='color:#c00;font-weight:800'><span>💸 ຄືນເງິນລູກຄ້າ</span><span>"+fmt2(refundAmt)+" kip</span></div>";
+    if(refundDueInv>0)summaryHtml+="<div class='sumrow' style='color:#c00;font-weight:800'><span>💸 ຄືນເງິນລູກຄ້າ</span><span>"+fmt2(refundDueInv)+" kip</span></div>";
   }
   summaryHtml+="</div>";
   const html="<html><head><meta charset='UTF-8'><style>"+css+"</style></head><body>"+
@@ -2229,14 +2376,15 @@ function buildMyOrderCard(o,redrawFn){
     sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#27ae60",marginBottom:"4px"}},
       el("span",null,"🏷 ສ່ວນຫຼຸດ"+(couponLbl?" ("+couponLbl+")":"")),el("span",null,"-₭"+fmt(o.discount))));
   }
-  const refundAmt=getCancelledTotal(o);
-  if(refundAmt>0){
+  const cancelledAmt=getCancelledTotal(o);   // (v720) ยอดรายการที่ยกเลิก
+  const refundAmt=getRefundDue(o);           // (v720) ยอดที่ต้องคืนลูกค้าทั้งหมด (ยกเลิกรายการ + ส่วนต่างจากการแก้ไขรายการ)
+  if(cancelledAmt>0){
     sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#c00",marginBottom:"4px"}},
-      el("span",null,"❌ ລາຍການທີ່ຍົກເລີກ"),el("span",null,"-₭"+fmt(refundAmt))));
+      el("span",null,"❌ ລາຍການທີ່ຍົກເລີກ"),el("span",null,"-₭"+fmt(cancelledAmt))));
   }
   sumBox.appendChild(el("div",{style:{borderTop:"1px dashed #C4A8DC",margin:"6px 0"}}));
   sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontWeight:"800",fontSize:".86rem",color:"#1B6B3A"}},
-    el("span",null,"💳 ຍອດທີ່ຕ້ອງຊຳລະ"),el("span",null,"₭"+fmt((o.total||0)-refundAmt))));
+    el("span",null,"💳 ຍອດທີ່ຕ້ອງຊຳລະ"),el("span",null,"₭"+fmt((o.total||0)-cancelledAmt))));
   card.appendChild(sumBox);
   // ── ລະບົບຄືນເງິນ — ສະແດງສະເພາະຖ້າມີລາຍການຖືກຍົກເລີກ ແລະ ມີຍອດຄືນເງິນ ──
   if(refundAmt>0){
@@ -2252,8 +2400,11 @@ function buildMyOrderCard(o,redrawFn){
     } else {
       refundBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}},
         el("span",{style:{fontSize:".78rem",fontWeight:"700",color:"#c00"}},"💸 "+(_lang==="lo"?"ຍອດຄືນເງິນ":"Refund Amount")),
-        el("span",{style:{fontSize:".84rem",fontWeight:"800",color:"#c00"}},"₭"+fmt(refundAmt))
+        el("span",{style:{fontSize:".84rem",fontWeight:"800",color:"#c00"}},"₭"+fmt(refundAmt-(Number(o.refundPaidAmt)||0)))
       ));
+      if((Number(o.refundPaidAmt)||0)>0){
+        refundBox.appendChild(el("div",{style:{fontSize:".7rem",color:"#1B6B3A",marginBottom:"6px"}},"✅ "+(_lang==="lo"?"ໂອນຄືນແລ້ວກ່ອນໜ້າ ₭":"Already refunded ₭")+fmt(o.refundPaidAmt)+(_lang==="lo"?" (ຍອດຂ້າງເທິງ = ສ່ວນທີ່ຍັງຄ້າງ)":" (amount above = remaining)")));
+      }
       refundBox.appendChild(el("div",{style:{fontSize:".7rem",color:"#888",marginBottom:"8px"}},
         _lang==="lo"
           ?"ກະລຸນາອັບໂຫລດ QR Code ຂອງບັນຊີທີ່ມີຊື່ກົງກັບ Account ຂອງທ່ານ ເພື່ອໃຫ້ພວກເຮົາໂອນເງິນຄືນ"
@@ -2271,7 +2422,7 @@ function buildMyOrderCard(o,redrawFn){
             rState.uploading=false; rState.failed=false;
             o.refundQr=url;
             if(!o.statusLog)o.statusLog=[];
-            o.statusLog.push({at:new Date().toLocaleString("lo-LA"),from:"-",to:"-",by:o.name||"ລູກຄ້າ",note:"ອັບໂຫລດ QR Code ສຳລັບຄືນເງິນ"});
+            o.statusLog.push({at:new Date().toLocaleString("lo-LA"),from:"-",to:"-",by:o.name||"ລູກຄ້າ",note:"ອັບໂຫລດ QR Code ສຳລັບຄືນເງິນ",refundSys:true});
             saveToCloud("orders",o.id,o);
             render();
           }).catch(function(){
@@ -2307,6 +2458,9 @@ function buildMyOrderCard(o,redrawFn){
       }
       refundBox.appendChild(fiQ);
     }
+    // ปุ่มดาวน์โหลดสลิปโอนคืนเงิน — ลูกค้า (หน้านี้) และซูเปอร์แอดมินเท่านั้น
+    const _slipBtns=buildRefundSlipButtons(o);
+    if(_slipBtns)refundBox.appendChild(_slipBtns);
     card.appendChild(refundBox);
   }
   // ── ປຸ່ມດຽວ: ປະຫວັດ (read-only, ບໍ່ມີປຸ່ມແກ້ໄຂ/ປ່ຽນສະຖານະ/ສລິບ) ──
@@ -3446,7 +3600,7 @@ function exportMonthlyExcel(){
       o.coupon||"",
       o.total||0,
       actualTotal,
-      cancelledTotal||"",
+      Math.max(0,getRefundDue(o))||"",
       o.status||""
     ]);
   });
@@ -3701,7 +3855,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.9")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.3")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -6688,7 +6842,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.9")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.3")
   );
 
   // Icon style helper
@@ -13479,7 +13633,7 @@ function buildStaffDashboard(){
           if(o.discount>0)addR("🏷 ສ່ວນຫຼຸດ"+(o.coupon?" ("+o.coupon+")":""),"-₭"+fmt(o.discount),"","#27ae60");
           const dhr=document.createElement("div");dhr.style.cssText="border-top:1px dashed #C4A8DC;margin:6px 0;";totBox.appendChild(dhr);
           addR("💳 ຍອດໂອນເງິນ","₭"+fmt(o.total),true,"#1B6B3A");
-          if(o.cancelledItems&&o.cancelledItems.length>0){const ct=getCancelledTotal(o);if(ct>0){const dhr2=document.createElement("div");dhr2.style.cssText="border-top:1.5px dashed #c00;margin:6px 0;";totBox.appendChild(dhr2);addR("✅ ຍອດທີ່ສົ່ງໄດ້","₭"+fmt(o.total-ct),"","#1A2B5F");addR("💸 ຄືນເງິນລູກຄ້າ","₭"+fmt(ct),"","#c00");}}
+          if((o.cancelledItems&&o.cancelledItems.length>0)||(Number(o.editRefundAdj)||0)>0){const ct=getCancelledTotal(o);const rdue=getRefundDue(o);if(ct>0||rdue>0){const dhr2=document.createElement("div");dhr2.style.cssText="border-top:1.5px dashed #c00;margin:6px 0;";totBox.appendChild(dhr2);addR("✅ ຍອດທີ່ສົ່ງໄດ້","₭"+fmt(o.total-ct),"","#1A2B5F");if(rdue>0)addR("💸 ຄືນເງິນລູກຄ້າ","₭"+fmt(rdue),"","#c00");}}
           card.appendChild(totBox);
           // Action buttons
           const btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;";
@@ -15060,6 +15214,194 @@ function buildShopAddProductForm(){
     );
 }
 
+
+// (v720) หน้าต่างแก้ไขรายการสินค้าในออเดอร์ — ซูเปอร์แอดมินเท่านั้น (ปุ่มอยู่แถวปุ่มของการ์ดออเดอร์)
+function openEditOrderItemsModal(o){
+  if((o.itemEdits||[]).length){toast(_lang==='lo'?'ອໍເດີນີ້ຖືກແກ້ໄຂແລ້ວ — ແກ້ໄຂໄດ້ຄັ້ງດຽວ':'Already edited — one edit per order');return;}
+  const afterComplete=(o.status==="ອໍເດີສຳເລັດແລ້ວ");
+  const withdrawn=isOrderWithdrawn(o);
+  const removed={};          // index ของรายการเดิมที่ทำเครื่องหมาย "ไม่ถูกต้อง"
+  let added=[];              // รายการสินค้าใหม่ที่เพิ่ม
+  let reason="";             // "return" | "swap"
+  let noteVal="";
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"92vh",overflowY:"auto"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"✏️ "+(_lang==="lo"?"ແກ້ໄຂລາຍການສິນຄ້າ":"Edit items")+" Order #"+String(o.id).slice(-6)));
+  mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"8px"}},(o.name||"")+" · "+(o.shopName||"")));
+  if(afterComplete){
+    mod.appendChild(el("div",{style:{background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"8px",padding:"7px 10px",fontSize:".72rem",color:"#8B5E00",fontWeight:"600",marginBottom:"8px"}},
+      "ℹ️ "+(_lang==="lo"?"ອໍເດີນີ້ສຳເລັດແລ້ວ — ການແກ້ໄຂຈະຖືກບັນທຶກເປັນ 'ຫຼັງອໍເດີສຳເລັດ' ໃນປະຫວັດ":"This order is completed — the edit will be logged as 'after completion'")));
+  }
+  if(withdrawn){
+    mod.appendChild(el("div",{style:{background:"#FFEBEE",border:"1.5px solid #ef9a9a",borderRadius:"8px",padding:"7px 10px",fontSize:".72rem",color:"#c62828",fontWeight:"700",marginBottom:"8px"}},
+      "⚠️ "+(_lang==="lo"?"ຮ້ານຖອນເງິນຂອງອໍເດີນີ້ໄປແລ້ວ — ການແກ້ໄຂຈະບໍ່ປັບຍອດທີ່ຖອນໄປແລ້ວອັດຕະໂນມັດ ຕ້ອງປັບກັບຮ້ານເອງ":"The shop already withdrew this order — the edit will NOT adjust the withdrawn amount automatically")));
+  }
+  // ── ส่วนที่ 1: รายการเดิม ──
+  mod.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"700",color:"#1A2B5F",margin:"6px 0 4px"}},"1) "+(_lang==="lo"?"ລາຍການໃນບິນ — ກົດ 🚫 ທີ່ລາຍການທີ່ບໍ່ຖືກຕ້ອງ":"Items in the bill — tap 🚫 on incorrect items")));
+  const itemsDiv=el("div",null);
+  mod.appendChild(itemsDiv);
+  function refreshItems(){
+    itemsDiv.innerHTML="";
+    (o.items||[]).forEach(function(it,idx){
+      const isCancelled=(o.cancelledItems||[]).includes(_orderItemKey(it));
+      const marked=!!removed[idx];
+      const row=el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 9px",borderRadius:"8px",marginBottom:"5px",background:marked?"#FFEBEE":"#F0F7F2",border:"1.5px solid "+(marked?"#ef9a9a":"#E0EDE4"),opacity:isCancelled?".55":"1"}});
+      const txt=el("div",{style:{flex:"1",minWidth:0}});
+      txt.appendChild(el("div",{style:{fontSize:".76rem",fontWeight:"600",color:marked?"#c62828":"#1A1020",textDecoration:marked?"line-through":"none"}},
+        (it.n||"")+(it.c?" ("+it.c+(it.s?"/"+it.s:"")+")":"")+" ×"+it.q));
+      txt.appendChild(el("div",{style:{fontSize:".7rem",color:"#1B6B3A",fontWeight:"600"}},"₭"+fmt((Number(it.p)||0)*(Number(it.q)||0))+(isCancelled?" · "+(_lang==="lo"?"ຍົກເລີກແລ້ວ":"cancelled"):"")));
+      row.appendChild(txt);
+      if(!isCancelled){
+        row.appendChild(el("button",{style:{padding:"5px 9px",borderRadius:"8px",border:"1.5px solid "+(marked?"#27ae60":"#c00"),background:"#fff",color:marked?"#27ae60":"#c00",fontSize:".7rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",flexShrink:"0"},
+          onclick:function(){if(removed[idx])delete removed[idx];else removed[idx]=true;refreshItems();refreshPreview();}},
+          marked?("↩ "+(_lang==="lo"?"ຍົກເລີກການລຶບ":"Undo")):("🚫 "+(_lang==="lo"?"ບໍ່ຖືກຕ້ອງ":"Wrong"))));
+      }
+      itemsDiv.appendChild(row);
+    });
+  }
+  // ── ส่วนที่ 2: เพิ่มสินค้าใหม่ ──
+  mod.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"700",color:"#1A2B5F",margin:"10px 0 4px"}},"2) "+(_lang==="lo"?"ເພີ່ມສິນຄ້າໃໝ່ເຂົ້າບິນ (ຄົ້ນຫາຊື່ ຫຼື ລະຫັດສິນຄ້າ)":"Add new item (search by name or product code)")));
+  const search=document.createElement("input");search.className="inp";search.placeholder=_lang==="lo"?"ຊື່ສິນຄ້າ ຫຼື ລະຫັດ...":"Product name or code...";
+  search.style.marginBottom="6px";
+  mod.appendChild(search);
+  const resultsDiv=el("div",null);mod.appendChild(resultsDiv);
+  const pickerDiv=el("div",null);mod.appendChild(pickerDiv);
+  const addedDiv=el("div",null);mod.appendChild(addedDiv);
+  function shopProds(){
+    return (prods||[]).filter(function(x){
+      if(!x||x.hidden)return false;
+      if(o.shopId)return String(x.shopId)===String(o.shopId);
+      return !x.shopId;
+    });
+  }
+  function renderResults(){
+    resultsDiv.innerHTML="";
+    const q=(search.value||"").trim().toLowerCase();
+    if(!q)return;
+    const list=shopProds().filter(function(x){
+      if(String(x.id).toLowerCase().indexOf(q)!==-1)return true;
+      if(String(x.name||"").toLowerCase().indexOf(q)!==-1)return true;
+      if(x.skus&&Object.keys(x.skus).some(function(k){return String(x.skus[k]).toLowerCase().indexOf(q)!==-1;}))return true;
+      return false;
+    }).slice(0,8);
+    if(list.length===0){resultsDiv.appendChild(el("div",{style:{fontSize:".72rem",color:"#888",padding:"6px 2px"}},_lang==="lo"?"ບໍ່ພົບສິນຄ້າຂອງຮ້ານນີ້":"No product found in this shop"));return;}
+    list.forEach(function(x){
+      resultsDiv.appendChild(el("button",{style:{display:"flex",width:"100%",justifyContent:"space-between",alignItems:"center",gap:"8px",padding:"8px 10px",marginBottom:"4px",borderRadius:"8px",border:"1.5px solid #C8E6D4",background:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"left"},
+        onclick:function(){openPicker(x);}},
+        el("span",{style:{fontSize:".76rem",fontWeight:"600",color:"#1A2B5F"}},"#"+x.id+" "+(x.name||"")),
+        el("span",{style:{fontSize:".74rem",color:"#1B6B3A",fontWeight:"700"}},"₭"+fmt(x.price||0))));
+    });
+  }
+  search.oninput=renderResults;
+  function openPicker(x){
+    pickerDiv.innerHTML="";
+    resultsDiv.innerHTML="";
+    const colors=(x.colors&&x.colors.length)?x.colors:[""];
+    const sizes=(x.sizes&&x.sizes.length)?x.sizes:[""];
+    const promo=(typeof getPromoMap==="function"&&getPromoMap()[x.id])?getPromoMap()[x.id].price:null;
+    const box=el("div",{style:{background:"#F8FCF8",border:"1.5px solid #A8D5B0",borderRadius:"10px",padding:"10px",marginBottom:"8px"}});
+    box.appendChild(el("div",{style:{fontSize:".78rem",fontWeight:"800",color:"#1A2B5F",marginBottom:"6px"}},"#"+x.id+" "+(x.name||"")));
+    const row=el("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"6px"}});
+    const cSel=document.createElement("select");cSel.className="inp";cSel.style.cssText="flex:1;min-width:90px;margin:0;";
+    colors.forEach(function(c){const op=document.createElement("option");op.value=c;op.textContent=c||(_lang==="lo"?"(ບໍ່ມີສີ)":"(no color)");cSel.appendChild(op);});
+    const sSel=document.createElement("select");sSel.className="inp";sSel.style.cssText="flex:1;min-width:90px;margin:0;";
+    sizes.forEach(function(sz){const op=document.createElement("option");op.value=sz;op.textContent=sz||(_lang==="lo"?"(ບໍ່ມີໄຊສ໌)":"(no size)");sSel.appendChild(op);});
+    row.appendChild(cSel);row.appendChild(sSel);box.appendChild(row);
+    const row2=el("div",{style:{display:"flex",gap:"6px",alignItems:"center",marginBottom:"6px"}});
+    const qIn=document.createElement("input");qIn.className="inp";qIn.type="number";qIn.min="1";qIn.value="1";qIn.style.cssText="width:70px;margin:0;";
+    const pIn=document.createElement("input");pIn.className="inp";pIn.type="number";pIn.min="0";pIn.value=String(promo!=null?promo:(x.price||0));pIn.style.cssText="flex:1;margin:0;";
+    row2.appendChild(el("span",{style:{fontSize:".7rem",color:"#666"}},_lang==="lo"?"ຈຳນວນ":"Qty"));row2.appendChild(qIn);
+    row2.appendChild(el("span",{style:{fontSize:".7rem",color:"#666"}},_lang==="lo"?"ລາຄາ/ຊິ້ນ ₭":"Price ₭"));row2.appendChild(pIn);
+    box.appendChild(row2);
+    const stockLbl=el("div",{style:{fontSize:".68rem",color:"#888",marginBottom:"6px"}},"");
+    function updStock(){const k=(cSel.value||"")+"|"+(sSel.value||"");stockLbl.textContent=(_lang==="lo"?"ສະຕ໊ອກ: ":"Stock: ")+((x.stock&&x.stock[k]!=null)?x.stock[k]:0);}
+    cSel.onchange=updStock;sSel.onchange=updStock;updStock();
+    box.appendChild(stockLbl);
+    const btns=el("div",{style:{display:"flex",gap:"6px"}});
+    btns.appendChild(el("button",{style:{flex:"1",padding:"8px",borderRadius:"8px",border:"1.5px solid #ddd",background:"#fff",cursor:"pointer",fontFamily:"inherit",fontSize:".76rem"},onclick:function(){pickerDiv.innerHTML="";}},_lang==="lo"?"ຍົກເລີກ":"Cancel"));
+    btns.appendChild(el("button",{style:{flex:"2",padding:"8px",borderRadius:"8px",border:"none",background:"#1B6B3A",color:"#fff",fontWeight:"700",cursor:"pointer",fontFamily:"inherit",fontSize:".78rem"},onclick:function(){
+      const q=Math.floor(Number(qIn.value));const price=Number(pIn.value);
+      if(!(q>=1)){toast(_lang==="lo"?"ກະລຸນາໃສ່ຈຳນວນ":"Enter quantity");return;}
+      if(!(price>=0)||isNaN(price)){toast(_lang==="lo"?"ກະລຸນາໃສ່ລາຄາ":"Enter price");return;}
+      const newItem={n:x.name||"",pid:x.id,c:cSel.value||"",s:sSel.value||"",q:q,p:price,cost:Number(x.cost)||0,preorder:false,shopId:x.shopId||null,shopName:o.shopName||"",added:true};
+      const key=_orderItemKey(newItem);
+      const clash=(o.items||[]).some(function(it,idx){return !removed[idx]&&_orderItemKey(it)===key;})||added.some(function(a){return _orderItemKey(a)===key;});
+      if(clash){toast(_lang==="lo"?"ມີລາຍການນີ້ໃນບິນແລ້ວ — ເລືອກສີ/ໄຊສ໌ອື່ນ ຫຼື ລຶບລາຍການເດີມກ່ອນ":"This item is already in the bill — pick another color/size or remove the old one first");return;}
+      const k=(newItem.c||"")+"|"+(newItem.s||"");const avail=(x.stock&&x.stock[k]!=null)?Number(x.stock[k]):0;
+      if(avail<q)toast("⚠️ "+(_lang==="lo"?"ສະຕ໊ອກບໍ່ພໍ (ມີ "+avail+") — ຍັງເພີ່ມໄດ້ ແຕ່ສະຕ໊ອກຈະເປັນ 0":"Low stock ("+avail+") — added anyway, stock will be set to 0"));
+      added.push(newItem);pickerDiv.innerHTML="";search.value="";refreshAdded();refreshPreview();
+    }},"➕ "+(_lang==="lo"?"ເພີ່ມເຂົ້າບິນ":"Add to bill")));
+    box.appendChild(btns);
+    pickerDiv.appendChild(box);
+  }
+  function refreshAdded(){
+    addedDiv.innerHTML="";
+    if(!added.length)return;
+    addedDiv.appendChild(el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#1B6B3A",margin:"4px 0"}},"➕ "+(_lang==="lo"?"ສິນຄ້າທີ່ຈະເພີ່ມ":"Items to add")));
+    added.forEach(function(a,idx){
+      addedDiv.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 9px",borderRadius:"8px",marginBottom:"5px",background:"#E8F5EE",border:"1.5px solid #A8D5B0"}},
+        el("div",{style:{flex:"1",minWidth:0,fontSize:".76rem",fontWeight:"600",color:"#1A1020"}},(a.n||"")+(a.c?" ("+a.c+(a.s?"/"+a.s:"")+")":"")+" ×"+a.q+" · ₭"+fmt(a.p*a.q)),
+        el("button",{style:{padding:"4px 9px",borderRadius:"8px",border:"1.5px solid #c00",background:"#fff",color:"#c00",fontSize:".7rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){added.splice(idx,1);refreshAdded();refreshPreview();}},"✕")));
+    });
+  }
+  // ── ส่วนที่ 3: เหตุผล ──
+  mod.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"700",color:"#1A2B5F",margin:"10px 0 4px"}},"3) "+(_lang==="lo"?"ເຫດຜົນການແກ້ໄຂ *":"Reason for the edit *")));
+  const reasonRow=el("div",{style:{display:"flex",gap:"6px",marginBottom:"6px"}});
+  mod.appendChild(reasonRow);
+  function refreshReason(){
+    reasonRow.innerHTML="";
+    [["return","↩️ "+(_lang==="lo"?"ມີການຄືນສິນຄ້າ":"Item returned")],["swap","🔄 "+(_lang==="lo"?"ປ່ຽນເປັນສິນຄ້າໃໝ່":"Swapped for new item")]].forEach(function(r){
+      const on=reason===r[0];
+      reasonRow.appendChild(el("button",{style:{flex:"1",padding:"9px 6px",borderRadius:"9px",border:"2px solid "+(on?"#1B6B3A":"#ddd"),background:on?"#1B6B3A":"#fff",color:on?"#fff":"#444",fontWeight:"700",fontSize:".76rem",cursor:"pointer",fontFamily:"inherit"},
+        onclick:function(){reason=r[0];refreshReason();refreshPreview();}},r[1]));
+    });
+  }
+  const noteIn=document.createElement("textarea");noteIn.className="inp";noteIn.rows=2;noteIn.placeholder=_lang==="lo"?"ໝາຍເຫດ (ບໍ່ບັງຄັບ)":"Note (optional)";noteIn.style.resize="none";
+  noteIn.oninput=function(){noteVal=this.value;};
+  mod.appendChild(noteIn);
+  // ── พรีวิวผล ──
+  const previewDiv=el("div",{style:{background:"#F5F0FA",border:"1.5px solid #C4A8DC",borderRadius:"10px",padding:"9px 11px",margin:"8px 0",fontSize:".74rem",color:"#1A2B5F"}});
+  mod.appendChild(previewDiv);
+  function refreshPreview(){
+    previewDiv.innerHTML="";
+    const idxs=Object.keys(removed).map(Number);
+    if(!idxs.length&&!added.length){previewDiv.appendChild(el("div",{style:{color:"#888"}},_lang==="lo"?"ຍັງບໍ່ມີການປ່ຽນແປງ":"No changes yet"));return;}
+    const c=computeOrderEdit(o,idxs,added);
+    const line=function(a,b,col){previewDiv.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",gap:"8px",marginBottom:"3px",color:col||"#1A2B5F"}},el("span",null,a),el("span",{style:{fontWeight:"700"}},b)));};
+    line(_lang==="lo"?"ຍອດລວມບິນ":"Bill total","₭"+fmt(c.oldTotal)+" → ₭"+fmt(c.newTotal));
+    line(_lang==="lo"?"ຍອດທີ່ຮ້ານໄດ້ຮັບ":"Shop receives","₭"+fmt(c.shopNetBefore)+" → ₭"+fmt(c.shopNetAfter),"#1B6B3A");
+    if(c.editRefund>0)line(_lang==="lo"?"💸 ຕ້ອງຄືນເງິນລູກຄ້າ":"💸 Refund to customer","₭"+fmt(c.editRefund),"#c00");
+    else if(c.newTotal>c.oldTotal)line(_lang==="lo"?"ຍອດບິນເພີ່ມຂຶ້ນ":"Bill increased","₭"+fmt(c.newTotal-c.oldTotal),"#e65100");
+  }
+  // ── ปุ่มยืนยัน ──
+  const saveBtn=el("button",{style:{width:"100%",padding:"12px",borderRadius:"10px",border:"none",background:"#5D2D7A",color:"#fff",fontWeight:"800",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit"}},
+    "💾 "+(_lang==="lo"?"ບັນທຶກການແກ້ໄຂ":"Save changes"));
+  saveBtn.onclick=function(){
+    const idxs=Object.keys(removed).map(Number);
+    if(!idxs.length&&!added.length){toast(_lang==="lo"?"ຍັງບໍ່ມີການປ່ຽນແປງ":"No changes");return;}
+    if(!reason){toast(_lang==="lo"?"ກະລຸນາເລືອກເຫດຜົນການແກ້ໄຂ":"Please choose a reason");return;}
+    if(reason==="return"&&!idxs.length){toast(_lang==="lo"?"ກະລຸນາເລືອກລາຍການທີ່ຄືນ (🚫)":"Select the returned item(s) (🚫)");return;}
+    if(reason==="swap"&&(!idxs.length||!added.length)){toast(_lang==="lo"?"ການປ່ຽນສິນຄ້າ ຕ້ອງມີທັງລາຍການທີ່ລຶບ ແລະ ລາຍການໃໝ່":"A swap needs both a removed item and a new item");return;}
+    const remainingCount=(o.items||[]).length-idxs.length+added.length;
+    if(remainingCount<=0){toast(_lang==="lo"?"ບິນຕ້ອງມີຢ່າງໜ້ອຍ 1 ລາຍການ (ຖ້າຍົກເລີກທັງໝົດ ໃຫ້ປ່ຽນສະຖານະເປັນຍົກເລີກ)":"The bill must keep at least 1 item (to cancel everything, set the order to cancelled)");return;}
+    if(withdrawn&&!window.confirm(_lang==="lo"?"ຮ້ານຖອນເງິນອໍເດີນີ້ໄປແລ້ວ ການແກ້ໄຂຈະບໍ່ປັບຍອດທີ່ຖອນຍ້ອນຫຼັງ. ຢືນຢັນບັນທຶກ?":"The shop already withdrew this order. The edit will not adjust the withdrawn amount. Save anyway?"))return;
+    saveBtn.disabled=true;
+    try{
+      applyOrderItemEdit(o,idxs,added,reason,(noteVal||"").trim());
+      closeOv();
+      toast("✅ "+(_lang==="lo"?"ບັນທຶກການແກ້ໄຂແລ້ວ":"Edit saved"));
+      render();
+    }catch(err){
+      saveBtn.disabled=false;
+      console.error("applyOrderItemEdit failed:",err);
+      toast("❌ "+(err&&err.message?err.message:String(err)));
+    }
+  };
+  mod.appendChild(saveBtn);
+  refreshItems();refreshReason();refreshPreview();
+  showOv(mod,null);
+}
+
 // ── ส่วนออเดอร์ — ใช้ร่วมกันทั้งแท็บแอดมินร้านค้า และปุ่ม "คำสั่งซื้อ" บนหน้าโปรไฟล์ร้านค้า ──
 // ຫມາຍເຫດ: ໂໝດຮ້ານຄ້າຜ່ານຊ່ອງລູກຄ້າ (isShopViewer) ຕ້ອງນັບເປັນ isShop ເພື່ອໃຫ້ logic ການກັ່ນຕອງ/ສະແດງຜົນຖືກຕ້ອງ
 function buildShopOrdersSection(){
@@ -15213,7 +15555,7 @@ function buildShopOrdersSection(){
                 toast("⚠️ "+(_lang==="lo"?"ໂຫຼດສລິບບໍ່ສຳເລັດ":"Failed to load slip"));
               });
             }},"💳 ສລິບ"):null;
-            return el("div",{className:"order-row-item","data-oid":String(o.id).slice(-6),"data-phone":(o.phone||""),"data-name":(o.name||"").toLowerCase(),style:{background:C,borderRadius:"10px",padding:"9px 11px",marginBottom:"7px"}},
+            return el("div",{className:"order-row-item","data-oid":String(o.id).slice(-6),"data-phone":(isShop?"":(o.phone||"")),"data-name":(isShop?"":(o.name||"").toLowerCase()),style:{background:C,borderRadius:"10px",padding:"9px 11px",marginBottom:"7px"}},
               el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px",flexWrap:"wrap",gap:"4px"}},
                 el("div",null,
                   el("b",{style:{fontSize:"1.05rem",fontWeight:"900",color:"#1A2B5F"}},"#"+String(o.id).slice(-6)+(isShop?"":(" — "+o.name))),
@@ -15390,30 +15732,33 @@ function buildShopOrdersSection(){
                   }
                   if(cost>0)rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".7rem",color:profit>=0?"#1a7a3a":"#c00",marginTop:"4px"}},
                     el("span",null,"📊 ກຳໄລ"),el("span",{style:{fontWeight:"600"}},"₭"+fmt(profit))));
-                  if(isSuperAdmin&&o.cancelledItems&&o.cancelledItems.length>0){
+                  if(isSuperAdmin&&((o.cancelledItems&&o.cancelledItems.length>0)||(Number(o.editRefundAdj)||0)>0)){
                     const cancelledTotal=getCancelledTotal(o);
+                    const refundDueP=getRefundDue(o);
                     const actualTotal=o.total-cancelledTotal;
                     rows.push(el("div",{style:{borderTop:"1.5px dashed #c00",margin:"6px 0"}}));
                     rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".75rem",color:"#1A2B5F",marginBottom:"3px"}},
                       el("span",null,"✅ ຍອດທີ່ສົ່ງໄດ້"),el("span",{style:{fontWeight:"700"}},"₭"+fmt(actualTotal))));
                     rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".82rem",color:"#c00",fontWeight:"800"}},
-                      el("span",null,"💸 ຄືນເງິນລູກຄ້າ"),el("span",null,"₭"+fmt(cancelledTotal))));
+                      el("span",null,"💸 ຄືນເງິນລູກຄ້າ"),el("span",null,"₭"+fmt(Math.max(0,refundDueP)))));
                   }
                   return rows;
                 })()
               ),
               // ── ລະບົບຄືນເງິນ ສຳລັບ Superadmin/Staff — ເບິ່ງ QR ລູກຄ້າ + ອັບໂຫລດສລິບຄືນເງິນ (ບໍ່ປ່ຽນ o.status ເລີຍ) ──
               (isSuperAdmin||isStaff)?(function(){
-                const refundAmt2=getCancelledTotal(o);
+                const refundAmt2=getRefundDue(o);
                 if(refundAmt2<=0)return null;
+                const _paidBefore=(!o.refundDone)?(Number(o.refundPaidAmt)||0):0;
                 if(!window._refundSlipUploadState)window._refundSlipUploadState={};
                 if(!window._refundSlipUploadState[o.id])window._refundSlipUploadState[o.id]={uploading:false,failed:false};
                 const sState=window._refundSlipUploadState[o.id];
                 const box=el("div",{style:{background:"#FFF5F5",border:"1.5px solid #ffcdd2",borderRadius:"10px",padding:"10px 12px",marginTop:"8px"}});
                 box.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}},
                   el("span",{style:{fontSize:".78rem",fontWeight:"700",color:o.refundDone?"#1B6B3A":"#c00"}},(o.refundDone?"✅ ":"💸 ")+"ຄືນເງິນ"+(o.refundDone?"ແລ້ວ":"")),
-                  el("span",{style:{fontSize:".84rem",fontWeight:"800",color:o.refundDone?"#1B6B3A":"#c00"}},"₭"+fmt(refundAmt2))
+                  el("span",{style:{fontSize:".84rem",fontWeight:"800",color:o.refundDone?"#1B6B3A":"#c00"}},"₭"+fmt(o.refundDone?refundAmt2:Math.max(0,refundAmt2-_paidBefore)))
                 ));
+                if(_paidBefore>0)box.appendChild(el("div",{style:{fontSize:".7rem",color:"#1B6B3A",marginBottom:"6px"}},"✅ ໂອນຄືນແລ້ວກ່ອນໜ້າ ₭"+fmt(_paidBefore)+" (ຍອດຂ້າງເທິງ = ສ່ວນທີ່ຍັງຄ້າງໂອນ)"));
                 // ປຸ່ມເບິ່ງ QR ລູກຄ້າ (ສະແດງສະເພາະຖ້າມີ)
                 if(o.refundQr){
                   box.appendChild(el("button",{style:{width:"100%",padding:"7px",borderRadius:"8px",border:"1.5px solid #1565c0",background:"#fff",color:"#1565c0",fontWeight:"700",fontSize:".74rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"6px"},onclick:function(){
@@ -15435,11 +15780,11 @@ function buildShopOrdersSection(){
                     const b64=ev.target.result;
                     sState.uploading=true; sState.failed=false;
                     o.refundSlip=b64; render();
-                    uploadFile(b64,"laoh/refundSlips/"+o.id+".jpg","image/jpeg").then(function(url){
+                    uploadFile(b64,"laoh/refundSlips/"+o.id+"_"+Date.now()+".jpg","image/jpeg").then(function(url){
                       sState.uploading=false; sState.failed=false;
-                      o.refundSlip=url; o.refundDone=true;
+                      o.refundSlip=url; o.refundDone=true; o.refundPaidAmt=refundAmt2;
                       if(!o.statusLog)o.statusLog=[];
-                      o.statusLog.push({at:new Date().toLocaleString("lo-LA"),from:"-",to:"-",by:(user&&user.name)||"Admin",note:"ອັບໂຫລດສລິບຄືນເງິນ — ₭"+fmt(refundAmt2)});
+                      o.statusLog.push({at:new Date().toLocaleString("lo-LA"),from:"-",to:"-",by:(user&&user.name)||"Admin",note:"ອັບໂຫລດສລິບຄືນເງິນ — ₭"+fmt(refundAmt2),refundSys:true});
                       saveToCloud("orders",o.id,o);
                       render();
                     }).catch(function(){
@@ -15465,12 +15810,20 @@ function buildShopOrdersSection(){
                 } else {
                   box.appendChild(el("button",{style:{width:"100%",padding:"9px",borderRadius:"10px",border:"2px solid #c00",background:"#fff",color:"#c00",fontWeight:"700",fontSize:".78rem",cursor:"pointer",fontFamily:"inherit"},onclick:function(){fiS.click();}},"🖼 ອັບໂຫລດສລິບໂອນເງິນຄືນ"));
                 }
+                const _slipBtnsA=buildRefundSlipButtons(o);
+                if(_slipBtnsA)box.appendChild(_slipBtnsA);
                 box.appendChild(fiS);
                 return box;
               })():null,
               el("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginTop:"6px"}},
               (isSuperAdmin||isShop)?el("button",{style:{background:"none",border:"1.5px solid #5D2D7A",color:"#5D2D7A",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){
-                const logs=o.statusLog||[];
+                // (v723) ร้านค้าไม่เห็นบรรทัดอัปโหลด QR / สลิปคืนเงิน (เห็นยอดคืนเงินจากบรรทัดแก้ไขรายการและรายการยกเลิกตามเดิม)
+                const logs=(o.statusLog||[]).filter(function(l){
+                  if(!isShop)return true;
+                  if(l&&l.refundSys)return false;
+                  const nt=(l&&l.note)||"";
+                  return nt.indexOf("ອັບໂຫລດ QR Code ສຳລັບຄືນເງິນ")!==0&&nt.indexOf("ອັບໂຫລດສລິບຄືນເງິນ")!==0;
+                });
                 const modal=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();}});
                 modal.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
                 modal.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"📋 ປະຫວັດ Order #"+String(o.id).slice(-6)));
@@ -15489,6 +15842,8 @@ function buildShopOrdersSection(){
                 modal.appendChild(el("div",{style:{borderTop:"1px solid #eee",marginTop:"10px",paddingTop:"8px",fontSize:".72rem",color:"#888"}},"ສ້າງ: "+(o.at||"")));
                 showOv(modal);
               }},"📋 ປະຫວັດ"):null,
+              // (v720) ปุ่มแก้ไขรายการสินค้า — ซูเปอร์แอดมินเท่านั้น (ใช้ได้ทุกสถานะ ยกเว้นยกเลิก รวมถึงออเดอร์ที่สำเร็จแล้ว)
+              (isSuperAdmin&&o.status!=="ຍົກເລີກ"&&!(o.itemEdits&&o.itemEdits.length))?el("button",{style:{background:"none",border:"1.5px solid #D84315",color:"#D84315",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},onclick:function(){openEditOrderItemsModal(o);}},"✏️ "+(_lang==="lo"?"ແກ້ໄຂລາຍການ":"Edit items")):null,
               el("button",{style:{background:"none",border:"1.5px solid #1B6B3A",color:"#1B6B3A",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){printOrder(o);}},"🖨 ພິມໃບບິນ"),
               (isShop||isSuperAdmin||isStaff)?el("button",{style:{background:"none",border:"1.5px solid #FF8C00",color:"#FF8C00",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){printDeliveryNote(o);}},"🖨 ໃບສົ່ງສິນຄ້າ"):null,
               (isShop||isSuperAdmin||isStaff)?el("button",{style:{background:"none",border:"1.5px solid #6C5CE7",color:"#6C5CE7",padding:"5px 11px",borderRadius:"8px",fontSize:".72rem",fontWeight:"600",cursor:"pointer",fontFamily:"inherit"},onclick:function(){shareDeliveryNotePdf(o);}},"📤 ແຊ PDF ໃຫ້ Printer"):null,

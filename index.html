@@ -22,11 +22,13 @@ if(/Android/i.test(navigator.userAgent)){
 }
 </script>
 <title>LaoH | ລາວເຮັດ</title>
+<link rel="preconnect" href="https://firebasestorage.googleapis.com">
+<link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v716 -->
+<!-- LaoH Marketplace v719 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -827,7 +829,7 @@ function _updateSaveIndicator(){
 function _incSave(){_pendingSaves++;_updateSaveIndicator();}
 function _decSave(){_pendingSaves=Math.max(0,_pendingSaves-1);_updateSaveIndicator();}
 
-function saveToCloud(col,id,data){
+function saveToCloud(col,id,data,opts){
   if(!db)return Promise.resolve();
   try{
     let d=data;
@@ -845,7 +847,10 @@ function saveToCloud(col,id,data){
         // ยังคง return error object เหมือนเดิม (ไม่เปลี่ยนเป็น throw) เพื่อไม่ให้จุดที่เช็ค
         // "result instanceof Error" อยู่แล้ว (เช่น สมัครสมาชิก, ยื่นคำขอเปิดร้าน) พังจากการเปลี่ยนพฤติกรรม ──
         console.error("saveToCloud failed ["+col+"/"+id+"]:",e);
-        toast("⚠️ "+(_lang==="lo"?"ບັນທຶກຂໍ້ມູນລົ້ມເຫຼວ ("+col+"): ":"Failed to save ("+col+"): ")+((e&&e.message)?e.message:String(e)));
+        // (v717) opts.silent = การบันทึกเบื้องหลังที่ผู้ใช้ไม่ได้กดเอง (เช่น ระบบตรวจ/ยกเลิกออเดอร์ตัวอย่างหมดอายุตอนเปิดแอป) — ไม่ต้อง toast รบกวนผู้ใช้ แค่ log ใน console
+        if(!(opts&&opts.silent)){
+          toast("⚠️ "+(_lang==="lo"?"ບັນທຶກຂໍ້ມູນລົ້ມເຫຼວ ("+col+"): ":"Failed to save ("+col+"): ")+((e&&e.message)?e.message:String(e)));
+        }
         return e;
       });
   }catch(e){return Promise.resolve();}
@@ -3696,7 +3701,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.1.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4915,26 +4920,42 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
   // จัดกลุ่มตามเจ้าของ (uid สำหรับรีวิว เพราะคือตัวคนเขียนจริง ไม่ใช่ร้านของสินค้าที่ถูกรีวิว,
   // shopId สำหรับโพสต์ร้าน/หนังสือเสียง/live) เรียงภายในกลุ่มตามลำดับเดิม (ล่าสุดก่อนอยู่แล้วจากการ merge)
   // แล้วหยิบทีละ 2 จากแต่ละกลุ่มสลับกันไปเรื่อยๆ จนกว่าจะหมด — ไม่แตะ logic การรวม/กรองเดิมเลย ──
-  filteredFeedItems=(function(items,chunkSize){
-    const groups={};const order=[];
-    items.forEach(function(fi){
-      const key=fi.type==="review"?("u_"+(fi.data&&fi.data.uid)):("s_"+(fi.data&&fi.data.shopId));
-      if(!groups[key]){groups[key]=[];order.push(key);}
-      groups[key].push(fi);
-    });
-    const result=[];let anyLeft=true;
-    while(anyLeft){
-      anyLeft=false;
-      order.forEach(function(key){
-        const g=groups[key];
-        if(g.length>0){
-          anyLeft=true;
-          for(let i=0;i<chunkSize && g.length>0;i++){result.push(g.shift());}
-        }
-      });
+  // (v718) เปลี่ยนจาก round-robin ตายตัวเป็น "เรียงตามเวลา (ใหม่สุดก่อน) แต่ไม่ให้ Account เดียวติดกันเกิน 3 โพสต์":
+  // - เดินตามลำดับเวลาเดิม ถ้า Account เดิมโผล่ครบ 3 โพสต์ติดกัน → พักโพสต์ถัดไปของ Account นั้น
+  //   แล้วแทรกโพสต์ล่าสุดของ Account อื่นสูงสุด 3 Account (ละ 1 โพสต์) จากนั้นกลับมาเรียงตามเวลาต่อ (ไม่ต้องรอให้ Account อื่นหมดก่อน)
+  // - ถ้าไม่มี Account อื่นเหลือเลย ก็แสดง Account เดิมต่อไปตามเวลา
+  filteredFeedItems=(function(items,maxRun,otherCount){
+    const keyOf=function(fi){return fi.type==="review"?("u_"+(fi.data&&fi.data.uid)):("s_"+(fi.data&&fi.data.shopId));};
+    const remaining=items.slice();
+    const result=[];
+    let runKey=null,runCount=0;
+    while(remaining.length>0){
+      const nextKey=keyOf(remaining[0]);
+      if(runCount<maxRun||nextKey!==runKey){
+        result.push(remaining.shift());
+        if(nextKey===runKey){runCount++;}else{runKey=nextKey;runCount=1;}
+        continue;
+      }
+      // ครบ maxRun ติดกันแล้ว → แทรก Account อื่น (ละ 1 โพสต์ ล่าสุดของแต่ละคน) สูงสุด otherCount Account
+      const picked=[];const seen={};seen[runKey]=true;
+      for(let i=0;i<remaining.length&&picked.length<otherCount;i++){
+        const k=keyOf(remaining[i]);
+        if(seen[k])continue;
+        seen[k]=true;picked.push(i);
+      }
+      if(picked.length===0){
+        // ไม่มี Account อื่นเหลือ → ปล่อย Account เดิมต่อไปตามเวลา
+        result.push(remaining.shift());runCount++;
+        continue;
+      }
+      // เอาออกจาก remaining (จากท้ายไปหน้า กัน index เลื่อน) แล้วใส่ผลลัพธ์ตามลำดับเวลาเดิม
+      const taken=picked.map(function(i){return remaining[i];});
+      picked.slice().reverse().forEach(function(i){remaining.splice(i,1);});
+      taken.forEach(function(fi){result.push(fi);});
+      runKey=keyOf(taken[taken.length-1]);runCount=1;
     }
     return result;
-  })(filteredFeedItems,3); // (v714) เปลี่ยนจากทีละ 2 เป็นทีละ 3 ต่อ Account ก่อนสลับไป Account ถัดไป
+  })(filteredFeedItems,3,3);
   // ── (v686) กรองแล้วไม่พบผลลัพธ์เลย (ค้นหาไม่เจอ / ยังไม่ได้ติดตามใครเลย) แสดงข้อความแจ้งแทนหน้าว่างเปล่า ──
   if(filteredFeedItems.length===0){
     return el("div",{className:"feed-page"+((!user||!(user.role==="admin"||user.role==="shop"||user.role==="narrator"||user.role==="rider"||user.role==="staff")||view!=="admin")?" feed-page-bnav":"")},
@@ -5390,6 +5411,48 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       });
     },{root:scroll,rootMargin:"100% 0px 100% 0px",threshold:0});
     scroll.querySelectorAll(".feed-item").forEach(function(it){feedLoadObs.observe(it);});
+    // (v719) เร่งความเร็วโหลดวิดีโอใน Feed (เฉพาะฝั่งแอป ไม่ยุ่งกับไฟล์ที่อัปโหลด):
+    // 1) การ์ดแรกโหลดเต็มทันที ไม่ต้องรอ observer  2) พอวิดีโอที่ดูอยู่บัฟเฟอร์พอเล่นจนจบแล้ว (canplaythrough) ค่อยโหลดตัวถัดไปล่วงหน้าเต็มๆ
+    // (ไม่แย่งเน็ตกับตัวที่ดูอยู่ และข้ามถ้าผู้ใช้เปิดโหมดประหยัดข้อมูล/เน็ตช้า)  3) การ์ดที่เลื่อนไปไกลเกิน ~2.5 หน้าจอ ปล่อยการโหลดทิ้ง คืนเน็ต+หน่วยความจำ
+    try{
+      const _items=Array.from(scroll.querySelectorAll(".feed-item"));
+      const _firstVid=_items[0]&&_items[0].querySelector("video");
+      if(_firstVid&&_firstVid._ensureSrc)_firstVid._ensureSrc(true);
+      const _conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+      const _slowNet=!!(_conn&&(_conn.saveData||/(^|-)2g$|^3g$/.test(String(_conn.effectiveType||""))));
+      const _upgradeNext=function(item){
+        if(_slowNet)return;
+        const nx=item&&item.nextElementSibling;
+        const nv=nx&&nx.querySelector&&nx.querySelector("video");
+        if(nv&&nv._ensureSrc)nv._ensureSrc(true);
+      };
+      _items.forEach(function(it){
+        const v=it.querySelector("video");
+        if(!v)return;
+        v.addEventListener("canplaythrough",function(){
+          // ทำเฉพาะตัวที่กำลังเล่นอยู่ (ไม่ใช่ตัวที่โหลดเฟรมแรกไว้เฉยๆ)
+          if(!v.paused)_upgradeNext(it);
+        });
+        v.addEventListener("playing",function(){
+          if(v.readyState>=4)_upgradeNext(it);
+        });
+      });
+      const feedUnloadObs=new IntersectionObserver(function(entries){
+        entries.forEach(function(en){
+          if(en.isIntersecting)return;
+          const uv=en.target.querySelector("video");
+          if(!uv||!uv.getAttribute("src")||!uv._ensureSrc)return;
+          try{
+            uv.pause();
+            if(uv._setFeedVidPaused)uv._setFeedVidPaused();
+            uv.removeAttribute("src");
+            uv.preload="none";
+            uv.load(); // ปล่อยการดาวน์โหลดที่ค้างอยู่ — ภาพปก (poster) ยังแสดงอยู่ และจะโหลดใหม่เมื่อเลื่อนกลับมาใกล้
+          }catch(e){}
+        });
+      },{root:scroll,rootMargin:"250% 0px 250% 0px",threshold:0});
+      _items.forEach(function(it){feedUnloadObs.observe(it);});
+    }catch(e){console.warn("feed speed-up init failed:",e);}
     // ── ตัวช่วยสำรอง (เฉพาะหน้า Feed เท่านั้น ไม่กระทบระบบอื่น): การ์ดแรกที่เห็นทันทีตอนเข้าหน้า ยังไม่มีการเลื่อนจอเกิดขึ้น จึงเช็คและสั่งเล่นตรงๆ อีกชั้นหนึ่งเผื่อระบบตรวจจับด้านบนยังไม่ทันทำงาน ──
     setTimeout(function(){
       const items=Array.from(scroll.querySelectorAll(".feed-item"));
@@ -6625,7 +6688,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.1.9")
   );
 
   // Icon style helper
@@ -23163,7 +23226,7 @@ loadFromCloud().then(function(){
       if(o.isDemoOrder&&o.demoExpiresAt&&_now>=o.demoExpiresAt&&o.status!=="ຍົກເລີກ"){
         const updated=Object.assign({},o,{status:"ຍົກເລີກ"});
         orders[idx]=updated;
-        if(typeof saveToCloud==="function")saveToCloud("orders",updated.id,updated);
+        if(typeof saveToCloud==="function")saveToCloud("orders",updated.id,updated,{silent:true});
         _anyExpired=true;
       }
     });

@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v724 -->
+<!-- LaoH Marketplace v726 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -94,6 +94,9 @@ body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600
 .shop-bubble-name{font-size:.58rem;font-weight:700;color:#1A2B5F;text-align:center;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* Shop profile page */
 .shop-banner{height:140px;display:flex;align-items:flex-end;padding:16px;position:relative;overflow:hidden;}
+.coin-ico{display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE98A,#F5B800 60%,#C98A00);color:#7A4E00;font-weight:900;border:2px solid #FFD54F;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;font-family:'DM Sans',sans-serif;}
+.coin-spin{animation:coinSpin 2.2s linear infinite;}
+@keyframes coinSpin{0%{transform:rotateY(0deg);}100%{transform:rotateY(360deg);}}
 .shop-avatar{width:72px;height:72px;border-radius:50%;border:3px solid #fff;background:#F0F7F2;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,.2);}
 .shop-profile-info{flex:1;padding-left:12px;padding-bottom:2px;}
 
@@ -1052,7 +1055,7 @@ function getCancelledTotal(o){
 // ══════════════════════════════════════════════════════════════════
 function getRefundDue(o){
   if(!o)return 0;
-  return getCancelledTotal(o)+(Number(o.editRefundAdj)||0); // (v722) ยอดคืน = รายการยกเลิก + ส่วนต่างจากการแก้ไขรายการ (แก้ไขได้ครั้งเดียว) //(v721) คืนเงินคิดจากรายการยกเลิกเท่านั้น — การแก้ไขรายการไม่เกี่ยวกับระบบคืนเงิน (ปุ่มคืนเงินจากการแก้ไขจะเพิ่มภายหลัง)
+  return getCancelledCash(o)+(Number(o.editRefundAdj)||0); // (v726: ตัดส่วนเหรียญ) (v722) ยอดคืน = รายการยกเลิก + ส่วนต่างจากการแก้ไขรายการ (แก้ไขได้ครั้งเดียว) //(v721) คืนเงินคิดจากรายการยกเลิกเท่านั้น — การแก้ไขรายการไม่เกี่ยวกับระบบคืนเงิน (ปุ่มคืนเงินจากการแก้ไขจะเพิ่มภายหลัง)
 }
 function isOrderWithdrawn(o){
   if(!o)return false;
@@ -1078,7 +1081,8 @@ function computeOrderEdit(o,removedIdx,added){
   const newDiscProd=oldSub>0?Math.min(newSub,Math.round(oldDiscProd*newSub/oldSub)):0;
   const newDiscount=newDiscProd+shipDisc;
   const shipping=Number(o.shipping)||0;
-  const newTotal=Math.max(0,newSub+shipping-newDiscount);
+  const coinD=Number(o.coinDiscount)||0; // (v726) ส่วนลดเหรียญคงที่ ไม่ปรับตามสัดส่วนส่วนลดร้าน
+  const newTotal=Math.max(0,newSub+shipping-newDiscount-coinD);
   const newKeys={};newItems.forEach(function(i){newKeys[_orderItemKey(i)]=true;});
   const newCancelled=(o.cancelledItems||[]).filter(function(k){return !!newKeys[k];});
   const oNew=Object.assign({},o,{items:newItems,subtotal:newSub,discProd:newDiscProd,discount:newDiscount,total:newTotal,
@@ -2086,8 +2090,9 @@ function printOrder(o){
   const fmt2=function(n){return Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});};
   const isShopPrinting=(user&&user.role==="shop")||(user&&user.role==="c"&&user.isShopViewer);
   const cancelledKeys=o.cancelledItems||[];
-  const refundAmt=getCancelledTotal(o);          // ยอดรายการที่ยกเลิก (ใช้คิด "ยอดที่ชำระ")
-  const refundDueInv=getRefundDue(o);            // (v720) ยอดต้องคืนลูกค้าทั้งหมด รวมส่วนต่างจากการแก้ไขรายการ
+  const refundAmt=isShopPrinting?getCancelledTotal(o):getCancelledCash(o);          // ยอดรายการที่ยกเลิก (ใช้คิด "ยอดที่ชำระ")
+  const _coinD=Number(o.coinDiscount)||0;
+  const refundDueInv=isShopPrinting?(getCancelledTotal(o)+(Number(o.editRefundAdj)||0)):getRefundDue(o);            // (v720) ยอดต้องคืนลูกค้าทั้งหมด รวมส่วนต่างจากการแก้ไขรายการ
   const _cT2=Number(o.total)||0;const _cD2=Number(o.discount)||0;
   const subtotalAmt=o.subtotal!=null?Number(o.subtotal):_cT2+_cD2;
   const discProdAmt=o.discProd!=null?o.discProd:((o.coupon&&!o.shipCoupon)?o.discount||0:0);
@@ -2132,9 +2137,10 @@ function printOrder(o){
     summaryHtml+="<div class='sumrow'><span>⚙️ ຄ່າຈັດສົ່ງ</span><span>"+((o.shipping||0)===0?"ຟຣີ":fmt2(o.shipping||0)+" kip")+"</span></div>";
     if(discShipAmt>0)summaryHtml+="<div class='sumrow' style='color:#27ae60'><span>🏷 ສ່ວນຫຼຸດຄ່າຈັດສົ່ງ"+(o.shipCoupon?" ("+o.shipCoupon+")":"")+"</span><span>-"+fmt2(discShipAmt)+" kip</span></div>";
   }
+  if(!isShopPrinting&&_coinD>0)summaryHtml+="<div class='sumrow' style='color:#B8860B'><span>🪙 ສ່ວນຫຼຸດຈາກເຫຼຽນ (ລາວເຮັດຮັບຜິດຊອບ)</span><span>-"+fmt2(_coinD)+" kip</span></div>";
   if(refundAmt>0||refundDueInv>0){
     summaryHtml+="<div style='border-top:1.5px dashed #c00;margin:6px 0'></div>";
-    summaryHtml+="<div class='sumrow' style='color:#1A2B5F;font-weight:700'><span>✅ ຍອດທີ່ສົ່ງໄດ້</span><span>"+fmt2((o.total||0)-refundAmt)+" kip</span></div>";
+    summaryHtml+="<div class='sumrow' style='color:#1A2B5F;font-weight:700'><span>✅ ຍອດທີ່ສົ່ງໄດ້</span><span>"+fmt2((o.total||0)+(isShopPrinting?_coinD:0)-refundAmt)+" kip</span></div>";
     if(refundDueInv>0)summaryHtml+="<div class='sumrow' style='color:#c00;font-weight:800'><span>💸 ຄືນເງິນລູກຄ້າ</span><span>"+fmt2(refundDueInv)+" kip</span></div>";
   }
   summaryHtml+="</div>";
@@ -2156,7 +2162,7 @@ function printOrder(o){
     "<table><thead><tr><th>#</th><th>ສິນຄ້າ</th><th>ຮ້ານຄ້າ</th><th style='text-align:right'>ລາຄາ/ຊິ້ນ</th><th style='text-align:right'>ລວມ</th></tr></thead>"+
     "<tbody>"+rows+"</tbody></table>"+
     summaryHtml+
-    "<div class='total-box'><span>ຍອດທີ່ຊຳລະ</span><span style='font-size:1.1rem;font-weight:900'>"+fmt2((o.total||0)-refundAmt)+" kip</span></div>"+
+    "<div class='total-box'><span>ຍອດທີ່ຊຳລະ</span><span style='font-size:1.1rem;font-weight:900'>"+fmt2((o.total||0)+(isShopPrinting?_coinD:0)-refundAmt)+" kip</span></div>"+
     "<div class='footer'>LaoH &bull; "+new Date().toLocaleDateString("th-TH")+"</div>"+
     "<br><button class='no-print' onclick='window.print()' style='background:#5D2D7A;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem'>Print / Save PDF</button>"+
     " <button class='no-print' onclick='window.close()' style='background:none;color:#5D2D7A;border:1.5px solid #5D2D7A;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem'>✕ ປິດໜ້ານີ້</button>"+
@@ -2327,7 +2333,7 @@ function buildMyOrderCard(o,redrawFn){
   }});
   const hdrLeft=el("div",null);
   hdrLeft.appendChild(el("div",{style:{fontWeight:"700",fontSize:".82rem",color:"#1A2B5F"}},"#"+String(o.id).slice(-6)));
-  hdrLeft.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginTop:"2px"}},"🏪 "+(o.shopName||"")+" · "+(o.items||[]).length+" ລາຍການ · ₭"+fmt((o.total||0)-getCancelledTotal(o))));
+  hdrLeft.appendChild(el("div",{style:{fontSize:".68rem",color:"#6B8F75",marginTop:"2px"}},"🏪 "+(o.shopName||"")+" · "+(o.items||[]).length+" ລາຍການ · ₭"+fmt((o.total||0)-getCancelledCash(o))));
   hdrRow.appendChild(hdrLeft);
   const hdrRight=el("div",{style:{display:"flex",alignItems:"center",gap:"6px"}});
   hdrRight.appendChild(el("span",{style:{fontSize:".68rem",background:"#1B6B3A",color:"#fff",padding:"2px 8px",borderRadius:"8px",fontWeight:"700"}},o.status||"ລໍຖ້າ"));
@@ -2376,7 +2382,11 @@ function buildMyOrderCard(o,redrawFn){
     sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#27ae60",marginBottom:"4px"}},
       el("span",null,"🏷 ສ່ວນຫຼຸດ"+(couponLbl?" ("+couponLbl+")":"")),el("span",null,"-₭"+fmt(o.discount))));
   }
-  const cancelledAmt=getCancelledTotal(o);   // (v720) ยอดรายการที่ยกเลิก
+  if((Number(o.coinDiscount)||0)>0){
+    sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#B8860B",marginBottom:"4px"}},
+      el("span",null,"🪙 "+_ct("ໃຊ້ເຫຼຽນສະສົມ","ใช้เหรียญสะสม","Coins used")),el("span",null,"-₭"+fmt(o.coinDiscount))));
+  }
+  const cancelledAmt=getCancelledCash(o);   // (v720) ยอดรายการที่ยกเลิก
   const refundAmt=getRefundDue(o);           // (v720) ยอดที่ต้องคืนลูกค้าทั้งหมด (ยกเลิกรายการ + ส่วนต่างจากการแก้ไขรายการ)
   if(cancelledAmt>0){
     sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#c00",marginBottom:"4px"}},
@@ -3581,7 +3591,7 @@ function exportMonthlyExcel(){
     const items=(o.items||[]).map(function(i){return i.n+(i.c?"("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q+" @₭"+fmt(i.p||0);}).join(", ");
     const cancelled=(o.cancelledItems||[]);
     const cancelledNames=cancelled.length>0?(o.items||[]).filter(function(i){return cancelled.includes(i.n+(i.c||"")+(i.s||""));}).map(function(i){return i.n+(i.c?"("+i.c+(i.s?"/"+i.s:"")+")":" ")+"×"+i.q;}).join(", "):"";
-    const cancelledTotal=getCancelledTotal(o);
+    const cancelledTotal=getCancelledCash(o);
     const actualTotal=(o.total||0)-cancelledTotal;
     orderRows.push([
       "#"+String(o.id).slice(-6),
@@ -3855,7 +3865,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.6")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4481,7 +4491,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       // ── ไม่เล่นทันทีตอนสร้าง (วิดีโอที่ยังไม่เลื่อนมาเห็นจะเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) — ให้ IntersectionObserver ด้านล่างเป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
       vid._tryPlayFeedVid=tryPlayFeedVid;
       vid._setFeedVidPaused=function(){vidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
-      media.appendChild(vid);
+      media.appendChild(vid);attachViewCounter(vid,"review",rv.id); // (v725) นับวิว
       attachFeedBufferSpinner(vid,media);
     } else if(rv.mediaUrl){
       const img=document.createElement("img");
@@ -4559,7 +4569,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
           const mediaArea=el("div",{style:{flex:"1",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}});
           if(x.mediaType==="video"&&x.mediaUrl){
             const v2=document.createElement("video");v2.src=x.mediaUrl;v2.controls=true;v2.autoplay=true;v2.setAttribute("playsinline","");v2.setAttribute("webkit-playsinline","");v2.style.cssText="max-width:100%;max-height:100%;";
-            mediaArea.appendChild(v2);
+            mediaArea.appendChild(v2);attachViewCounter(v2,"review",x.id); // (v725) นับวิว
           } else if(x.mediaUrl){
             mediaArea.appendChild(el("img",{src:x.mediaUrl,style:{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}}));
           }
@@ -4618,8 +4628,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       pill.onclick=function(){
         // track view + บันทึกว่าเข้ามาจากรีวิวใคร
         window._lastReviewRef=rv.id;
-        // เพิ่ม views
-        if(!rv.views)rv.views=0; rv.views++;
+        // (v725) เลิกนับวิวจากการกดปุ่มสินค้า — วิวนับจากการดูวิดีโอจริงแล้ว (attachViewCounter)
         saveReview(rv); // update localStorage
         showProduct(p);
       };
@@ -4776,7 +4785,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
         // ── ไม่เล่นทันทีตอนสร้าง — ให้ IntersectionObserver ของ Feed (ตัวเดียวกับที่ใช้กับ buildReviewCard) เป็นคนสั่งเล่นตอนเลื่อนมาเห็นจริงๆ เท่านั้น ──
         vid._tryPlayFeedVid=tryPlayFeedVid;
         vid._setFeedVidPaused=function(){vidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
-        mediaWrap.appendChild(vid);
+        mediaWrap.appendChild(vid);attachViewCounter(vid,"post",post.id); // (v725) นับวิว
         attachFeedBufferSpinner(vid,mediaWrap);
       } else {
         const img=document.createElement("img");
@@ -5713,6 +5722,344 @@ function deleteShopPost(postId){
 (function(){try{const s=localStorage.getItem("laoh_shopPosts");if(s)window._shopPosts=JSON.parse(s);}catch(e){}})();
 
 // ── REVIEWS data ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// (v725) ตัวนับวิววิดีโอ (รีวิวลูกค้า + โพสต์ร้านค้า)
+// - นับ +1 เมื่อวิดีโอเล่นต่อเนื่องสะสมครบ 2 วินาทีขณะอยู่บนจอ (ดูไม่จบก็นับ / บัญชีเดิมดูซ้ำก็นับ)
+// - เลื่อนผ่านแล้วเลื่อนกลับมา = นับใหม่ (รีเซ็ตเมื่อวิดีโอออกจากจอ) · คลิปวนเล่นซ้ำเอง/หยุดแล้วเล่นต่อ ไม่นับเพิ่ม
+// - เก็บเป็นตัวนับแยกที่คอลเลกชัน "videoViews" (doc: review_<id> / post_<id>, ฟิลด์ n) ด้วย increment
+//   ไม่แก้เอกสาร reviews/shopPosts เดิม เพราะตัวฟัง onSnapshot ของสองคอลเลกชันนั้นสั่ง render() ทุกครั้งที่เอกสารเปลี่ยน
+//   (ถ้าเขียนวิวลงเอกสารเดิม Feed จะถูกวาดใหม่ทุกวิว) · วิวเดิมใน rv.views ยังอยู่ ยอดรวม = เดิม + ตัวนับใหม่
+// ══════════════════════════════════════════════════════════════════
+window._vvExtra=window._vvExtra||{};
+window._vvLastAt=window._vvLastAt||{};
+let _vvLoadPromise=null;
+function _vvKey(kind,id){return (kind==="post"?"post_":"review_")+id;}
+function _vvLoadAll(){
+  if(_vvLoadPromise)return _vvLoadPromise;
+  _vvLoadPromise=(db?db.collection("videoViews").get().then(function(snap){
+    snap.docs.forEach(function(d){
+      const n=Number((d.data()||{}).n)||0;
+      window._vvExtra[d.id]=Math.max(n,window._vvExtra[d.id]||0);
+    });
+    return true;
+  }).catch(function(){return false;}):Promise.resolve(false));
+  return _vvLoadPromise;
+}
+// ยอดวิวรวมของรีวิว = วิวเดิม + วิวนับใหม่ (โหลดตัวนับครั้งเดียวตอนเปิดหน้าสถิติ แล้ววาดใหม่ 1 ครั้งถ้าไม่มีป๊อบอัพเปิดอยู่)
+function _rvViews(rv){
+  if(!rv)return 0;
+  if(!_vvLoadPromise)_vvLoadAll().then(function(ok){if(ok&&!document.getElementById("ov")&&typeof render==="function"){try{render();}catch(e){}}});
+  return (Number(rv.views)||0)+(window._vvExtra[_vvKey("review",rv.id)]||0);
+}
+// ป้ายยอดวิวของโพสต์ร้านค้า (อัปเดตตัวเลขเองหลังโหลดตัวนับเสร็จ ไม่สั่ง render)
+function buildPostViewsBadge(post){
+  const span=document.createElement("span");
+  function upd(){span.textContent="👁 "+fmt((Number(post.views)||0)+(window._vvExtra[_vvKey("post",post.id)]||0));}
+  upd();
+  _vvLoadAll().then(upd);
+  return span;
+}
+function attachViewCounter(vid,kind,itemId){
+  try{
+    if(!vid||itemId==null||itemId===""||vid._vcOn)return;
+    vid._vcOn=true;
+    let acc=0,lastT=null,counted=false,visible=false;
+    function reset(){acc=0;lastT=null;counted=false;}
+    function fire(){
+      counted=true;
+      try{
+        if(!db||typeof firebase==="undefined"||!firebase.auth||!firebase.auth().currentUser)return; // ยังไม่ล็อกอิน: เขียนไม่ได้ตามกฎ Firestore
+        const k=_vvKey(kind,itemId),now=Date.now();
+        if(now-(window._vvLastAt[k]||0)<8000)return; // กันนับซ้ำจากการวาดหน้าจอใหม่ขณะดูวิดีโอเดิมอยู่
+        window._vvLastAt[k]=now;
+        window._vvExtra[k]=(window._vvExtra[k]||0)+1;
+        db.collection("videoViews").doc(k).set({n:firebase.firestore.FieldValue.increment(1),kind:kind,itemId:String(itemId),at:now},{merge:true}).catch(function(){});
+      }catch(e){}
+    }
+    vid.addEventListener("timeupdate",function(){
+      if(vid.paused||vid.seeking){lastT=null;return;}
+      const t=vid.currentTime;
+      if(lastT!=null){const d=t-lastT;if(d>0&&d<1.5)acc+=d;} // คลิปวนกลับต้นเรื่อง (d<0) ไม่นับ
+      lastT=t;
+      if(!counted&&visible&&acc>=2)fire();
+    });
+    vid.addEventListener("pause",function(){lastT=null;});
+    vid.addEventListener("seeked",function(){lastT=null;});
+    if("IntersectionObserver" in window){
+      new IntersectionObserver(function(es){
+        es.forEach(function(e){
+          const v=!!(e.isIntersecting&&e.intersectionRatio>=0.5);
+          if(!v&&visible)reset(); // ออกจากจอ → เลื่อนกลับมาจะนับเป็นวิวใหม่
+          visible=v;
+        });
+      },{threshold:[0,0.5,1]}).observe(vid);
+    } else {visible=true;}
+  }catch(e){}
+}
+// ══════════════════════════════════════════════════════════════════
+// (v726) ระบบเหรียญสะสมรายวัน (เฉพาะบัญชีลูกค้า)
+// - เก็บเหรียญวันละ 1 ครั้ง/บัญชี ได้ ₭500 (นับวันตามเวลา สปป.ลาว UTC+7) สะสมไม่หมดอายุ
+// - ใช้เป็นส่วนลดตอนชำระเงิน ไม่เกิน 10% ของยอดสินค้า (ไม่รวมค่าจัดส่ง) · ลาวเฮ็ดรับผิดชอบส่วนลดนี้ ร้านค้าได้ยอดเท่าเดิม
+// - ยอดเหรียญเก็บในเอกสารแยก coinWallets/{uid} (ไม่ปนกับเอกสาร users ที่หลายจุดในแอปเขียนทับทั้งก้อน)
+//   ประวัติทุกรายการเก็บที่ coinLedger (claim/use/adjust/refund) พร้อมผู้ทำรายการ + เวลาเซิร์ฟเวอร์
+// - ออเดอร์เก็บส่วนลดเหรียญในฟิลด์แยก coinDiscount (ไม่ปนกับ discount/discProd) → getShopNetTotal ไม่เปลี่ยน
+// - ปิดทั้งฟีเจอร์: COIN_ENABLED=false (ทุกอย่างกลับเป็นเหมือนก่อนมีเหรียญ)
+// - หมายเหตุความปลอดภัย: ยังไม่มีกฎ Firestore/Cloud Function ป้องกัน → ลูกค้าที่รู้เทคนิคแก้ยอดเองได้ (มีตัวตรวจยอด≠ผลรวมประวัติในหน้าแอดมิน)
+// ══════════════════════════════════════════════════════════════════
+const COIN_ENABLED=true;
+const COIN_DAILY_AMOUNT=500;
+const COIN_MAX_PCT=10;
+window._coinWallet=null;window._coinWalletFor=null;window._coinWalletLoading=false;window._coinOn=false;window._coinClaiming=false;window._coinReserving=false;
+let _coinWalletWaiters=[];
+function _ct(lo,th,en){return _lang==="lo"?lo:(_lang==="th"?th:en);}
+function _coinTS(){return firebase.firestore.FieldValue.serverTimestamp();}
+function isCoinUser(){return !!(COIN_ENABLED&&db&&user&&user.role==="c"&&!user.isShopViewer&&user.id!=null);}
+function coinTodayStr(){return new Date(Date.now()+7*3600*1000).toISOString().slice(0,10);}
+function coinWalletReady(){return !!(isCoinUser()&&window._coinWalletFor===user.id&&window._coinWallet);}
+function getCoinBalance(){return coinWalletReady()?Math.max(0,Math.floor(Number(window._coinWallet.coins)||0)):0;}
+function coinCanClaimToday(){return coinWalletReady()&&window._coinWallet.lastClaim!==coinTodayStr();}
+function coinMaxUse(base){return Math.max(0,Math.min(getCoinBalance(),Math.floor((Number(base)||0)*COIN_MAX_PCT/100)));}
+// จำนวนเหรียญที่จะหักจริงในบิลนี้ (0 ถ้าไม่ได้เปิดสวิตช์/ไม่มีสิทธิ์) — base = ยอดสินค้า − ส่วนลดสินค้า (ไม่รวมค่าส่ง)
+function coinPlanFor(cT,dProd){
+  if(!isCoinUser()||!window._coinOn||!coinWalletReady())return 0;
+  return coinMaxUse(Math.max(0,(Number(cT)||0)-(Number(dProd)||0)));
+}
+function coinOnWallet(cb){if(cb)_coinWalletWaiters.push(cb);}
+function coinEnsureWallet(){
+  if(!isCoinUser()||coinWalletReady()||window._coinWalletLoading)return;
+  const uid=user.id;window._coinWalletLoading=true;
+  db.collection("coinWallets").doc(String(uid)).get().then(function(snap){
+    if(user&&user.id===uid){window._coinWallet=snap.exists?(snap.data()||{coins:0,lastClaim:""}):{coins:0,lastClaim:""};window._coinWalletFor=uid;}
+  }).catch(function(){}).then(function(){
+    window._coinWalletLoading=false;
+    const w=_coinWalletWaiters;_coinWalletWaiters=[];
+    w.forEach(function(f){try{f();}catch(e){}});
+  });
+}
+function coinIconEl(spin,size){
+  return el("div",{className:"coin-ico"+(spin?" coin-spin":""),style:{width:size+"px",height:size+"px",fontSize:Math.round(size*0.5)+"px"}},"₭");
+}
+// เก็บเหรียญประจำวัน — ทำใน transaction (อ่านยอด/วันล่าสุดสดจากเซิร์ฟเวอร์ก่อนเขียน กันกดซ้ำจากหลายเครื่อง)
+function claimDailyCoin(){
+  if(!isCoinUser()||!coinWalletReady()||window._coinClaiming)return;
+  window._coinClaiming=true;
+  const uid=user.id,uname=user.name||"";
+  const wref=db.collection("coinWallets").doc(String(uid)),lref=db.collection("coinLedger").doc();
+  const today=coinTodayStr();
+  db.runTransaction(function(tx){
+    return tx.get(wref).then(function(snap){
+      const d=snap.exists?(snap.data()||{}):{coins:0,lastClaim:""};
+      const bal=Math.max(0,Math.floor(Number(d.coins)||0));
+      if(d.lastClaim===today)return {already:true,coins:bal,lastClaim:d.lastClaim};
+      const nb=bal+COIN_DAILY_AMOUNT;
+      tx.set(wref,{uid:uid,coins:nb,lastClaim:today,updatedAt:_coinTS()},{merge:true});
+      tx.set(lref,{uid:uid,type:"claim",amount:COIN_DAILY_AMOUNT,balanceAfter:nb,date:today,at:_coinTS(),clientAt:Date.now(),by:uname,byRole:"customer"});
+      return {already:false,coins:nb,lastClaim:today};
+    });
+  }).then(function(r){
+    window._coinWallet=Object.assign({},window._coinWallet||{},{coins:r.coins,lastClaim:r.lastClaim});
+    toast(r.already?_ct("ມື້ນີ້ເກັບເຫຼຽນແລ້ວ","วันนี้เก็บเหรียญแล้ว","Already collected today"):("🪙 +₭"+fmt(COIN_DAILY_AMOUNT)));
+  }).catch(function(e){
+    console.warn("claimDailyCoin failed:",e);
+    toast("⚠️ "+_ct("ເກັບເຫຼຽນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່","เก็บเหรียญไม่สำเร็จ กรุณาลองใหม่","Could not collect the coin, please retry"));
+  }).then(function(){
+    window._coinClaiming=false;
+    if(view==="profile"&&!document.getElementById("ov")){try{render();}catch(e){}}
+  });
+}
+// หักเหรียญตอนสั่งซื้อ (ก่อนสร้างออเดอร์) — ใน transaction; ยอดไม่พอ → ok:false ไม่สร้างออเดอร์
+function coinReserve(amount){
+  const uid=user.id,uname=user.name||"";
+  const wref=db.collection("coinWallets").doc(String(uid)),lref=db.collection("coinLedger").doc();
+  const ref="cn"+Date.now();
+  return db.runTransaction(function(tx){
+    return tx.get(wref).then(function(snap){
+      const d=snap.exists?(snap.data()||{}):{coins:0};
+      const bal=Math.max(0,Math.floor(Number(d.coins)||0));
+      if(bal<amount)return {ok:false,coins:bal};
+      const nb=bal-amount;
+      tx.set(wref,{uid:uid,coins:nb,updatedAt:_coinTS()},{merge:true});
+      tx.set(lref,{uid:uid,type:"use",amount:-amount,balanceAfter:nb,date:coinTodayStr(),at:_coinTS(),clientAt:Date.now(),by:uname,byRole:"customer",ref:ref});
+      return {ok:true,coins:nb};
+    });
+  }).then(function(r){
+    window._coinWallet=Object.assign({},window._coinWallet||{},{coins:r.coins});
+    return r.ok?{ok:true,amount:amount,ref:ref,ledgerId:lref.id}:{ok:false};
+  }).catch(function(e){console.warn("coinReserve failed:",e);return {ok:false,error:true};});
+}
+function coinRefund(info,note){
+  try{
+    const uid=user.id,uname=user.name||"";
+    const wref=db.collection("coinWallets").doc(String(uid)),lref=db.collection("coinLedger").doc();
+    db.runTransaction(function(tx){
+      return tx.get(wref).then(function(snap){
+        const d=snap.exists?(snap.data()||{}):{coins:0};
+        const nb=Math.max(0,Math.floor(Number(d.coins)||0))+info.amount;
+        tx.set(wref,{uid:uid,coins:nb,updatedAt:_coinTS()},{merge:true});
+        tx.set(lref,{uid:uid,type:"refund",amount:info.amount,balanceAfter:nb,date:coinTodayStr(),at:_coinTS(),clientAt:Date.now(),by:uname,byRole:"system",ref:info.ref,note:note||"สั่งซื้อไม่สำเร็จ"});
+        return nb;
+      });
+    }).then(function(nb){window._coinWallet=Object.assign({},window._coinWallet||{},{coins:nb});}).catch(function(){});
+  }catch(e){}
+}
+function coinAttachOrders(info,createdOrders){
+  try{db.collection("coinLedger").doc(info.ledgerId).update({orderIds:createdOrders.map(function(o){return o.id;})}).catch(function(){});}catch(e){}
+}
+// ยอดคืนเงินสดจากรายการที่ยกเลิก — ตัดส่วนที่จ่ายด้วยเหรียญออก (เหรียญไม่คืน) ใช้เฉพาะฝั่งลูกค้า/แอดมิน ไม่ใช้กับยอดร้านค้า
+function getCancelledCash(o){
+  const c=getCancelledTotal(o);
+  const coin=Number(o&&o.coinDiscount)||0;
+  if(!c||!coin)return c;
+  const base=(Number(o.subtotal)||0)-(Number(o.discProd)||0);
+  if(base<=0)return c;
+  return Math.max(0,Math.round(c*(1-Math.min(1,coin/base))));
+}
+// ── UI: ชิปยอดเหรียญ (ขวาของรูปโปรไฟล์) ──
+function buildCoinChip(){
+  if(!isCoinUser())return null;
+  const box=el("div",{style:{flexShrink:"0"}});
+  function fill(){
+    box.innerHTML="";
+    if(!coinWalletReady()){coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});return;}
+    box.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"6px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"20px",padding:"5px 10px 5px 6px"}},
+      coinIconEl(false,24),
+      el("div",null,
+        el("div",{style:{fontSize:".52rem",color:"#8B6A00",fontWeight:"700",lineHeight:"1"}},_ct("ເຫຼຽນສະສົມ","เหรียญสะสม","Coins")),
+        el("div",{style:{fontSize:".82rem",color:"#7A4E00",fontWeight:"900",lineHeight:"1.2"}},"₭"+fmt(getCoinBalance()))
+      )
+    ));
+  }
+  fill();return box;
+}
+// ── UI: ปุ่มเก็บเหรียญประจำวัน (เหรียญหมุน) ──
+function buildCoinClaimButton(){
+  if(!isCoinUser())return null;
+  const box=el("div",null);
+  function fill(){
+    box.innerHTML="";
+    if(!coinWalletReady()){coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});return;}
+    const can=coinCanClaimToday()&&!window._coinClaiming;
+    box.appendChild(el("button",{type:"button",
+      style:{width:"100%",display:"flex",alignItems:"center",gap:"12px",padding:"10px 12px",borderRadius:"12px",border:"1.5px solid "+(can?"#F5B800":"#E0E0E0"),background:can?"linear-gradient(135deg,#FFF8E1,#FFECB3)":"#F5F5F5",cursor:can?"pointer":"default",fontFamily:"inherit",textAlign:"left"},
+      onclick:function(){if(coinCanClaimToday())claimDailyCoin();}},
+      coinIconEl(can,38),
+      el("div",{style:{flex:"1"}},
+        el("div",{style:{fontSize:".82rem",fontWeight:"800",color:can?"#7A4E00":"#888"}},can?_ct("ກົດເພື່ອເກັບເຫຼຽນປະຈຳວັນ","กดเพื่อเก็บเหรียญประจำวัน","Tap to collect your daily coin"):_ct("ເກັບເຫຼຽນມື້ນີ້ແລ້ວ ✓","เก็บเหรียญวันนี้แล้ว ✓","Today's coin collected ✓")),
+        el("div",{style:{fontSize:".66rem",color:can?"#8B6A00":"#999",marginTop:"1px"}},can?("+₭"+fmt(COIN_DAILY_AMOUNT)+" · "+_ct("ໃຊ້ເປັນສ່ວນຫຼຸດໄດ້","ใช้เป็นส่วนลดได้","use as a discount")):_ct("ມາເກັບໃໝ່ມື້ອື່ນ","มาเก็บใหม่พรุ่งนี้","Come back tomorrow"))
+      )
+    ));
+  }
+  fill();return box;
+}
+// ── UI: สวิตช์ใช้เหรียญในหน้าชำระเงิน (ขั้นที่ 1) ──
+function buildCoinToggleRow(cT,dProd){
+  if(!isCoinUser())return null;
+  const box=el("div",null);
+  function fill(){
+    box.innerHTML="";
+    if(!coinWalletReady()){coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});return;}
+    const bal=getCoinBalance();
+    const maxU=coinMaxUse(Math.max(0,(Number(cT)||0)-(Number(dProd)||0)));
+    if(bal<=0)return; // ไม่มีเหรียญ ไม่แสดงอะไร
+    const on=!!window._coinOn&&maxU>0;
+    const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"10px",padding:"8px 10px",margin:"6px 0"}});
+    row.appendChild(coinIconEl(false,26));
+    row.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
+      el("div",{style:{fontSize:".78rem",fontWeight:"800",color:"#7A4E00"}},_ct("ໃຊ້ເຫຼຽນສະສົມ","ใช้เหรียญสะสม","Use coins")+" (₭"+fmt(bal)+")"),
+      el("div",{style:{fontSize:".64rem",color:"#8B6A00"}},
+        maxU>0?(_ct("ຫັກໄດ້ສູງສຸດ ","หักได้สูงสุด ","Max ")+"₭"+fmt(maxU)+" ("+COIN_MAX_PCT+"% "+_ct("ຂອງຍອດສິນຄ້າ","ของยอดสินค้า","of items")+")"):_ct("ບິນນີ້ຍັງໃຊ້ເຫຼຽນບໍ່ໄດ້","บิลนี้ยังใช้เหรียญไม่ได้","Not usable on this order"))
+    ));
+    if(maxU>0){
+      row.appendChild(el("button",{type:"button","aria-label":"coin",style:{width:"46px",height:"26px",borderRadius:"13px",border:"none",background:on?"#1B6B3A":"#ccc",position:"relative",cursor:"pointer",flexShrink:"0",padding:"0"},
+        onclick:function(){window._coinOn=!window._coinOn;renderCo();}},
+        el("span",{style:{position:"absolute",top:"3px",left:on?"23px":"3px",width:"20px",height:"20px",borderRadius:"50%",background:"#fff",transition:"left .15s"}})));
+    }
+    box.appendChild(row);
+    if(on)box.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".77rem",color:"#7A4E00",marginBottom:"3px"}},
+      el("span",null,"🪙 "+_ct("ຫັກຈາກເຫຼຽນ","หักจากเหรียญ","Coins applied")),el("span",null,"-₭"+fmt(maxU))));
+  }
+  fill();return box;
+}
+// ── แอดมิน: ดู/ปรับเหรียญของลูกค้า + ประวัติ ──
+function openCoinAdminModal(u){
+  if(!db||!user||user.role!=="admin")return;
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"2px"}},"🪙 ເຫຼຽນສະສົມ — "+(u.name||"")));
+  mod.appendChild(el("div",{style:{fontSize:".68rem",color:"#888",marginBottom:"10px"}},"ID: "+u.id));
+  const body=el("div",null,el("div",{style:{textAlign:"center",color:"#888",padding:"16px 0",fontSize:".8rem"}},"⏳ ..."));
+  mod.appendChild(body);
+  showOv(mod,null);
+  function typeLabel(l){
+    if(l.type==="claim")return "➕ ເກັບເຫຼຽນປະຈຳວັນ";
+    if(l.type==="use")return "➖ ໃຊ້ເຫຼຽນ"+((l.orderIds&&l.orderIds.length)?" — Order "+l.orderIds.map(function(x){return "#"+String(x).slice(-6);}).join(", "):"");
+    if(l.type==="refund")return "↩️ ຄືນເຫຼຽນ"+(l.note?" — "+l.note:"");
+    if(l.type==="adjust")return "✏️ ແອັດມິນປັບ"+(l.note?" — "+l.note:"");
+    return l.type||"";
+  }
+  function load(){
+    body.innerHTML="";body.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"16px 0",fontSize:".8rem"}},"⏳ ..."));
+    Promise.all([
+      db.collection("coinWallets").doc(String(u.id)).get(),
+      db.collection("coinLedger").where("uid","==",u.id).get()
+    ]).then(function(res){
+      const w=res[0].exists?(res[0].data()||{}):{coins:0,lastClaim:""};
+      const bal=Math.max(0,Math.floor(Number(w.coins)||0));
+      const logs=res[1].docs.map(function(d){const x=d.data()||{};x._id=d.id;x._t=(x.at&&x.at.toMillis)?x.at.toMillis():(x.clientAt||0);return x;}).sort(function(a,b){return b._t-a._t;});
+      const sum=logs.reduce(function(s,l){return s+(Number(l.amount)||0);},0);
+      body.innerHTML="";
+      body.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"12px",padding:"10px 12px",marginBottom:"8px"}},
+        coinIconEl(false,34),
+        el("div",{style:{flex:"1"}},el("div",{style:{fontSize:".66rem",color:"#8B6A00",fontWeight:"700"}},"ຍອດເຫຼຽນຄົງເຫຼືອ"),el("div",{style:{fontSize:"1.2rem",fontWeight:"900",color:"#7A4E00"}},"₭"+fmt(bal))),
+        el("div",{style:{fontSize:".62rem",color:"#8B6A00",textAlign:"right"}},"ເກັບຫຼ້າສຸດ"+"\n"+(w.lastClaim||"-"))
+      ));
+      if(bal!==sum){
+        body.appendChild(el("div",{style:{background:"#FFEBEE",border:"1.5px solid #ef9a9a",borderRadius:"8px",padding:"7px 10px",fontSize:".7rem",color:"#c62828",fontWeight:"700",marginBottom:"8px"}},
+          "⚠️ ຍອດເຫຼຽນ (₭"+fmt(bal)+") ບໍ່ກົງກັບຜົນລວມປະຫວັດ (₭"+fmt(sum)+") ຕ່າງ ₭"+fmt(bal-sum)+" — ກວດສອບຄວາມຜິດປົກກະຕິ"));
+      }
+      // ฟอร์มปรับเหรียญ
+      const form=el("div",{style:{background:"#F5F0FA",border:"1.5px solid #C4A8DC",borderRadius:"10px",padding:"9px 10px",marginBottom:"10px"}});
+      form.appendChild(el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#5D2D7A",marginBottom:"5px"}},"✏️ ປັບເຫຼຽນ (+ ເພີ່ມ / − ຫຼຸດ)"));
+      const amtIn=document.createElement("input");amtIn.className="inp";amtIn.type="number";amtIn.placeholder="ເຊັ່ນ 500 ຫຼື -500";amtIn.style.marginBottom="6px";
+      const reasonIn=document.createElement("input");reasonIn.className="inp";reasonIn.type="text";reasonIn.placeholder="ເຫດຜົນ (ບັງຄັບ)";reasonIn.style.marginBottom="6px";
+      const adjBtn=el("button",{type:"button",className:"btn btn-p",style:{width:"100%",padding:"9px",fontSize:".8rem"}},"💾 ບັນທຶກການປັບ");
+      adjBtn.onclick=function(){
+        const a=Math.round(Number(amtIn.value));const why=(reasonIn.value||"").trim();
+        if(!a||isNaN(a)){toast("ກະລຸນາໃສ່ຈຳນວນ");return;}
+        if(!why){toast("ກະລຸນາໃສ່ເຫດຜົນ");return;}
+        adjBtn.disabled=true;
+        const wref=db.collection("coinWallets").doc(String(u.id)),lref=db.collection("coinLedger").doc();
+        const by=(user&&user.name)||"Admin";
+        db.runTransaction(function(tx){
+          return tx.get(wref).then(function(snap){
+            const d=snap.exists?(snap.data()||{}):{coins:0};
+            const nb=Math.max(0,Math.floor(Number(d.coins)||0)+a);
+            const real=nb-Math.max(0,Math.floor(Number(d.coins)||0));
+            tx.set(wref,{uid:u.id,coins:nb,updatedAt:_coinTS()},{merge:true});
+            tx.set(lref,{uid:u.id,type:"adjust",amount:real,balanceAfter:nb,date:coinTodayStr(),at:_coinTS(),clientAt:Date.now(),by:by,byRole:"admin",note:why});
+            return nb;
+          });
+        }).then(function(){toast("✅ ບັນທຶກແລ້ວ");load();}).catch(function(e){adjBtn.disabled=false;toast("❌ "+((e&&e.message)||"error"));});
+      };
+      form.appendChild(amtIn);form.appendChild(reasonIn);form.appendChild(adjBtn);
+      body.appendChild(form);
+      body.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"800",color:"#1A2B5F",marginBottom:"6px"}},"📋 ປະຫວັດເຫຼຽນ ("+logs.length+")"));
+      if(!logs.length)body.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"10px 0",fontSize:".76rem"}},"ຍັງບໍ່ມີປະຫວັດ"));
+      logs.forEach(function(l){
+        const amt=Number(l.amount)||0;
+        body.appendChild(el("div",{style:{background:"#F0F7F2",borderRadius:"8px",padding:"7px 10px",marginBottom:"5px",borderLeft:"3px solid "+(amt>=0?"#1B6B3A":"#c62828")}},
+          el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},
+            el("span",null,typeLabel(l)),el("span",{style:{color:amt>=0?"#1B6B3A":"#c62828"}},(amt>=0?"+":"")+"₭"+fmt(amt))),
+          el("div",{style:{fontSize:".64rem",color:"#6B8F75",marginTop:"2px"}},(l._t?new Date(l._t).toLocaleString("lo-LA"):"")+" · ໂດຍ "+(l.by||"-")+(l.byRole?" ("+l.byRole+")":"")+" · ຍອດຄົງເຫຼືອ ₭"+fmt(l.balanceAfter||0))
+        ));
+      });
+    }).catch(function(e){
+      body.innerHTML="";body.appendChild(el("div",{style:{textAlign:"center",color:"#c00",padding:"14px 0",fontSize:".78rem"}},"❌ ໂຫຼດຂໍ້ມູນບໍ່ສຳເລັດ"));
+      console.warn("openCoinAdminModal failed:",e);
+    });
+  }
+  load();
+}
 if(!window._reviews)window._reviews=[];
 function getReviews(){return (window._reviews||[]).filter(function(r){return r&&r.id;});}
 function saveReview(rv){
@@ -6842,7 +7189,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.6")
   );
 
   // Icon style helper
@@ -7554,7 +7901,7 @@ function buildShopProfile(shopId){
           // ── ไม่เล่นทันทีตอนสร้าง (จะให้ตอน scroll ไปเห็น/เปิด viewer เป็นคนสั่งเล่นแทน ป้องกัน video ที่ยังไม่เห็นเล่นไม่สำเร็จเงียบๆ แล้วโชว์ controls ค้างไว้ก่อนเวลา) ──
           v2._tryPlayV2=tryPlayV2;
           v2._setV2Paused=function(){v2Playing=false;if(voiceoverAudio)voiceoverAudio.pause();};
-          mediaArea.appendChild(v2);
+          mediaArea.appendChild(v2);attachViewCounter(v2,(shopVideoPosts.indexOf(vItem)>=0)?"post":"review",vItem.id); // (v725) นับวิว
           itemEl.appendChild(mediaArea);
           const vmInfo=el("div",{style:{padding:"12px 14px",background:"#111",color:"#fff"}});
           vmInfo.appendChild(el("div",{style:{fontWeight:"700",marginBottom:"4px"}},itemProd?itemProd.name:(vItem.userName||sh.name||"")));
@@ -9476,7 +9823,7 @@ function buildUserProfile(uid){
       }
       // ── ແຖບສະຖິຕິ: ຍອດເບິ່ງ+ຍອດຊື້ ເຫັນທຸກຄົນ, ຄ່າຄອມເຫັນສະເພາະເຈົ້າຂອງ ──
       const statsBar=el("div",{style:{position:"absolute",bottom:"0",left:"0",right:"0",background:"linear-gradient(transparent,rgba(0,0,0,.65))",color:"#fff",fontSize:".55rem",padding:"10px 5px 4px",display:"flex",justifyContent:"space-around",alignItems:"flex-end"}});
-      statsBar.appendChild(el("div",{style:{textAlign:"center"}},el("div",null,"👁"),el("div",{style:{fontWeight:"700"}},fmt(rv.views||0))));
+      statsBar.appendChild(el("div",{style:{textAlign:"center"}},el("div",null,"👁"),el("div",{style:{fontWeight:"700"}},fmt(_rvViews(rv)))));
       statsBar.appendChild(el("div",{style:{textAlign:"center"}},el("div",null,"📦"),el("div",{style:{fontWeight:"700"}},rv.buys||0)));
       if(isMe)statsBar.appendChild(el("div",{style:{textAlign:"center",color:"#C8F5D0"}},el("div",null,"💰"),el("div",{style:{fontWeight:"700"}},"₭"+fmt(rv.commEarned||0))));
       imgBox.appendChild(statsBar);
@@ -11005,7 +11352,7 @@ function buildReviewDetailItemContent(itemType,itemData){
       };
       vid._tryPlayFeedVid=tryPlayRvVid;
       vid._setFeedVidPaused=function(){rvVidPlaying=false;if(voiceoverAudio)voiceoverAudio.pause();};
-      mediaBox.appendChild(vid);
+      mediaBox.appendChild(vid);attachViewCounter(vid,isPost?"post":"review",itemData.id); // (v725) นับวิว
     } else {
       mediaBox.appendChild(el("img",{src:mediaUrl,style:{width:"100%",height:"100%",objectFit:"cover",display:"block"},alt:""}));
     }
@@ -12703,6 +13050,7 @@ if(_checkoutCart&&_checkoutCart.length>0){showCheckout();}else{render();}}
 // ── CHECKOUT ───────────────────────────────────────────────────────
 let coStep=0,coSlip=null,coSlipUploading=false,coSlipUploadFailed=false,coDl={n:"",ph:"",ca:CARRIERS[0],br:"",deliveryType:"carrier",house:"",village:"",district:"",lat:null,lng:null,homeFee:0};
 function showCheckout(){
+  window._coinOn=false; // (v726) เปิดหน้าชำระเงินใหม่ → ปิดสวิตช์ใช้เหรียญไว้ก่อน
   coStep=1;coSlip=null;coSlipUploading=false;coSlipUploadFailed=false;
   // use _checkoutCart if set (partial checkout), else full cart
   // Deep copy to avoid readonly/frozen object issues from localStorage
@@ -12754,7 +13102,8 @@ function renderCo(){
     else if(cpProd&&cpProd.type==="shipping") discountShip=Math.round(fee*cpProd.pct/100); // backward compat
     const discount=discountProd+discountShip;
     const cp=cpProd; // keep 'cp' alias for legacy references below
-    const finalAmt=gt-discount;
+    const _coinU1=coinPlanFor(cT,discountProd);
+    const finalAmt=gt-discount-_coinU1;
     mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation()},
       el("button",{className:"mcl",onclick:()=>{closeOv();render();}},"✕"),
       el("p",{style:{fontSize:"1.05rem",fontWeight:"700",marginBottom:"8px"}},_lang==="lo"?"💳 ຊຳລະເງິນ":"💳 Checkout"),
@@ -12942,6 +13291,7 @@ function renderCo(){
               )
             : el("div",{style:{fontSize:".72rem",color:"#888",marginBottom:"3px"}},(_lang==="lo"?"⚠️ ເລືອກທີ່ຢູ່ເພື່ອຄຳນວນຄ່າສົ່ງ":"⚠️ Select address to calculate shipping")),
           discountProd>0?el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".77rem",color:"#27ae60",marginBottom:"3px"}},el("span",null,(_lang==="lo"?"🛍 ຫຼຸດສິນຄ້າ":"🛍 Product Discount")),el("span",null,"-₭"+fmt(discountProd))):null,
+          buildCoinToggleRow(cT,discountProd),
           el("div",{style:{display:"flex",justifyContent:"space-between",fontWeight:"800",fontSize:".95rem",color:"#1B6B3A",marginTop:"3px"}},el("span",null,(_lang==="lo"?"ລວມທັງໝົດ":"Total")),el("span",null,"₭"+fmt(finalAmt)))
         )
       ),
@@ -12969,7 +13319,8 @@ function renderCo(){
     if(cpShip3&&cpShip3.type==="shipping") discShip3=Math.round(fee*cpShip3.pct/100);
     else if(cpProd3&&cpProd3.type==="shipping") discShip3=Math.round(fee*cpProd3.pct/100);
     const disc3=discProd3+discShip3;
-    const finalAmt3=gt-disc3;
+    const _coinU3=coinPlanFor(cT,discProd3);
+    const finalAmt3=gt-disc3-_coinU3;
     mod=el("div",{className:"mod","data-noswipe":"1",onclick:e=>e.stopPropagation()},
       el("button",{className:"mcl",onclick:()=>{closeOv();render();}},"✕"),
       el("p",{style:{fontSize:"1.1rem",fontWeight:"700",marginBottom:"8px"}},(_lang==="lo"?"💳 ສະແກນ QR & ອັປສລິບ":"💳 Scan QR & Upload Slip")),
@@ -12978,6 +13329,7 @@ function renderCo(){
         el("div",{style:{fontSize:".78rem",opacity:".85",marginBottom:"2px"}},(_lang==="lo"?"ຍອດທີ່ຕ້ອງຊຳລະ":"Amount Due")),
         el("div",{style:{fontSize:"1.5rem",fontWeight:"900"}},"₭"+fmt(finalAmt3)),
         disc3>0?el("div",{style:{fontSize:".7rem",opacity:".75"}},"(ຫຼຸດ ₭"+fmt(disc3)+(discShip3>0?" + ຄ່າສົ່ງ ₭"+fmt(discShip3):"")+")"):null,
+        _coinU3>0?el("div",{style:{fontSize:".7rem",opacity:".85"}},"🪙 "+_ct("ໃຊ້ເຫຼຽນ","ใช้เหรียญ","Coins")+" -₭"+fmt(_coinU3)):null,
         // ── ປຸ່ມ copy ຈຳນວນເງິນ ──
         (function(){
           const copyBtn=el("button",{type:"button",style:{marginTop:"8px",background:"rgba(255,255,255,.2)",border:"1.5px solid rgba(255,255,255,.6)",color:"#fff",borderRadius:"20px",padding:"5px 16px",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},
@@ -13062,6 +13414,10 @@ function renderCo(){
           if(coSlipUploading){toast(_lang==="lo"?"ກະລຸນາລໍຖ້າອັບໂຫຼດສລິບໃຫ້ສຳເລັດກ່ອນ":"Please wait for the slip to finish uploading");return;}
           if(!coSlip||!isUrl(coSlip)||coSlipUploadFailed){toast("ກະລຸນາອັບໂຫຼດສລິບກ່ອນ");return;}
           // Place order now
+          // (v726) หักเหรียญ (ถ้าเปิดสวิตช์) ก่อนสร้างออเดอร์ — ถ้าหักไม่สำเร็จ/ยอดไม่พอ จะไม่สร้างออเดอร์
+          const _coinWant=_coinU3||0;
+          const _placeNow=function(_coinInfo){
+          let _coinOrdersMade=false;
           try{
           const cp=window._appliedCoupon||null;
           const cpShip2=window._appliedShipCoupon||null;
@@ -13099,6 +13455,16 @@ function renderCo(){
             shopGroups[sid].push(item);
           });
           const shopKeys=Object.keys(shopGroups);
+          // (v726) แบ่งส่วนลดเหรียญให้แต่ละออเดอร์ตามสัดส่วนยอดสินค้าของร้าน (ออเดอร์แรกรับเศษ)
+          const coinTotal=_coinInfo?_coinInfo.amount:0;
+          const coinAlloc={};
+          if(coinTotal>0){
+            const _sumG=function(k){return shopGroups[k].reduce(function(s,i){return s+(i.dispPrice||i.price)*i.q;},0);};
+            const _allSum=shopKeys.reduce(function(s,k){return s+_sumG(k);},0)||1;
+            let _used=0;
+            shopKeys.forEach(function(k,i){if(i>0){coinAlloc[k]=Math.floor(coinTotal*_sumG(k)/_allSum);_used+=coinAlloc[k];}});
+            coinAlloc[shopKeys[0]]=coinTotal-_used;
+          }
           const createdOrders=[];
           const _orderSaveCalls=[]; // ── ໃຊ້ກວດສອບວ່າ Firestore ບັນທຶກສຳເລັດແທ້ ກ່ອນສະແດງວ່າ "ສຳເລັດ" ──
           shopKeys.forEach(function(sid,idx){
@@ -13107,6 +13473,7 @@ function renderCo(){
             const sFee=idx===0?fee:0;
             const sDisc=idx===0?discount:0;
             const sDiscProd=idx===0?dProd:0;
+            const sCoin=coinAlloc[sid]||0;
             const sOid=baseOid+(idx*10000);
             const sh=shops.find(function(s){return String(s.id)===sid;});
             const o={id:sOid,uid:(user&&user.id),name:coDl.n,phone:coDl.ph,
@@ -13121,10 +13488,11 @@ function renderCo(){
               coupon:idx===0&&cp&&cp.type!=="shipping"?cp.code:"",
               shipCoupon:idx===0&&cpShip2?cpShip2.code:(idx===0&&cp&&cp.type==="shipping"?cp.code:""),
               couponIssuer:idx===0&&sDisc>0?((cp&&cp.issuer)||(cpShip2&&cpShip2.issuer)||"shop"):"",
-              total:sTotal+sFee-sDisc,
+              total:sTotal+sFee-sDisc-sCoin,
               status:"ລໍຢືນຢັນ",
               at:new Date().toLocaleString("th-TH"),
               groupId:baseOid};
+            if(sCoin>0){o.coinDiscount=sCoin;o.coinRef=_coinInfo.ref;} // (v726)
             createdOrders.push(o);
             const oWithSlip=Object.assign({},o,{slip:coSlip});
             orders=[oWithSlip].concat(orders);
@@ -13149,6 +13517,9 @@ function renderCo(){
               }
             });
           });
+          _coinOrdersMade=true;
+          window._coinOn=false;
+          if(_coinInfo)coinAttachOrders(_coinInfo,createdOrders);
           // reviewRef tracking
           const allCartItems=coCart.length>0?coCart:Object.values(shopGroups).flat();
           const cartReviewRefs=new Set();
@@ -13261,8 +13632,25 @@ _checkoutCart=null; selectedCartKeys.clear(); coStep=4; closeOv();
           }
           _attemptOrderUploadCheckout();
           }catch(err){
+            if(_coinInfo&&!_coinOrdersMade)coinRefund(_coinInfo,"สั่งซื้อไม่สำเร็จ (error)");
             toast("Error: "+err.message);
             console.error("CHECKOUT ERROR:", err.message, err.stack);
+          }
+          };
+          if(_coinWant>0){
+            if(window._coinReserving)return;
+            window._coinReserving=true;
+            coinReserve(_coinWant).then(function(info){
+              window._coinReserving=false;
+              if(info&&info.ok){_placeNow(info);}
+              else{
+                toast("⚠️ "+_ct("ຫັກເຫຼຽນບໍ່ສຳເລັດ ຍອດເຫຼຽນອາດບໍ່ພໍ ກະລຸນາລອງໃໝ່","หักเหรียญไม่สำเร็จ ยอดเหรียญอาจไม่พอ กรุณาลองใหม่","Could not apply coins (balance may be insufficient). Please retry."));
+                window._coinWallet=null;window._coinWalletFor=null;window._coinOn=false;coinEnsureWallet();
+                coStep=1;renderCo();
+              }
+            });
+          } else {
+            _placeNow(null);
           }
           }catch(outerErr){
             console.error("OUTER CHECKOUT ERROR:", outerErr.message, outerErr.stack);
@@ -13633,7 +14021,7 @@ function buildStaffDashboard(){
           if(o.discount>0)addR("🏷 ສ່ວນຫຼຸດ"+(o.coupon?" ("+o.coupon+")":""),"-₭"+fmt(o.discount),"","#27ae60");
           const dhr=document.createElement("div");dhr.style.cssText="border-top:1px dashed #C4A8DC;margin:6px 0;";totBox.appendChild(dhr);
           addR("💳 ຍອດໂອນເງິນ","₭"+fmt(o.total),true,"#1B6B3A");
-          if((o.cancelledItems&&o.cancelledItems.length>0)||(Number(o.editRefundAdj)||0)>0){const ct=getCancelledTotal(o);const rdue=getRefundDue(o);if(ct>0||rdue>0){const dhr2=document.createElement("div");dhr2.style.cssText="border-top:1.5px dashed #c00;margin:6px 0;";totBox.appendChild(dhr2);addR("✅ ຍອດທີ່ສົ່ງໄດ້","₭"+fmt(o.total-ct),"","#1A2B5F");if(rdue>0)addR("💸 ຄືນເງິນລູກຄ້າ","₭"+fmt(rdue),"","#c00");}}
+          if((o.cancelledItems&&o.cancelledItems.length>0)||(Number(o.editRefundAdj)||0)>0){const ct=getCancelledCash(o);const rdue=getRefundDue(o);if(ct>0||rdue>0){const dhr2=document.createElement("div");dhr2.style.cssText="border-top:1.5px dashed #c00;margin:6px 0;";totBox.appendChild(dhr2);addR("✅ ຍອດທີ່ສົ່ງໄດ້","₭"+fmt(o.total-ct),"","#1A2B5F");if(rdue>0)addR("💸 ຄືນເງິນລູກຄ້າ","₭"+fmt(rdue),"","#c00");}}
           card.appendChild(totBox);
           // Action buttons
           const btnRow=document.createElement("div");btnRow.style.cssText="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;";
@@ -15707,6 +16095,9 @@ function buildShopOrdersSection(){
                     if(o.discount>0)rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".75rem",color:"#27ae60",marginBottom:"4px"}},
                       el("span",null,"🏷 ສ່ວນຫຼຸດ"+(o.coupon?" ("+o.coupon+")":" ")+(o.shipCoupon?" + ("+o.shipCoupon+")":"")),
                       el("span",null,"-₭"+fmt(o.discount))));
+                    if((Number(o.coinDiscount)||0)>0)rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".75rem",color:"#B8860B",marginBottom:"4px"}},
+                      el("span",null,"🪙 ສ່ວນຫຼຸດຈາກເຫຼຽນ (ລາວເຮັດຮັບຜິດຊອບ)"),
+                      el("span",null,"-₭"+fmt(o.coinDiscount))));
                   } else {
                     // ສະເພາະ shop: ສະແດງສ່ວນຫຼຸດສິນຄ້າ (discProdAmt) ເທົ່ານັ້ນ
                     if(discProdAmt>0)rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".75rem",color:"#27ae60",marginBottom:"4px"}},
@@ -15733,7 +16124,7 @@ function buildShopOrdersSection(){
                   if(cost>0)rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".7rem",color:profit>=0?"#1a7a3a":"#c00",marginTop:"4px"}},
                     el("span",null,"📊 ກຳໄລ"),el("span",{style:{fontWeight:"600"}},"₭"+fmt(profit))));
                   if(isSuperAdmin&&((o.cancelledItems&&o.cancelledItems.length>0)||(Number(o.editRefundAdj)||0)>0)){
-                    const cancelledTotal=getCancelledTotal(o);
+                    const cancelledTotal=getCancelledCash(o);
                     const refundDueP=getRefundDue(o);
                     const actualTotal=o.total-cancelledTotal;
                     rows.push(el("div",{style:{borderTop:"1.5px dashed #c00",margin:"6px 0"}}));
@@ -17775,7 +18166,7 @@ function buildAdminTab(){
                 } else {imgBox.textContent="📸";}
                 // stats overlay
                 const rvSt=el("div",{style:{position:"absolute",bottom:"0",left:"0",right:"0",background:"linear-gradient(transparent,rgba(0,0,0,.7))",color:"#fff",fontSize:".5rem",padding:"8px 3px 3px",display:"flex",justifyContent:"space-around"}});
-                rvSt.appendChild(el("div",{style:{textAlign:"center"}},el("div",null,"👁"),el("div",{style:{fontWeight:"700"}},fmt(rv.views||0))));
+                rvSt.appendChild(el("div",{style:{textAlign:"center"}},el("div",null,"👁"),el("div",{style:{fontWeight:"700"}},fmt(_rvViews(rv)))));
                 rvSt.appendChild(el("div",{style:{textAlign:"center"}},el("div",null,"📦"),el("div",{style:{fontWeight:"700"}},rv.buys||0)));
                 rvSt.appendChild(el("div",{style:{textAlign:"center",color:"#C8F5D0"}},el("div",null,"💰"),el("div",{style:{fontWeight:"700"}},"₭"+fmt(rv.commEarned||0))));
                 imgBox.appendChild(rvSt);
@@ -17820,11 +18211,15 @@ function buildAdminTab(){
             }
           },"🔑 Reset");
           btnRow.appendChild(resetPwdBtn);
+          if(COIN_ENABLED&&user&&user.role==="admin"){
+            btnRow.appendChild(el("button",{style:{flex:"1",padding:"6px 8px",borderRadius:"8px",border:"1.5px solid #F5B800",background:"#FFF8E1",color:"#7A4E00",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
+              onclick:function(){openCoinAdminModal(u);}},"🪙 ເຫຼຽນ"));
+          }
           cardEl.appendChild(btnRow);
 
           // Commission row — แสดงเฉพาะคนที่มี commission
           const uRvsAll=getReviews().filter(function(rv){return rv.uid===u.id;});
-          const totalViews=uRvsAll.reduce(function(s,r){return s+(r.views||0);},0);
+          const totalViews=uRvsAll.reduce(function(s,r){return s+_rvViews(r);},0);
           const totalBuys=uRvsAll.reduce(function(s,r){return s+(r.buys||0);},0);
           const totalComm=uRvsAll.reduce(function(s,r){return s+(r.commEarned||0);},0);
           if(uRvsAll.length>0){
@@ -17837,7 +18232,7 @@ function buildAdminTab(){
             commRow.appendChild(el("div",{style:{textAlign:"center"}},el("div",{style:{fontSize:".55rem",color:"#6B8F75"}},"⏳ ຍັງບໍ່ຖອນ"),el("div",{style:{fontWeight:"700",fontSize:".72rem",color:pendingComm>0?"#e67e22":"#6B8F75"}},"₭"+fmt(totalComm))));
             const histBtn=el("button",{style:{padding:"4px 8px",borderRadius:"6px",background:"#1A2B5F",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".6rem",fontWeight:"700"},
               onclick:function(){
-                const rows2=uRvsAll.map(function(r,i){const p2=prods.find(function(x){return x&&x.id===r.prodId;})||{};return "<tr><td>"+(i+1)+"</td><td>"+new Date(r.at).toLocaleDateString("lo-LA")+"</td><td>"+(p2.name||"-")+"</td><td style='text-align:right'>"+fmt(r.views||0)+"</td><td style='text-align:right'>"+(r.buys||0)+"</td><td style='text-align:right;color:#1B6B3A;font-weight:700'>₭"+fmt(r.commEarned||0)+"</td></tr>";}).join("");
+                const rows2=uRvsAll.map(function(r,i){const p2=prods.find(function(x){return x&&x.id===r.prodId;})||{};return "<tr><td>"+(i+1)+"</td><td>"+new Date(r.at).toLocaleDateString("lo-LA")+"</td><td>"+(p2.name||"-")+"</td><td style='text-align:right'>"+fmt(_rvViews(r))+"</td><td style='text-align:right'>"+(r.buys||0)+"</td><td style='text-align:right;color:#1B6B3A;font-weight:700'>₭"+fmt(r.commEarned||0)+"</td></tr>";}).join("");
                 const html2="<html><head><meta charset='UTF-8'><style>body{font-family:Arial;padding:20px;font-size:13px}h2{color:#1A2B5F}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:7px 10px}th{background:#1B6B3A;color:#fff;text-align:center}.tot{background:#E8F5EE;font-weight:700}</style></head><body><h2>Commission ຮີວິວ — "+u.name+"</h2><p>ວັນທີ: "+new Date().toLocaleDateString("lo-LA")+"</p><table><tr><th>#</th><th>ວັນທີ</th><th>ສິນຄ້າ</th><th>👁 ເບິ່ງ</th><th>📦 ຊື້</th><th>💰 Comm</th></tr>"+rows2+"<tr class='tot'><td colspan='5'>ລວມ</td><td style='text-align:right'>₭"+fmt(totalComm)+"</td></tr></table><br><button onclick='window.close()' style='background:none;color:#1A2B5F;border:1.5px solid #1A2B5F;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:Arial'>✕ ປິດໜ້ານີ້</button></body></html>";
                 const w2=window.open("","_blank");if(w2){w2.document.write(html2);w2.document.close();}
               }
@@ -18091,7 +18486,7 @@ function buildAdminTab(){
       el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"6px",marginBottom:"12px"}},
         el("div",{style:{background:"#F0F7F2",borderRadius:"10px",padding:"10px",textAlign:"center"}},
           el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginBottom:"2px"}},"👁 ການເບິ່ງ"),
-          el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},fmt(allRvs.reduce(function(s,r){return s+(r.views||0);},0)))
+          el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},fmt(allRvs.reduce(function(s,r){return s+_rvViews(r);},0)))
         ),
         el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px",textAlign:"center"}},
           el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginBottom:"2px"}},"🛒 ຍອດຊື້"),
@@ -18111,7 +18506,7 @@ function buildAdminTab(){
           if(!r.uid)return;
           if(!userMap[r.uid])userMap[r.uid]={name:r.userName||r.uid,rvCount:0,views:0,buys:0,commEarned:0};
           userMap[r.uid].rvCount++;
-          userMap[r.uid].views+=(r.views||0);
+          userMap[r.uid].views+=_rvViews(r);
           userMap[r.uid].buys+=(r.buys||0);
           userMap[r.uid].commEarned+=(r.commEarned||0);
         });
@@ -18135,7 +18530,7 @@ function buildAdminTab(){
             const uRvs=allRvs.filter(function(r){return r.uid===Object.keys(userMap).find(function(k){return userMap[k]===u;});});
             const rows=uRvs.map(function(r,i){
               const p=prods.find(function(x){return x&&x.id===r.prodId;})||{};
-              return "<tr><td>"+(i+1)+"</td><td>"+new Date(r.at).toLocaleDateString("lo-LA")+"</td><td>"+(p.name||"-")+"</td><td style='text-align:right'>"+(r.views||0)+"</td><td style='text-align:right'>"+(r.buys||0)+"</td><td style='text-align:right;color:#1B6B3A;font-weight:700'>₭"+fmt(r.commEarned||0)+"</td></tr>";
+              return "<tr><td>"+(i+1)+"</td><td>"+new Date(r.at).toLocaleDateString("lo-LA")+"</td><td>"+(p.name||"-")+"</td><td style='text-align:right'>"+_rvViews(r)+"</td><td style='text-align:right'>"+(r.buys||0)+"</td><td style='text-align:right;color:#1B6B3A;font-weight:700'>₭"+fmt(r.commEarned||0)+"</td></tr>";
             }).join("");
             const html="<html><head><meta charset='UTF-8'><style>body{font-family:Arial,sans-serif;padding:20px;font-size:13px}h2{color:#1A2B5F}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:7px 10px}th{background:#1B6B3A;color:#fff;text-align:center}.tot{background:#E8F5EE;font-weight:700}</style></head><body>"
               +"<h2>ປະຫວັດ Commission ຮີວິວ — "+u.name+"</h2>"
@@ -20093,7 +20488,7 @@ function buildAdminTab(){
       dlBtn.style.cssText="font-size:.58rem;padding:4px 8px;border-radius:6px;background:#1A2B5F;color:#fff;border:none;cursor:pointer;font-family:inherit;flex-shrink:0;";
       dlBtn.textContent="📄 ປະຫວັດ";
       dlBtn.onclick=function(){
-        const rows2=uRvsAll2.map(function(r,i){const p2=prods.find(function(x){return x&&x.id===r.prodId;})||{};return "<tr><td>"+(i+1)+"</td><td>"+new Date(r.at).toLocaleDateString("lo-LA")+"</td><td>"+(p2.name||"-")+"</td><td>"+fmt(r.views||0)+"</td><td>"+(r.buys||0)+"</td><td style='color:#1B6B3A;font-weight:700'>₭"+fmt(r.commEarned||0)+"</td></tr>";}).join("");
+        const rows2=uRvsAll2.map(function(r,i){const p2=prods.find(function(x){return x&&x.id===r.prodId;})||{};return "<tr><td>"+(i+1)+"</td><td>"+new Date(r.at).toLocaleDateString("lo-LA")+"</td><td>"+(p2.name||"-")+"</td><td>"+fmt(_rvViews(r))+"</td><td>"+(r.buys||0)+"</td><td style='color:#1B6B3A;font-weight:700'>₭"+fmt(r.commEarned||0)+"</td></tr>";}).join("");
         const html2="<html><head><meta charset='UTF-8'><style>body{font-family:Arial;padding:20px;font-size:13px}h2{color:#1A2B5F}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:7px 10px;text-align:right}th{background:#1B6B3A;color:#fff;text-align:center}td:first-child,td:nth-child(2),td:nth-child(3){text-align:left}.tot{background:#E8F5EE;font-weight:700}</style></head><body><h2>Commission ຮີວິວ — "+u.name+"</h2><p>ວັນທີ: "+new Date().toLocaleDateString("lo-LA")+"</p><table><tr><th>#</th><th>ວັນທີ</th><th>ສິນຄ້າ</th><th>ເບິ່ງ</th><th>ຊື້</th><th>Comm</th></tr>"+rows2+"<tr class='tot'><td colspan='5'>ລວມ</td><td>₭"+fmt(u.comm)+"</td></tr></table><br><button onclick='window.close()' style='background:none;color:#1A2B5F;border:1.5px solid #1A2B5F;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:.85rem;font-family:Arial'>✕ ປິດໜ້ານີ້</button></body></html>";
         const w2=window.open("","_blank");if(w2){w2.document.write(html2);w2.document.close();}
       };
@@ -20246,13 +20641,13 @@ function buildAdminTab(){
     const reviewCommCard=isSuperAdmin&&allRvs2.length>0?el("div",{className:"acard",style:{marginBottom:"12px"}},
       el("div",{style:{fontWeight:"700",fontSize:".9rem",marginBottom:"10px"}},"📸 Commission ຈາກຮີວິວ"),
       el("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"6px",marginBottom:"10px"}},
-        el("div",{style:{background:"#F0F7F2",borderRadius:"10px",padding:"10px",textAlign:"center"}},el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginBottom:"2px"}},"👁 ການເບິ່ງ"),el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},fmt(allRvs2.reduce(function(s,r){return s+(r.views||0);},0)))),
+        el("div",{style:{background:"#F0F7F2",borderRadius:"10px",padding:"10px",textAlign:"center"}},el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginBottom:"2px"}},"👁 ການເບິ່ງ"),el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1A2B5F"}},fmt(allRvs2.reduce(function(s,r){return s+_rvViews(r);},0)))),
         el("div",{style:{background:"#FFF8E7",borderRadius:"10px",padding:"10px",textAlign:"center"}},el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginBottom:"2px"}},"🛒 ຍອດຊື້"),el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#B8860B"}},fmt(allRvs2.reduce(function(s,r){return s+(r.buys||0);},0)))),
         el("div",{style:{background:"#E8F5EE",borderRadius:"10px",padding:"10px",textAlign:"center"}},el("div",{style:{fontSize:".62rem",color:"#6B8F75",marginBottom:"2px"}},"💰 Comm ລວມ"),el("div",{style:{fontWeight:"800",fontSize:".9rem",color:"#1B6B3A"}},"₭"+fmt(allRvs2.reduce(function(s,r){return s+(r.commEarned||0);},0))))
       ),
       (function(){
         const uMap={};
-        allRvs2.forEach(function(r){if(!r.uid)return;if(!uMap[r.uid])uMap[r.uid]={uid:r.uid,name:r.userName||r.uid,rv:0,views:0,buys:0,comm:0};uMap[r.uid].rv++;uMap[r.uid].views+=(r.views||0);uMap[r.uid].buys+=(r.buys||0);uMap[r.uid].comm+=(r.commEarned||0);});
+        allRvs2.forEach(function(r){if(!r.uid)return;if(!uMap[r.uid])uMap[r.uid]={uid:r.uid,name:r.userName||r.uid,rv:0,views:0,buys:0,comm:0};uMap[r.uid].rv++;uMap[r.uid].views+=_rvViews(r);uMap[r.uid].buys+=(r.buys||0);uMap[r.uid].comm+=(r.commEarned||0);});
         const uList=Object.values(uMap).filter(function(u){return u.comm>0;}).sort(function(a,b){return b.comm-a.comm;});
         if(uList.length===0)return el("div",{style:{fontSize:".75rem",color:"#6B8F75",textAlign:"center",padding:"8px"}},"ຍັງບໍ່ມີ commission");
         const wrap=el("div",null);
@@ -21170,6 +21565,24 @@ function buildAdminTab(){
         });
       }
       section.appendChild(cpnCard);
+      // (v726) ส่วนลดจากเหรียญสะสม — ลาวเฮ็ดรับผิดชอบ
+      const coinOrdersF=orders.filter(function(o){return inDateRange(o.id)&&(Number(o.coinDiscount)||0)>0&&o.status!=="ຍົກເລີກ";}).sort(function(a,b){return b.id-a.id;});
+      if(COIN_ENABLED){
+        const coinTotalF=coinOrdersF.reduce(function(s,o){return s+(Number(o.coinDiscount)||0);},0);
+        const coinCardF=el("div",{className:"acard",style:{marginBottom:"14px"}});
+        coinCardF.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#B8860B",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #eee"}},
+          el("span",null,"🪙 ສ່ວນຫຼຸດຈາກເຫຼຽນສະສົມ (ລາວເຮັດຈ່າຍແທນ)"),el("span",null,"-₭"+fmt(coinTotalF))));
+        if(coinOrdersF.length===0){
+          coinCardF.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີການໃຊ້ເຫຼຽນໃນຊ່ວງວັນທີນີ້"));
+        } else {
+          coinOrdersF.slice(0,200).forEach(function(o){
+            coinCardF.appendChild(el("div",{style:{padding:"7px 4px",borderBottom:"1px solid #f0f0f0"}},
+              el("div",{style:{fontSize:".76rem",fontWeight:"700",color:"#1A2B5F"}},"#"+String(o.id).slice(-6)+(o.shopName?" · "+o.shopName:"")),
+              el("div",{style:{fontSize:".65rem",color:"#888"}},(o.at||"")+" · "+(o.name||"")+" · -₭"+fmt(o.coinDiscount||0))));
+          });
+        }
+        section.appendChild(coinCardF);
+      }
     }
 
     return section;
@@ -21364,6 +21777,7 @@ function buildAdminTab(){
           }
         }
 
+        if(post.mediaType==="video"){const _vb=el("div",{style:{padding:"4px 12px 0",fontSize:".72rem",color:"#6B8F75",fontWeight:"700"}});_vb.appendChild(buildPostViewsBadge(post));postCard.appendChild(_vb);} // (v725) ยอดวิวโพสต์วิดีโอ
         if(post.caption){postCard.appendChild(el("div",{style:{padding:"6px 12px",fontSize:".78rem",color:"#1A1020"}},post.caption));}
         if(pp3){postCard.appendChild(el("div",{style:{padding:"5px 12px 8px",fontSize:".72rem",color:"#1B6B3A",fontWeight:"600"}},"🛍 "+pp3.name+" · ₭"+fmt(pp3.price)));}
         section.appendChild(postCard);
@@ -23354,8 +23768,10 @@ function buildProfile(){
           el("div",{style:{fontSize:".68rem",color:"#1B6B3A",marginTop:"4px",fontWeight:"700"}},
             "🛍 "+myO.length+(_lang==="lo"?" ຄຳສັ່ງ":" orders")
           )
-        )
+        ),
+        buildCoinChip()
       ),
+      buildCoinClaimButton(),
     ),
 
     // ── My Public Profile Card ─────────────────────────────────────

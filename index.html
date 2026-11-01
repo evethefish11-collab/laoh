@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v730 -->
+<!-- LaoH Marketplace v731 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3865,7 +3865,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.3.0")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.3.1")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -4515,7 +4515,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
     }
     const stars=rv.stars>0?"⭐".repeat(rv.stars):"";
     const textBlock=el("div");
-    textBlock.innerHTML=(stars?"<div style='font-size:.9rem;margin-bottom:4px'>"+stars+"</div>":"")+
+    textBlock.innerHTML=(rv.wantPost?"<div style='display:inline-block;font-size:.66rem;font-weight:800;color:#FFE98A;border:1px solid #FFE98A;border-radius:10px;padding:1px 8px;margin-bottom:4px'>🔎 "+_ct("ກຳລັງຕາມຫາສິນຄ້າ","กำลังตามหาสินค้า","Looking for")+"</div>":"")+(stars?"<div style='font-size:.9rem;margin-bottom:4px'>"+stars+"</div>":"")+
       "<div style='font-size:.8rem;color:rgba(255,255,255,.9);line-height:1.4;'>"+rv.caption+"</div>"+
       "<div style='font-size:.65rem;color:rgba(255,255,255,.6);margin-top:4px'>"+rv.userName+"</div>";
     overlay.appendChild(textBlock);
@@ -4611,6 +4611,14 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
       info.appendChild(shopRow);
     }
 
+    // (v731) โพสต์ตามหาสินค้าที่ยังไม่มีคนปัก → กรอบเส้นประให้ปักสินค้า
+    if(rv.wantPost&&!p.id){
+      const _own=user&&String(rv.uid)===String(user.id);
+      const _pb=el("div",{style:{border:"2px dashed rgba(255,255,255,.6)",borderRadius:"14px",padding:"10px 12px",textAlign:"center",color:"#fff",fontSize:".78rem",fontWeight:"700",cursor:_own?"default":"pointer"},
+        onclick:function(e){e.stopPropagation();if(_own)return;if(!user){showAuth();return;}openWantPinPicker(rv);}},
+        _own?("⏳ "+_ct("ລໍຖ້າຄົນປັກສິນຄ້າທີ່ກຳລັງຕາມຫາ","รอคนปักสินค้าที่กำลังตามหา","Waiting for someone to pin the product")):("📌 "+_ct("ປັກສິນຄ້າທີ່ກຳລັງຕາມຫາ","ปักสินค้าที่กำลังตามหา","Pin the product being sought")));
+      info.appendChild(_pb);
+    }
     // product pill — ใหญ่ขึ้น + cart icon
     if(p.id){
       const pill=document.createElement("div");
@@ -4633,6 +4641,11 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
         showProduct(p);
       };
       info.appendChild(pill);
+      // (v731) เจ้าของโพสต์/ซูเปอร์แอดมิน กด "ไม่ใช่ชิ้นนี้" เพื่อปลดล็อกให้ปักใหม่
+      if(rv.wantPost&&user&&(user.role==="admin"||String(rv.uid)===String(user.id))){
+        info.appendChild(el("button",{type:"button",style:{marginTop:"6px",background:"none",border:"1px solid rgba(255,255,255,.5)",color:"#fff",borderRadius:"14px",padding:"4px 12px",fontSize:".68rem",cursor:"pointer",fontFamily:"inherit"},
+          onclick:function(e){e.stopPropagation();wantUnpin(rv);}},"↩️ "+_ct("ບໍ່ແມ່ນຊິ້ນນີ້","ไม่ใช่ชิ้นนี้","Not this one")));
+      }
     }
     item.appendChild(info);
 
@@ -4959,7 +4972,7 @@ getShopPosts().filter(function(p){return p&&p.id&&!p.hidden&&!isShopHidden(p.sho
 
   // ── ຖ້ານ _feedProdFilter ຖືກຕັ້ງ: ສ້າງ feed ສະເພາະຣີວິວຂອງສິນຄ້ານັ້ນ ──
   if(_feedProdFilter){
-    const prodReviews=reviews.filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.prodId===_feedProdFilter;});
+    const prodReviews=reviews.filter(function(rv){return rv&&rv.id&&!rv.hidden&&!rv.wantPost&&rv.prodId===_feedProdFilter;});
     const backProd=_feedBackProd;
     // ── ສ້າງ UI wrap ──
     const wrap2=el("div",{style:{position:"relative",height:"100%",background:"#000"}});
@@ -5829,7 +5842,7 @@ function coinEnsureWallet(){
   if(!isCoinUser()||coinWalletReady()||window._coinWalletLoading)return;
   const uid=user.id;window._coinWalletLoading=true;
   db.collection("coinWallets").doc(String(uid)).get().then(function(snap){
-    if(user&&user.id===uid){window._coinWallet=snap.exists?(snap.data()||{coins:0,lastClaim:""}):{coins:0,lastClaim:""};window._coinWalletFor=uid;}
+    if(user&&user.id===uid){window._coinWallet=snap.exists?(snap.data()||{coins:0,lastClaim:""}):{coins:0,lastClaim:""};window._coinWalletFor=uid;window._coinWalletAt=Date.now();}
   }).catch(function(e){window._coinWalletErr=((e&&e.code)||"")+" "+((e&&e.message)||e||"error");console.warn("coin wallet load failed:",e);}).then(function(){
     window._coinWalletLoading=false;
     const w=_coinWalletWaiters;_coinWalletWaiters=[];
@@ -5843,6 +5856,186 @@ function toastCoin(text){
   if(!t){t=document.createElement("div");t.id="_toast_el";t.className="toast";document.body.appendChild(t);}
   t.innerHTML="";t.appendChild(coinLabel(text));t.classList.add("on");
   clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove("on");},2400);
+}
+// ══════════════════════════════════════════════════════════════════
+// (v731) ໂພສຕາມຫາສິນຄ້າ (Want Post)
+// - ເກັບເປັນເອກະສານໃນ collection "reviews" ດ້ວຍທຸງ wantPost:true (prodId=null ຈົນກວ່າຈະມີຄົນປັກສິນຄ້າ) → ໃຊ້ການ໌ດ feed/ຕະກ້າ/ລິ້ງແຊຣ໌ເດີມທັງໝົດ
+// - ປັກໄດ້ຊິ້ນດຽວແລ້ວລັອກ (ເຮັດໃນ transaction) · ເຈົ້າຂອງໂພສ/ຊູບເປີແອດມິນກົດ "ບໍ່ແມ່ນຊິ້ນນີ້" ເພື່ອປົດລັອກ
+// - ຮ້ານຄ້າປັກໄດ້ສະເພາະສິນຄ້າຂອງຕົນເອງ · ລູກຄ້າ/ແອດມິນປັກໄດ້ທຸກສິນຄ້າ · ເຈົ້າຂອງໂພສປັກເອງບໍ່ໄດ້
+// - ຄ່າຮີວິວຂອງໂພສປະເພດນີ້ ຈ່າຍເປັນເຫຼຽນ (% ເທົ່າຄ່າຮີວິວເດີມ) ເຂົ້າກະເປົາເຫຼຽນສະສົມຂອງເຈົ້າຂອງໂພສ ເມື່ອອໍເດີສຳເລັດ
+// ══════════════════════════════════════════════════════════════════
+function wantClean(t){return String(t||"").replace(/[<>]/g,"").trim();}
+function wantCanPin(rv){
+  if(!user||!rv||!rv.wantPost||rv.prodId)return false;
+  if(String(rv.uid)===String(user.id)&&user.role!=="admin")return false;
+  if(user.role==="admin")return true;
+  if(user.role==="shop")return !!user.shopId;
+  if(user.role==="c")return true;
+  return false;
+}
+function wantUpdateLocal(id,fields){
+  const l=window._reviews||[];const i=l.findIndex(function(r){return r&&r.id===id;});
+  if(i>=0)l[i]=Object.assign({},l[i],fields);
+}
+function wantPinProduct(rv,prod){
+  if(!db||!user||!prod)return;
+  const ref=db.collection("reviews").doc(String(rv.id));
+  const who={role:user.role==="admin"?"admin":(user.role==="shop"?"shop":"customer"),id:(user.role==="shop"?user.shopId:user.id),name:(user.shopName||user.name||"")};
+  let fields=null;
+  db.runTransaction(function(tx){
+    return tx.get(ref).then(function(snap){
+      if(!snap.exists)throw new Error("not-found");
+      const d=snap.data()||{};
+      if(d.prodId)throw new Error("already-pinned");
+      const hist=(d.pinHistory||[]).concat([{action:"pin",prodId:prod.id,by:who.name,byRole:who.role,at:Date.now()}]);
+      fields={prodId:prod.id,shopId:prod.shopId||null,wantStatus:"pinned",pinnedBy:who,pinnedAt:Date.now(),pinHistory:hist};
+      tx.update(ref,fields);
+    });
+  }).then(function(){
+    wantUpdateLocal(rv.id,fields);closeOv();
+    toast("📌 "+_ct("ປັກສິນຄ້າແລ້ວ","ปักสินค้าแล้ว","Pinned"));
+    pushNotif(rv.uid,null,"want_pinned","🔎 "+_ct("ມີຄົນປັກສິນຄ້າໃຫ້ໂພສຂອງທ່ານແລ້ວ","มีคนปักสินค้าให้โพสต์ของคุณแล้ว","Someone pinned a product to your post"),prod.name||"",null);
+    render();
+  }).catch(function(e){
+    const m=(e&&e.message)||"";
+    toast(m==="already-pinned"?"⚠️ "+_ct("ມີຄົນປັກສິນຄ້າແລ້ວ","มีคนปักสินค้าไปแล้ว","Already pinned"):"❌ "+_ct("ປັກບໍ່ສຳເລັດ","ปักไม่สำเร็จ","Pin failed"));
+    if(m==="already-pinned"){closeOv();render();}
+  });
+}
+function wantUnpin(rv){
+  if(!db||!user)return;
+  if(!(user.role==="admin"||String(rv.uid)===String(user.id)))return;
+  if(!confirm(_ct("ຢືນຢັນ: ບໍ່ແມ່ນສິນຄ້າຊິ້ນນີ້ ແລະເປີດໃຫ້ປັກໃໝ່?","ยืนยัน: ไม่ใช่สินค้าชิ้นนี้ และเปิดให้ปักใหม่?","Not this item — reopen for a new pin?")))return;
+  const ref=db.collection("reviews").doc(String(rv.id));
+  const by=(user.role==="admin"?"Admin":(user.name||""));
+  let fields=null;
+  db.runTransaction(function(tx){
+    return tx.get(ref).then(function(snap){
+      if(!snap.exists)throw new Error("not-found");
+      const d=snap.data()||{};
+      const hist=(d.pinHistory||[]).concat([{action:"unpin",prodId:d.prodId||null,by:by,byRole:user.role==="admin"?"admin":"owner",at:Date.now()}]);
+      fields={prodId:null,shopId:null,wantStatus:"open",pinnedBy:null,pinnedAt:null,pinHistory:hist};
+      tx.update(ref,fields);
+    });
+  }).then(function(){wantUpdateLocal(rv.id,fields);toast("↩️ "+_ct("ເປີດໃຫ້ປັກໃໝ່ແລ້ວ","เปิดให้ปักใหม่แล้ว","Reopened"));render();})
+  .catch(function(){toast("❌ "+_ct("ບໍ່ສຳເລັດ","ไม่สำเร็จ","Failed"));});
+}
+function openWantPinPicker(rv){
+  if(!user){showAuth();return;}
+  if(!wantCanPin(rv)){toast(_ct("ທ່ານປັກສິນຄ້າໃຫ້ໂພສນີ້ບໍ່ໄດ້","คุณปักสินค้าให้โพสต์นี้ไม่ได้","You cannot pin to this post"));return;}
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"4px"}},"📌 "+_ct("ປັກສິນຄ້າທີ່ກຳລັງຕາມຫາ","ปักสินค้าที่กำลังตามหา","Pin the wanted product")));
+  if(rv.caption)mod.appendChild(el("div",{style:{fontSize:".72rem",color:"#6B8F75",marginBottom:"8px"}},"“"+String(rv.caption).slice(0,120)+"”"));
+  const inp=document.createElement("input");inp.className="inp";inp.type="text";inp.placeholder="🔍 "+_ct("ຄົ້ນຫາຊື່ສິນຄ້າ ຫຼື ຮ້ານ","ค้นหาชื่อสินค้าหรือร้าน","Search product or shop");inp.style.marginBottom="8px";
+  const list=el("div",null);
+  mod.appendChild(inp);mod.appendChild(list);
+  function ok(p){
+    if(!p||!p.id||!p.name||p.deleted)return false;
+    if(isShopHidden(p.shopId))return false;
+    if(user.role==="shop"&&String(p.shopId)!==String(user.shopId))return false;
+    return true;
+  }
+  function draw(){
+    list.innerHTML="";
+    const q=(inp.value||"").trim().toLowerCase();
+    if(!q){list.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".76rem",padding:"14px 0"}},_ct("ພິມຊື່ສິນຄ້າເພື່ອຄົ້ນຫາ","พิมพ์ชื่อสินค้าเพื่อค้นหา","Type to search")));return;}
+    const res=(prods||[]).filter(function(p){
+      if(!ok(p))return false;
+      const sh=(shops||[]).find(function(x){return x.id===p.shopId;})||{};
+      return (String(p.name).toLowerCase().indexOf(q)>=0)||(String(sh.name||"").toLowerCase().indexOf(q)>=0);
+    }).slice(0,30);
+    if(!res.length){list.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".76rem",padding:"14px 0"}},_ct("ບໍ່ພົບສິນຄ້າ","ไม่พบสินค้า","No results")));return;}
+    res.forEach(function(p){
+      const sh=(shops||[]).find(function(x){return x.id===p.shopId;})||{};
+      const tsrc=(p.imgs&&p.imgs[0]&&isUrl(p.imgs[0]))?p.imgs[0]:(isUrl(p.img)?p.img:null);
+      const th=el("div",{style:{width:"44px",height:"44px",borderRadius:"8px",background:"#C8E6D4",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:"0",fontSize:"1.2rem"}});
+      if(tsrc){const im=document.createElement("img");im.src=tsrc;im.style.cssText="width:100%;height:100%;object-fit:cover;";th.appendChild(im);}else th.textContent=p.img||"🛍";
+      list.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:"#F0F7F2",borderRadius:"10px",padding:"8px 10px",marginBottom:"6px",cursor:"pointer"},
+        onclick:function(){
+          if(!confirm(_ct("ປັກສິນຄ້ານີ້ໃຫ້ໂພສ? (ປັກໄດ້ຊິ້ນດຽວ)","ปักสินค้านี้ให้โพสต์? (ปักได้ชิ้นเดียว)","Pin this product? (only one)")+"\n"+p.name))return;
+          wantPinProduct(rv,p);
+        }},
+        th,
+        el("div",{style:{flex:"1",minWidth:"0"}},
+          el("div",{style:{fontWeight:"700",fontSize:".82rem",color:"#1A2B5F",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},p.name),
+          el("div",{style:{fontSize:".68rem",color:"#6B8F75"}},(sh.emoji||"🏪")+" "+(sh.name||"")),
+          el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#1B6B3A"}},"₭"+fmt(p.price))
+        )));
+    });
+  }
+  inp.oninput=draw;draw();
+  showOv(mod,null);
+}
+function openWantPostForm(){
+  if(!user||user.role!=="c"||user.isShopViewer){showAuth&&!user?showAuth():null;return;}
+  const mine=getReviews().filter(function(r){return r.wantPost&&String(r.uid)===String(user.id);});
+  const recent=mine.filter(function(r){return (Date.now()-(r.at||0))<24*3600*1000;});
+  if(recent.length>=3){toast("⏳ "+_ct("ໂພສຕາມຫາໄດ້ສູງສຸດ 3 ຄັ້ງ/24 ຊົ່ວໂມງ","โพสต์ตามหาได้สูงสุด 3 ครั้ง/24 ชม.","Max 3 want-posts per 24h"));return;}
+  if(mine.filter(function(r){return !r.prodId&&!r.hidden;}).length>=5){toast("⏳ "+_ct("ມີໂພສທີ່ຍັງຕາມຫາຢູ່ 5 ໂພສແລ້ວ","มีโพสต์ที่ยังตามหาอยู่ 5 โพสต์แล้ว","You already have 5 open want-posts"));return;}
+  const st={mediaUrl:null,uploading:false};
+  const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
+  mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"10px"}},"🔎 "+_ct("ໂພສຕາມຫາສິນຄ້າ","โพสต์ตามหาสินค้า","Looking for a product")));
+  const prev=el("div",{style:{marginBottom:"8px"}});
+  const fi=document.createElement("input");fi.type="file";fi.accept="image/*";fi.style.display="none";
+  fi.onchange=function(e){
+    const f=e.target.files&&e.target.files[0];if(!f)return;
+    st.uploading=true;st.mediaUrl=null;prev.innerHTML="";prev.appendChild(el("div",{style:{fontSize:".76rem",color:"#888",padding:"8px 0"}},"⏳ "+_ct("ກຳລັງອັບໂຫຼດ...","กำลังอัปโหลด...","Uploading...")));
+    resizeImage(f,1280,1280,0.82,function(b64){
+      uploadImage(b64,"laoh/want").then(function(url){
+        st.mediaUrl=url;st.uploading=false;prev.innerHTML="";
+        prev.appendChild(el("img",{src:b64,style:{width:"100%",borderRadius:"8px",maxHeight:"180px",objectFit:"cover"}}));
+      }).catch(function(){st.uploading=false;prev.innerHTML="";toast("❌ "+_ct("ອັບໂຫຼດຮູບບໍ່ສຳເລັດ","อัปโหลดรูปไม่สำเร็จ","Image upload failed"));});
+    });
+  };
+  mod.appendChild(el("button",{type:"button",className:"btn btn-g",style:{width:"100%",padding:"10px",fontSize:".8rem",marginBottom:"8px"},onclick:function(){fi.click();}},"🖼 "+_ct("ເລືອກຮູບສິນຄ້າທີ່ຕາມຫາ","เลือกรูปสินค้าที่ตามหา","Choose a photo")));
+  mod.appendChild(prev);
+  const cap=document.createElement("textarea");cap.className="inp";cap.rows=4;cap.maxLength=300;cap.placeholder=_ct("ຂຽນລາຍລະອຽດສິນຄ້າທີ່ຕາມຫາ...","เขียนรายละเอียดสินค้าที่ตามหา...","Describe what you are looking for...");cap.style.marginBottom="10px";
+  mod.appendChild(cap);
+  const sub=el("button",{type:"button",className:"btn btn-p",style:{width:"100%"}},"✅ "+_ct("ໂພສ","โพสต์","Post"));
+  sub.onclick=function(){
+    if(st.uploading){toast("⏳ "+_ct("ລໍຖ້າອັບໂຫຼດຮູບກ່ອນ","รอรูปอัปโหลดก่อน","Wait for the upload"));return;}
+    if(!st.mediaUrl){toast(_ct("ກະລຸນາເລືອກຮູບ","กรุณาเลือกรูป","Please choose a photo"));return;}
+    const c=wantClean(cap.value);
+    if(!c){toast(_ct("ກະລຸນາຂຽນລາຍລະອຽດ","กรุณาเขียนรายละเอียด","Please write a description"));return;}
+    sub.disabled=true;
+    const rv={id:Date.now(),uid:user.id,userName:user.name||user.username||"",userAvatar:null,shopId:null,prodId:null,orderId:null,stars:0,caption:c,mediaUrl:st.mediaUrl,mediaType:"image",mediaPoster:null,shareGraphicUrl:null,shareVideoUrl:null,at:Date.now(),isFreeReview:false,wantPost:true,wantStatus:"open"};
+    saveReview(rv);closeOv();render();
+    toast("✅ "+_ct("ໂພສຕາມຫາສິນຄ້າແລ້ວ","โพสต์ตามหาสินค้าแล้ว","Posted"));
+  };
+  mod.appendChild(sub);
+  showOv(mod,null);
+}
+// ໃຫ້ເຫຼຽນລາງວັນ (ຈາກໂພສຕາມຫາສິນຄ້າ) — ID ປະຫວັດຄົງທີ່ຕໍ່ອໍເດີ ປ້ອງກັນໃຫ້ຊ້ຳ
+function coinGrant(uid,amount,note,orderId,_retry){
+  if(!db||!uid||!(amount>0))return;
+  const wref=db.collection("coinWallets").doc(String(uid)),lref=db.collection("coinLedger").doc("want_"+String(orderId));
+  db.runTransaction(function(tx){
+    return tx.get(lref).then(function(ls){
+      if(ls.exists)return null;
+      return tx.get(wref).then(function(ws){
+        const d=ws.exists?(ws.data()||{}):{coins:0};
+        const nb=Math.max(0,Math.floor(Number(d.coins)||0))+amount;
+        tx.set(wref,{uid:uid,coins:nb,updatedAt:_coinTS()},{merge:true});
+        tx.set(lref,{uid:uid,type:"reward",amount:amount,balanceAfter:nb,date:coinTodayStr(),at:_coinTS(),clientAt:Date.now(),by:"system",byRole:"system",ref:"want"+orderId,note:note||"",orderId:orderId});
+        return nb;
+      });
+    });
+  }).then(function(nb){
+    if(nb!=null&&user&&String(user.id)===String(uid)&&window._coinWallet)window._coinWallet=Object.assign({},window._coinWallet,{coins:nb});
+  }).catch(function(e){
+    console.warn("coinGrant failed:",e);
+    if(!_retry)setTimeout(function(){coinGrant(uid,amount,note,orderId,true);},1500);
+    else toast("⚠️ "+_ct("ໃຫ້ເຫຼຽນບໍ່ສຳເລັດ ກະລຸນາແຈ້ງແອດມິນ (Order #","ให้เหรียญไม่สำเร็จ กรุณาแจ้งแอดมิน (Order #","Coin grant failed, tell admin (Order #")+String(orderId).slice(-6)+")");
+  });
+}
+function coinRefreshIfStale(cb){
+  if(!coinWalletReady()||window._coinWalletLoading||Date.now()-(window._coinWalletAt||0)<60000)return;
+  const uid=user.id;window._coinWalletAt=Date.now();
+  db.collection("coinWallets").doc(String(uid)).get().then(function(snap){
+    if(user&&user.id===uid&&snap.exists){window._coinWallet=snap.data()||window._coinWallet;if(cb)cb();}
+  }).catch(function(){});
 }
 function coinErrBox(retry){
   return el("div",{style:{background:"#FFEBEE",border:"1.5px solid #ef9a9a",borderRadius:"10px",padding:"8px 10px",fontSize:".68rem",color:"#c62828"}},
@@ -5944,7 +6137,7 @@ function buildCoinChip(){
       )
     ));
   }
-  fill();return box;
+  fill();coinRefreshIfStale(function(){if(box.isConnected)fill();});return box;
 }
 // ── UI: ปุ่มเก็บเหรียญประจำวัน (เหรียญหมุน) ──
 function buildCoinClaimButton(compact){
@@ -6020,6 +6213,7 @@ function openCoinAdminModal(u){
   function typeLabel(l){
     if(l.type==="claim")return "➕ ເກັບຫຼຽນປະຈຳວັນ";
     if(l.type==="use")return "➖ ໃຊ້ຫຼຽນ"+((l.orderIds&&l.orderIds.length)?" — Order "+l.orderIds.map(function(x){return "#"+String(x).slice(-6);}).join(", "):"");
+    if(l.type==="reward")return "🎁 ໄດ້ຫຼຽນຈາກໂພສຕາມຫາສິນຄ້າ"+(l.orderId?" — Order #"+String(l.orderId).slice(-6):"");
     if(l.type==="refund")return "↩️ ຄືນຫຼຽນ"+(l.note?" — "+l.note:"");
     if(l.type==="adjust")return "✏️ ແອັດມິນປັບ"+(l.note?" — "+l.note:"");
     return l.type||"";
@@ -7216,7 +7410,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.3.0")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.3.1")
   );
 
   // Icon style helper
@@ -10005,6 +10199,11 @@ function buildUserProfile(uid){
     page.appendChild(avatarWrap);
   }
   page.appendChild(infoRow);
+  if(isMe&&user&&user.role==="c"&&!user.isShopViewer){
+    page.appendChild(el("div",{style:{padding:"0 16px 12px"}},
+      el("button",{type:"button",style:{width:"100%",padding:"10px",border:"1.5px dashed #1B6B3A",borderRadius:"10px",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit"},
+        onclick:openWantPostForm},"🔎 "+_ct("ໂພສຕາມຫາສິນຄ້າ","โพสต์ตามหาสินค้า","Post: looking for a product"))));
+  }
   if(myAccountSection)page.appendChild(myAccountSection);
   if(myReviewSection)page.appendChild(myReviewSection);
   page.appendChild(stats);page.appendChild(custTabBar);
@@ -10625,7 +10824,7 @@ function buildShop(){
             var _posts=_allPosts.filter(function(p2){return Number(p2.pinnedProdId)===Number(p.id);}).sort(function(a,b){return (b.at||0)-(a.at||0);});
             var _shopPost=_posts[0]||null;
             // หา review ล่าสุด
-            var _rvs=_allRvs.filter(function(rv){return Number(rv.prodId)===Number(p.id);}).sort(function(a,b){return (b.at||0)-(a.at||0);});
+            var _rvs=_allRvs.filter(function(rv){return !rv.wantPost&&Number(rv.prodId)===Number(p.id);}).sort(function(a,b){return (b.at||0)-(a.at||0);});
             var _toShow=[];
             if(_shopPost&&_rvs.length>0){
               // มีทั้งสอง → shop post 1 + review 1
@@ -11996,7 +12195,7 @@ function showProduct(p){
       })(),
       // ── ຣີວິວສິນຄ້ານີ້ ──────────────────────────────────────────────
       (function(){
-        const rvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&rv.prodId===p.id&&!isUserHidden(rv.uid)&&!isReviewHiddenByMe(rv.id);});
+        const rvs=getReviews().filter(function(rv){return rv&&rv.id&&!rv.hidden&&!rv.wantPost&&rv.prodId===p.id&&!isUserHidden(rv.uid)&&!isReviewHiddenByMe(rv.id);});
         const posts=getShopPosts().filter(function(pt){return pt&&pt.id&&!pt.hidden&&Number(pt.pinnedProdId)===Number(p.id)&&(pt.mediaUrl||pt.imgs)&&!isShopHidden(pt.shopId)&&!isPostHiddenByMe(pt.id);});
         // รวมกัน: posts ก่อน reviews
         const combined=posts.map(function(pt){return {type:"post",data:pt};}).concat(rvs.map(function(rv){return {type:"review",data:rv};}));
@@ -15911,7 +16110,17 @@ function buildShopOrdersSection(){
               let commPaid=o.reviewCommPaid||false;
               if(newSt==="ອໍເດີສຳເລັດແລ້ວ"&&oldSt!=="ອໍເດີສຳເລັດແລ້ວ"&&o.reviewRef&&!commPaid){
                 const srcRv2=getReviews().find(function(r){return r.id===o.reviewRef;});
-                if(srcRv2){
+                if(srcRv2&&srcRv2.wantPost){
+                  // (v731) โพสต์ตามหาสินค้า: ค่ารีวิวจ่ายเป็นเหรียญสะสม (เจ้าของโพสต์ซื้อเองไม่ได้)
+                  commPaid=true;
+                  const wAmt=Math.round(shopTotal*getReviewCommPct()/100);
+                  if(COIN_ENABLED&&wAmt>0&&String(srcRv2.uid)!==String(o.uid)){
+                    coinGrant(srcRv2.uid,wAmt,"ໂພສຕາມຫາສິນຄ້າ Order #"+String(o.id).slice(-6),o.id);
+                    srcRv2.coinEarned=(srcRv2.coinEarned||0)+wAmt;
+                    saveReview(srcRv2);
+                    pushNotif(srcRv2.uid,null,"want_coin","₭ "+_ct("ໄດ້ຮັບຫຼຽນ","ได้รับเหรียญ","You earned coins")+" +₭"+fmt(wAmt),_ct("ຈາກໂພສຕາມຫາສິນຄ້າຂອງທ່ານ","จากโพสต์ตามหาสินค้าของคุณ","From your want-post"),null);
+                  }
+                } else if(srcRv2){
                   const commAmt2=Math.round(shopTotal*getReviewCommPct()/100);
                   srcRv2.commEarned=(srcRv2.commEarned||0)+commAmt2;
                   commPaid=true;

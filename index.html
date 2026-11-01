@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v726 -->
+<!-- LaoH Marketplace v727 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3865,7 +3865,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.6")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5809,7 +5809,7 @@ function attachViewCounter(vid,kind,itemId){
 const COIN_ENABLED=true;
 const COIN_DAILY_AMOUNT=500;
 const COIN_MAX_PCT=10;
-window._coinWallet=null;window._coinWalletFor=null;window._coinWalletLoading=false;window._coinOn=false;window._coinClaiming=false;window._coinReserving=false;
+window._coinWallet=null;window._coinWalletFor=null;window._coinWalletErr=null;window._coinWalletLoading=false;window._coinOn=false;window._coinClaiming=false;window._coinReserving=false;
 let _coinWalletWaiters=[];
 function _ct(lo,th,en){return _lang==="lo"?lo:(_lang==="th"?th:en);}
 function _coinTS(){return firebase.firestore.FieldValue.serverTimestamp();}
@@ -5830,11 +5830,18 @@ function coinEnsureWallet(){
   const uid=user.id;window._coinWalletLoading=true;
   db.collection("coinWallets").doc(String(uid)).get().then(function(snap){
     if(user&&user.id===uid){window._coinWallet=snap.exists?(snap.data()||{coins:0,lastClaim:""}):{coins:0,lastClaim:""};window._coinWalletFor=uid;}
-  }).catch(function(){}).then(function(){
+  }).catch(function(e){window._coinWalletErr=((e&&e.code)||"")+" "+((e&&e.message)||e||"error");console.warn("coin wallet load failed:",e);}).then(function(){
     window._coinWalletLoading=false;
     const w=_coinWalletWaiters;_coinWalletWaiters=[];
     w.forEach(function(f){try{f();}catch(e){}});
   });
+}
+function coinErrBox(retry){
+  return el("div",{style:{background:"#FFEBEE",border:"1.5px solid #ef9a9a",borderRadius:"10px",padding:"8px 10px",fontSize:".68rem",color:"#c62828"}},
+    el("div",{style:{fontWeight:"700"}},"⚠️ "+_ct("ໂຫຼດເຫຼຽນບໍ່ສຳເລັດ","โหลดเหรียญไม่สำเร็จ","Could not load coins")),
+    el("div",{style:{wordBreak:"break-all",opacity:".85",margin:"2px 0 5px"}},String(window._coinWalletErr||"").slice(0,160)),
+    el("button",{type:"button",style:{padding:"4px 10px",borderRadius:"8px",border:"1px solid #c62828",background:"#fff",color:"#c62828",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
+      onclick:function(){window._coinWalletErr=null;retry();}},"🔄 "+_ct("ລອງໃໝ່","ลองใหม่","Retry")));
 }
 function coinIconEl(spin,size){
   return el("div",{className:"coin-ico"+(spin?" coin-spin":""),style:{width:size+"px",height:size+"px",fontSize:Math.round(size*0.5)+"px"}},"₭");
@@ -5920,7 +5927,7 @@ function buildCoinChip(){
   const box=el("div",{style:{flexShrink:"0"}});
   function fill(){
     box.innerHTML="";
-    if(!coinWalletReady()){coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});return;}
+    if(!coinWalletReady()){if(window._coinWalletErr)return;coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});return;}
     box.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"6px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"20px",padding:"5px 10px 5px 6px"}},
       coinIconEl(false,24),
       el("div",null,
@@ -5937,7 +5944,10 @@ function buildCoinClaimButton(){
   const box=el("div",null);
   function fill(){
     box.innerHTML="";
-    if(!coinWalletReady()){coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});return;}
+    if(!coinWalletReady()){
+      if(window._coinWalletErr){box.appendChild(coinErrBox(function(){fill();}));return;}
+      coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});
+      box.appendChild(el("div",{style:{fontSize:".7rem",color:"#8B6A00",padding:"6px 2px"}},"🪙 "+_ct("ກຳລັງໂຫຼດເຫຼຽນ...","กำลังโหลดเหรียญ...","Loading coins...")));return;}
     const can=coinCanClaimToday()&&!window._coinClaiming;
     box.appendChild(el("button",{type:"button",
       style:{width:"100%",display:"flex",alignItems:"center",gap:"12px",padding:"10px 12px",borderRadius:"12px",border:"1.5px solid "+(can?"#F5B800":"#E0E0E0"),background:can?"linear-gradient(135deg,#FFF8E1,#FFECB3)":"#F5F5F5",cursor:can?"pointer":"default",fontFamily:"inherit",textAlign:"left"},
@@ -7189,7 +7199,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.6")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.7")
   );
 
   // Icon style helper

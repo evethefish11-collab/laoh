@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v728 -->
+<!-- LaoH Marketplace v729 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -2137,7 +2137,7 @@ function printOrder(o){
     summaryHtml+="<div class='sumrow'><span>⚙️ ຄ່າຈັດສົ່ງ</span><span>"+((o.shipping||0)===0?"ຟຣີ":fmt2(o.shipping||0)+" kip")+"</span></div>";
     if(discShipAmt>0)summaryHtml+="<div class='sumrow' style='color:#27ae60'><span>🏷 ສ່ວນຫຼຸດຄ່າຈັດສົ່ງ"+(o.shipCoupon?" ("+o.shipCoupon+")":"")+"</span><span>-"+fmt2(discShipAmt)+" kip</span></div>";
   }
-  if(!isShopPrinting&&_coinD>0)summaryHtml+="<div class='sumrow' style='color:#B8860B'><span>🪙 ສ່ວນຫຼຸດຈາກເຫຼຽນ (ລາວເຮັດຮັບຜິດຊອບ)</span><span>-"+fmt2(_coinD)+" kip</span></div>";
+  if(!isShopPrinting&&_coinD>0)summaryHtml+="<div class='sumrow' style='color:#B8860B'><span>🪙 ສ່ວນຫຼຸດຈາກຫຼຽນ (ລາວເຮັດຮັບຜິດຊອບ)</span><span>-"+fmt2(_coinD)+" kip</span></div>";
   if(refundAmt>0||refundDueInv>0){
     summaryHtml+="<div style='border-top:1.5px dashed #c00;margin:6px 0'></div>";
     summaryHtml+="<div class='sumrow' style='color:#1A2B5F;font-weight:700'><span>✅ ຍອດທີ່ສົ່ງໄດ້</span><span>"+fmt2((o.total||0)+(isShopPrinting?_coinD:0)-refundAmt)+" kip</span></div>";
@@ -2384,7 +2384,7 @@ function buildMyOrderCard(o,redrawFn){
   }
   if((Number(o.coinDiscount)||0)>0){
     sumBox.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".74rem",color:"#B8860B",marginBottom:"4px"}},
-      el("span",null,"🪙 "+_ct("ໃຊ້ເຫຼຽນສະສົມ","ใช้เหรียญสะสม","Coins used")),el("span",null,"-₭"+fmt(o.coinDiscount))));
+      el("span",null,"🪙 "+_ct("ໃຊ້ຫຼຽນສະສົມ","ใช้เหรียญสะสม","Coins used")),el("span",null,"-₭"+fmt(o.coinDiscount))));
   }
   const cancelledAmt=getCancelledCash(o);   // (v720) ยอดรายการที่ยกเลิก
   const refundAmt=getRefundDue(o);           // (v720) ยอดที่ต้องคืนลูกค้าทั้งหมด (ยกเลิกรายการ + ส่วนต่างจากการแก้ไขรายการ)
@@ -3865,7 +3865,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.8")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.2.9")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5838,7 +5838,7 @@ function coinEnsureWallet(){
 }
 function coinErrBox(retry){
   return el("div",{style:{background:"#FFEBEE",border:"1.5px solid #ef9a9a",borderRadius:"10px",padding:"8px 10px",fontSize:".68rem",color:"#c62828"}},
-    el("div",{style:{fontWeight:"700"}},"⚠️ "+_ct("ໂຫຼດເຫຼຽນບໍ່ສຳເລັດ","โหลดเหรียญไม่สำเร็จ","Could not load coins")),
+    el("div",{style:{fontWeight:"700"}},"⚠️ "+_ct("ໂຫຼດຫຼຽນບໍ່ສຳເລັດ","โหลดเหรียญไม่สำเร็จ","Could not load coins")),
     el("div",{style:{wordBreak:"break-all",opacity:".85",margin:"2px 0 5px"}},String(window._coinWalletErr||"").slice(0,160)),
     el("button",{type:"button",style:{padding:"4px 10px",borderRadius:"8px",border:"1px solid #c62828",background:"#fff",color:"#c62828",fontSize:".68rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
       onclick:function(){window._coinWalletErr=null;retry();}},"🔄 "+_ct("ລອງໃໝ່","ลองใหม่","Retry")));
@@ -5865,10 +5865,10 @@ function claimDailyCoin(){
     });
   }).then(function(r){
     window._coinWallet=Object.assign({},window._coinWallet||{},{coins:r.coins,lastClaim:r.lastClaim});
-    toast(r.already?_ct("ມື້ນີ້ເກັບເຫຼຽນແລ້ວ","วันนี้เก็บเหรียญแล้ว","Already collected today"):("🪙 +₭"+fmt(COIN_DAILY_AMOUNT)));
+    toast(r.already?_ct("ມື້ນີ້ເກັບຫຼຽນແລ້ວ","วันนี้เก็บเหรียญแล้ว","Already collected today"):("🪙 +₭"+fmt(COIN_DAILY_AMOUNT)));
   }).catch(function(e){
     console.warn("claimDailyCoin failed:",e);
-    toast("⚠️ "+_ct("ເກັບເຫຼຽນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່","เก็บเหรียญไม่สำเร็จ กรุณาลองใหม่","Could not collect the coin, please retry"));
+    toast("⚠️ "+_ct("ເກັບຫຼຽນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່","เก็บเหรียญไม่สำเร็จ กรุณาลองใหม่","Could not collect the coin, please retry"));
   }).then(function(){
     window._coinClaiming=false;
     if(view==="profile"&&!document.getElementById("ov")){try{render();}catch(e){}}
@@ -5931,7 +5931,7 @@ function buildCoinChip(){
     box.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"6px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"20px",padding:"5px 10px 5px 6px"}},
       coinIconEl(false,24),
       el("div",null,
-        el("div",{style:{fontSize:".52rem",color:"#8B6A00",fontWeight:"700",lineHeight:"1"}},_ct("ເຫຼຽນສະສົມ","เหรียญสะสม","Coins")),
+        el("div",{style:{fontSize:".52rem",color:"#8B6A00",fontWeight:"700",lineHeight:"1"}},_ct("ຫຼຽນສະສົມ","เหรียญสะสม","Coins")),
         el("div",{style:{fontSize:".82rem",color:"#7A4E00",fontWeight:"900",lineHeight:"1.2"}},"₭"+fmt(getCoinBalance()))
       )
     ));
@@ -5947,14 +5947,14 @@ function buildCoinClaimButton(){
     if(!coinWalletReady()){
       if(window._coinWalletErr){box.appendChild(coinErrBox(function(){fill();}));return;}
       coinEnsureWallet();coinOnWallet(function(){if(box.isConnected)fill();});
-      box.appendChild(el("div",{style:{fontSize:".7rem",color:"#8B6A00",padding:"6px 2px"}},"🪙 "+_ct("ກຳລັງໂຫຼດເຫຼຽນ...","กำลังโหลดเหรียญ...","Loading coins...")));return;}
+      box.appendChild(el("div",{style:{fontSize:".7rem",color:"#8B6A00",padding:"6px 2px"}},"🪙 "+_ct("ກຳລັງໂຫຼດຫຼຽນ...","กำลังโหลดเหรียญ...","Loading coins...")));return;}
     const can=coinCanClaimToday()&&!window._coinClaiming;
     box.appendChild(el("button",{type:"button",
       style:{width:"100%",display:"flex",alignItems:"center",gap:"12px",padding:"10px 12px",borderRadius:"12px",border:"1.5px solid "+(can?"#F5B800":"#E0E0E0"),background:can?"linear-gradient(135deg,#FFF8E1,#FFECB3)":"#F5F5F5",cursor:can?"pointer":"default",fontFamily:"inherit",textAlign:"left"},
       onclick:function(){if(coinCanClaimToday())claimDailyCoin();}},
       coinIconEl(can,38),
       el("div",{style:{flex:"1"}},
-        el("div",{style:{fontSize:".82rem",fontWeight:"800",color:can?"#7A4E00":"#888"}},can?_ct("ກົດເພື່ອເກັບເຫຼຽນປະຈຳວັນ","กดเพื่อเก็บเหรียญประจำวัน","Tap to collect your daily coin"):_ct("ເກັບເຫຼຽນມື້ນີ້ແລ້ວ ✓","เก็บเหรียญวันนี้แล้ว ✓","Today's coin collected ✓")),
+        el("div",{style:{fontSize:".82rem",fontWeight:"800",color:can?"#7A4E00":"#888"}},can?_ct("ກົດເພື່ອເກັບຫຼຽນປະຈຳວັນ","กดเพื่อเก็บเหรียญประจำวัน","Tap to collect your daily coin"):_ct("ເກັບຫຼຽນມື້ນີ້ແລ້ວ ✓","เก็บเหรียญวันนี้แล้ว ✓","Today's coin collected ✓")),
         el("div",{style:{fontSize:".66rem",color:can?"#8B6A00":"#999",marginTop:"1px"}},can?("+₭"+fmt(COIN_DAILY_AMOUNT)+" · "+_ct("ໃຊ້ເປັນສ່ວນຫຼຸດໄດ້","ใช้เป็นส่วนลดได้","use as a discount")):_ct("ມາເກັບໃໝ່ມື້ອື່ນ","มาเก็บใหม่พรุ่งนี้","Come back tomorrow"))
       )
     ));
@@ -5975,9 +5975,9 @@ function buildCoinToggleRow(cT,dProd){
     const row=el("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"10px",padding:"8px 10px",margin:"6px 0"}});
     row.appendChild(coinIconEl(false,26));
     row.appendChild(el("div",{style:{flex:"1",minWidth:"0"}},
-      el("div",{style:{fontSize:".78rem",fontWeight:"800",color:"#7A4E00"}},_ct("ໃຊ້ເຫຼຽນສະສົມ","ใช้เหรียญสะสม","Use coins")+" (₭"+fmt(bal)+")"),
+      el("div",{style:{fontSize:".78rem",fontWeight:"800",color:"#7A4E00"}},_ct("ໃຊ້ຫຼຽນສະສົມ","ใช้เหรียญสะสม","Use coins")+" (₭"+fmt(bal)+")"),
       el("div",{style:{fontSize:".64rem",color:"#8B6A00"}},
-        maxU>0?(_ct("ຫັກໄດ້ສູງສຸດ ","หักได้สูงสุด ","Max ")+"₭"+fmt(maxU)+" ("+COIN_MAX_PCT+"% "+_ct("ຂອງຍອດສິນຄ້າ","ของยอดสินค้า","of items")+")"):_ct("ບິນນີ້ຍັງໃຊ້ເຫຼຽນບໍ່ໄດ້","บิลนี้ยังใช้เหรียญไม่ได้","Not usable on this order"))
+        maxU>0?(_ct("ຫັກໄດ້ສູງສຸດ ","หักได้สูงสุด ","Max ")+"₭"+fmt(maxU)+" ("+COIN_MAX_PCT+"% "+_ct("ຂອງຍອດສິນຄ້າ","ของยอดสินค้า","of items")+")"):_ct("ບິນນີ້ຍັງໃຊ້ຫຼຽນບໍ່ໄດ້","บิลนี้ยังใช้เหรียญไม่ได้","Not usable on this order"))
     ));
     if(maxU>0){
       row.appendChild(el("button",{type:"button","aria-label":"coin",style:{width:"46px",height:"26px",borderRadius:"13px",border:"none",background:on?"#1B6B3A":"#ccc",position:"relative",cursor:"pointer",flexShrink:"0",padding:"0"},
@@ -5986,7 +5986,7 @@ function buildCoinToggleRow(cT,dProd){
     }
     box.appendChild(row);
     if(on)box.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".77rem",color:"#7A4E00",marginBottom:"3px"}},
-      el("span",null,"🪙 "+_ct("ຫັກຈາກເຫຼຽນ","หักจากเหรียญ","Coins applied")),el("span",null,"-₭"+fmt(maxU))));
+      el("span",null,"🪙 "+_ct("ຫັກຈາກຫຼຽນ","หักจากเหรียญ","Coins applied")),el("span",null,"-₭"+fmt(maxU))));
   }
   fill();return box;
 }
@@ -5995,15 +5995,15 @@ function openCoinAdminModal(u){
   if(!db||!user||user.role!=="admin")return;
   const mod=el("div",{className:"mod","data-noswipe":"1",onclick:function(e){e.stopPropagation();},style:{maxHeight:"88vh",overflowY:"auto"}});
   mod.appendChild(el("button",{className:"mcl",onclick:closeOv},"✕"));
-  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"2px"}},"🪙 ເຫຼຽນສະສົມ — "+(u.name||"")));
+  mod.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",color:"#1A2B5F",marginBottom:"2px"}},"🪙 ຫຼຽນສະສົມ — "+(u.name||"")));
   mod.appendChild(el("div",{style:{fontSize:".68rem",color:"#888",marginBottom:"10px"}},"ID: "+u.id));
   const body=el("div",null,el("div",{style:{textAlign:"center",color:"#888",padding:"16px 0",fontSize:".8rem"}},"⏳ ..."));
   mod.appendChild(body);
   showOv(mod,null);
   function typeLabel(l){
-    if(l.type==="claim")return "➕ ເກັບເຫຼຽນປະຈຳວັນ";
-    if(l.type==="use")return "➖ ໃຊ້ເຫຼຽນ"+((l.orderIds&&l.orderIds.length)?" — Order "+l.orderIds.map(function(x){return "#"+String(x).slice(-6);}).join(", "):"");
-    if(l.type==="refund")return "↩️ ຄືນເຫຼຽນ"+(l.note?" — "+l.note:"");
+    if(l.type==="claim")return "➕ ເກັບຫຼຽນປະຈຳວັນ";
+    if(l.type==="use")return "➖ ໃຊ້ຫຼຽນ"+((l.orderIds&&l.orderIds.length)?" — Order "+l.orderIds.map(function(x){return "#"+String(x).slice(-6);}).join(", "):"");
+    if(l.type==="refund")return "↩️ ຄືນຫຼຽນ"+(l.note?" — "+l.note:"");
     if(l.type==="adjust")return "✏️ ແອັດມິນປັບ"+(l.note?" — "+l.note:"");
     return l.type||"";
   }
@@ -6020,16 +6020,16 @@ function openCoinAdminModal(u){
       body.innerHTML="";
       body.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"10px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"12px",padding:"10px 12px",marginBottom:"8px"}},
         coinIconEl(false,34),
-        el("div",{style:{flex:"1"}},el("div",{style:{fontSize:".66rem",color:"#8B6A00",fontWeight:"700"}},"ຍອດເຫຼຽນຄົງເຫຼືອ"),el("div",{style:{fontSize:"1.2rem",fontWeight:"900",color:"#7A4E00"}},"₭"+fmt(bal))),
+        el("div",{style:{flex:"1"}},el("div",{style:{fontSize:".66rem",color:"#8B6A00",fontWeight:"700"}},"ຍອດຫຼຽນຄົງເຫຼືອ"),el("div",{style:{fontSize:"1.2rem",fontWeight:"900",color:"#7A4E00"}},"₭"+fmt(bal))),
         el("div",{style:{fontSize:".62rem",color:"#8B6A00",textAlign:"right"}},"ເກັບຫຼ້າສຸດ"+"\n"+(w.lastClaim||"-"))
       ));
       if(bal!==sum){
         body.appendChild(el("div",{style:{background:"#FFEBEE",border:"1.5px solid #ef9a9a",borderRadius:"8px",padding:"7px 10px",fontSize:".7rem",color:"#c62828",fontWeight:"700",marginBottom:"8px"}},
-          "⚠️ ຍອດເຫຼຽນ (₭"+fmt(bal)+") ບໍ່ກົງກັບຜົນລວມປະຫວັດ (₭"+fmt(sum)+") ຕ່າງ ₭"+fmt(bal-sum)+" — ກວດສອບຄວາມຜິດປົກກະຕິ"));
+          "⚠️ ຍອດຫຼຽນ (₭"+fmt(bal)+") ບໍ່ກົງກັບຜົນລວມປະຫວັດ (₭"+fmt(sum)+") ຕ່າງ ₭"+fmt(bal-sum)+" — ກວດສອບຄວາມຜິດປົກກະຕິ"));
       }
       // ฟอร์มปรับเหรียญ
       const form=el("div",{style:{background:"#F5F0FA",border:"1.5px solid #C4A8DC",borderRadius:"10px",padding:"9px 10px",marginBottom:"10px"}});
-      form.appendChild(el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#5D2D7A",marginBottom:"5px"}},"✏️ ປັບເຫຼຽນ (+ ເພີ່ມ / − ຫຼຸດ)"));
+      form.appendChild(el("div",{style:{fontSize:".72rem",fontWeight:"700",color:"#5D2D7A",marginBottom:"5px"}},"✏️ ປັບຫຼຽນ (+ ເພີ່ມ / − ຫຼຸດ)"));
       const amtIn=document.createElement("input");amtIn.className="inp";amtIn.type="number";amtIn.placeholder="ເຊັ່ນ 500 ຫຼື -500";amtIn.style.marginBottom="6px";
       const reasonIn=document.createElement("input");reasonIn.className="inp";reasonIn.type="text";reasonIn.placeholder="ເຫດຜົນ (ບັງຄັບ)";reasonIn.style.marginBottom="6px";
       const adjBtn=el("button",{type:"button",className:"btn btn-p",style:{width:"100%",padding:"9px",fontSize:".8rem"}},"💾 ບັນທຶກການປັບ");
@@ -6053,7 +6053,7 @@ function openCoinAdminModal(u){
       };
       form.appendChild(amtIn);form.appendChild(reasonIn);form.appendChild(adjBtn);
       body.appendChild(form);
-      body.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"800",color:"#1A2B5F",marginBottom:"6px"}},"📋 ປະຫວັດເຫຼຽນ ("+logs.length+")"));
+      body.appendChild(el("div",{style:{fontSize:".74rem",fontWeight:"800",color:"#1A2B5F",marginBottom:"6px"}},"📋 ປະຫວັດຫຼຽນ ("+logs.length+")"));
       if(!logs.length)body.appendChild(el("div",{style:{textAlign:"center",color:"#888",padding:"10px 0",fontSize:".76rem"}},"ຍັງບໍ່ມີປະຫວັດ"));
       logs.forEach(function(l){
         const amt=Number(l.amount)||0;
@@ -7199,7 +7199,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.8")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.2.9")
   );
 
   // Icon style helper
@@ -8711,7 +8711,7 @@ function buildUserProfile(uid){
   const banner=el("div",{style:{height:"120px",background:pu.banner||"linear-gradient(135deg,#1A2B5F,#2C4A8C)",backgroundSize:"cover",backgroundPosition:"center",position:"relative"}});
   if(pu.banner&&isUrl(pu.banner)){banner.style.backgroundImage="url('"+pu.banner+"')";}
   // Avatar
-  const avatarWrap=el("div",{style:{position:"relative",marginTop:"-40px",marginLeft:"16px",marginBottom:"8px",display:"inline-block"}});
+  const avatarWrap=el("div",{style:{position:"relative",marginTop:"14px",marginLeft:"16px",marginBottom:"8px",display:"inline-block"}});
   const avatarEl=el("div",{style:{width:"80px",height:"80px",borderRadius:"50%",border:"3px solid #fff",background:"linear-gradient(135deg,#1B6B3A,#0F3D22)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.2)"}});
   if(pu.avatar&&isUrl(pu.avatar)){avatarEl.appendChild(el("img",{src:pu.avatar,style:{width:"100%",height:"100%",objectFit:"cover"}}));}
   else{avatarEl.textContent="👤";}
@@ -9978,7 +9978,7 @@ function buildUserProfile(uid){
     });
   }
   const page=el("div",{style:{background:"#F8FCF8",minHeight:"100vh"}});
-  page.appendChild(topBar);page.appendChild(banner);
+  page.appendChild(topBar); // (v729) ເອົາຮູບປົກ (banner) ອອກ
   // (v728) เหรียญสะสม: ชิปยอดอยู่ขวาแถวรูปโปรไฟล์ + ปุ่มเก็บเหรียญใต้ชื่อ (เฉพาะลูกค้าดูโปรไฟล์ตัวเอง)
   const _coinChipP=(isMe&&isCoinUser())?buildCoinChip():null;
   if(_coinChipP){
@@ -13351,7 +13351,7 @@ function renderCo(){
         el("div",{style:{fontSize:".78rem",opacity:".85",marginBottom:"2px"}},(_lang==="lo"?"ຍອດທີ່ຕ້ອງຊຳລະ":"Amount Due")),
         el("div",{style:{fontSize:"1.5rem",fontWeight:"900"}},"₭"+fmt(finalAmt3)),
         disc3>0?el("div",{style:{fontSize:".7rem",opacity:".75"}},"(ຫຼຸດ ₭"+fmt(disc3)+(discShip3>0?" + ຄ່າສົ່ງ ₭"+fmt(discShip3):"")+")"):null,
-        _coinU3>0?el("div",{style:{fontSize:".7rem",opacity:".85"}},"🪙 "+_ct("ໃຊ້ເຫຼຽນ","ใช้เหรียญ","Coins")+" -₭"+fmt(_coinU3)):null,
+        _coinU3>0?el("div",{style:{fontSize:".7rem",opacity:".85"}},"🪙 "+_ct("ໃຊ້ຫຼຽນ","ใช้เหรียญ","Coins")+" -₭"+fmt(_coinU3)):null,
         // ── ປຸ່ມ copy ຈຳນວນເງິນ ──
         (function(){
           const copyBtn=el("button",{type:"button",style:{marginTop:"8px",background:"rgba(255,255,255,.2)",border:"1.5px solid rgba(255,255,255,.6)",color:"#fff",borderRadius:"20px",padding:"5px 16px",fontSize:".74rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"}},
@@ -13666,7 +13666,7 @@ _checkoutCart=null; selectedCartKeys.clear(); coStep=4; closeOv();
               window._coinReserving=false;
               if(info&&info.ok){_placeNow(info);}
               else{
-                toast("⚠️ "+_ct("ຫັກເຫຼຽນບໍ່ສຳເລັດ ຍອດເຫຼຽນອາດບໍ່ພໍ ກະລຸນາລອງໃໝ່","หักเหรียญไม่สำเร็จ ยอดเหรียญอาจไม่พอ กรุณาลองใหม่","Could not apply coins (balance may be insufficient). Please retry."));
+                toast("⚠️ "+_ct("ຫັກຫຼຽນບໍ່ສຳເລັດ ຍອດຫຼຽນອາດບໍ່ພໍ ກະລຸນາລອງໃໝ່","หักเหรียญไม่สำเร็จ ยอดเหรียญอาจไม่พอ กรุณาลองใหม่","Could not apply coins (balance may be insufficient). Please retry."));
                 window._coinWallet=null;window._coinWalletFor=null;window._coinOn=false;coinEnsureWallet();
                 coStep=1;renderCo();
               }
@@ -16118,7 +16118,7 @@ function buildShopOrdersSection(){
                       el("span",null,"🏷 ສ່ວນຫຼຸດ"+(o.coupon?" ("+o.coupon+")":" ")+(o.shipCoupon?" + ("+o.shipCoupon+")":"")),
                       el("span",null,"-₭"+fmt(o.discount))));
                     if((Number(o.coinDiscount)||0)>0)rows.push(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".75rem",color:"#B8860B",marginBottom:"4px"}},
-                      el("span",null,"🪙 ສ່ວນຫຼຸດຈາກເຫຼຽນ (ລາວເຮັດຮັບຜິດຊອບ)"),
+                      el("span",null,"🪙 ສ່ວນຫຼຸດຈາກຫຼຽນ (ລາວເຮັດຮັບຜິດຊອບ)"),
                       el("span",null,"-₭"+fmt(o.coinDiscount))));
                   } else {
                     // ສະເພາະ shop: ສະແດງສ່ວນຫຼຸດສິນຄ້າ (discProdAmt) ເທົ່ານັ້ນ
@@ -18235,7 +18235,7 @@ function buildAdminTab(){
           btnRow.appendChild(resetPwdBtn);
           if(COIN_ENABLED&&user&&user.role==="admin"){
             btnRow.appendChild(el("button",{style:{flex:"1",padding:"6px 8px",borderRadius:"8px",border:"1.5px solid #F5B800",background:"#FFF8E1",color:"#7A4E00",fontSize:".72rem",fontWeight:"700",cursor:"pointer",fontFamily:"inherit"},
-              onclick:function(){openCoinAdminModal(u);}},"🪙 ເຫຼຽນ"));
+              onclick:function(){openCoinAdminModal(u);}},"🪙 ຫຼຽນ"));
           }
           cardEl.appendChild(btnRow);
 
@@ -21593,9 +21593,9 @@ function buildAdminTab(){
         const coinTotalF=coinOrdersF.reduce(function(s,o){return s+(Number(o.coinDiscount)||0);},0);
         const coinCardF=el("div",{className:"acard",style:{marginBottom:"14px"}});
         coinCardF.appendChild(el("div",{style:{display:"flex",justifyContent:"space-between",fontSize:".85rem",fontWeight:"800",color:"#B8860B",marginBottom:"10px",paddingBottom:"8px",borderBottom:"1px solid #eee"}},
-          el("span",null,"🪙 ສ່ວນຫຼຸດຈາກເຫຼຽນສະສົມ (ລາວເຮັດຈ່າຍແທນ)"),el("span",null,"-₭"+fmt(coinTotalF))));
+          el("span",null,"🪙 ສ່ວນຫຼຸດຈາກຫຼຽນສະສົມ (ລາວເຮັດຈ່າຍແທນ)"),el("span",null,"-₭"+fmt(coinTotalF))));
         if(coinOrdersF.length===0){
-          coinCardF.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີການໃຊ້ເຫຼຽນໃນຊ່ວງວັນທີນີ້"));
+          coinCardF.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ບໍ່ມີການໃຊ້ຫຼຽນໃນຊ່ວງວັນທີນີ້"));
         } else {
           coinOrdersF.slice(0,200).forEach(function(o){
             coinCardF.appendChild(el("div",{style:{padding:"7px 4px",borderBottom:"1px solid #f0f0f0"}},

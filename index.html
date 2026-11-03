@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v733 -->
+<!-- LaoH Marketplace v734 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3865,7 +3865,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.3.3")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.3.4")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -5824,6 +5824,9 @@ const COIN_DAILY_AMOUNT=500;
 const COIN_MAX_PCT=10;
 window._coinWallet=null;window._coinWalletFor=null;window._coinWalletErr=null;window._coinWalletLoading=false;window._coinOn=false;window._coinClaiming=false;window._coinReserving=false;
 let _coinWalletWaiters=[];
+window._coinBoxes=[];
+function coinRegisterBox(box,fill){window._coinBoxes.push({box:box,fill:fill});if(window._coinBoxes.length>30)window._coinBoxes=window._coinBoxes.slice(-30);}
+function coinRefreshAllBoxes(){window._coinBoxes=window._coinBoxes.filter(function(b){return b.box.isConnected;});window._coinBoxes.forEach(function(b){try{b.fill();}catch(e){}});}
 function _ct(lo,th,en){return _lang==="lo"?lo:(_lang==="th"?th:en);}
 function _coinTS(){return firebase.firestore.FieldValue.serverTimestamp();}
 function isCoinUser(){return !!(COIN_ENABLED&&db&&user&&user.role==="c"&&!user.isShopViewer&&user.id!=null);}
@@ -6072,7 +6075,7 @@ function claimDailyCoin(){
     toast("⚠️ "+_ct("ເກັບຫຼຽນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່","เก็บเหรียญไม่สำเร็จ กรุณาลองใหม่","Could not collect the coin, please retry"));
   }).then(function(){
     window._coinClaiming=false;
-    if(view==="profile"&&!document.getElementById("ov")){try{render();}catch(e){}}
+    coinRefreshAllBoxes(); // (v734) อัปเดตยอด+สถานะปุ่มทันที ไม่ต้องออกจากหน้า
   });
 }
 // หักเหรียญตอนสั่งซื้อ (ก่อนสร้างออเดอร์) — ใน transaction; ยอดไม่พอ → ok:false ไม่สร้างออเดอร์
@@ -6137,7 +6140,7 @@ function buildCoinChip(){
       )
     ));
   }
-  fill();coinRefreshIfStale(function(){if(box.isConnected)fill();});return box;
+  fill();coinRegisterBox(box,fill);coinRefreshIfStale(function(){if(box.isConnected)fill();});return box;
 }
 // ── UI: ปุ่มเก็บเหรียญประจำวัน (เหรียญหมุน) ──
 function buildCoinClaimButton(compact){
@@ -6153,7 +6156,7 @@ function buildCoinClaimButton(compact){
     if(compact){
       box.appendChild(el("button",{type:"button",
         style:{display:"flex",alignItems:"center",gap:"6px",background:"#FFF8E1",border:"1.5px solid #FFD54F",borderRadius:"20px",padding:"5px 10px 5px 6px",cursor:can?"pointer":"default",fontFamily:"inherit",textAlign:"left"},
-        onclick:function(){if(coinCanClaimToday())claimDailyCoin();}},
+        onclick:function(){if(coinCanClaimToday()){claimDailyCoin();coinRefreshAllBoxes();}}},
         coinIconEl(can,24),
         el("div",{style:{fontSize:".6rem",color:"#7A4E00",fontWeight:"800",lineHeight:"1.2",maxWidth:"112px"}},can?_ct("ກົດເພື່ອເກັບຫຼຽນປະຈຳວັນ","กดเพื่อเก็บเหรียญประจำวัน","Tap to collect daily coin"):_ct("ເກັບຫຼຽນມື້ນີ້ແລ້ວ ✓","เก็บเหรียญวันนี้แล้ว ✓","Collected today ✓"))
       ));
@@ -6169,7 +6172,7 @@ function buildCoinClaimButton(compact){
       )
     ));
   }
-  fill();return box;
+  fill();coinRegisterBox(box,fill);return box;
 }
 // ── UI: สวิตช์ใช้เหรียญในหน้าชำระเงิน (ขั้นที่ 1) ──
 function buildCoinToggleRow(cT,dProd){
@@ -7410,7 +7413,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.3.3")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.3.4")
   );
 
   // Icon style helper

@@ -28,7 +28,7 @@ if(/Android/i.test(navigator.userAgent)){
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase disabled during development -->
-<!-- LaoH Marketplace v734 -->
+<!-- LaoH Marketplace v737 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:"Noto Sans Lao","Noto Lao","DM Sans",sans-serif;font-weight:600;background:#F0F7F2;color:#1A2B5F;overflow-x:hidden}
@@ -3865,7 +3865,7 @@ function buildSideMenu(){
       el("div",{style:{flex:"1",marginLeft:"10px"}},
         el("div",{style:{color:"#fff",fontWeight:"900",fontSize:"1.1rem",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1"}},"LaoH"),
         el("div",{style:{color:"rgba(255,255,255,.8)",fontSize:".65rem",letterSpacing:"2px",fontFamily:"'Noto Sans Lao',sans-serif",fontWeight:"700",marginTop:"2px"}},"ລາວເຮັດ"),
-        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.3.4")
+        el("div",{style:{color:"rgba(255,255,255,.5)",fontSize:".55rem",letterSpacing:"1px",marginTop:"3px",fontFamily:"'DM Sans',sans-serif"}},"v7.3.7")
       ),
       el("button",{style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:"1.3rem",cursor:"pointer"},onclick:closeSideMenu},"✕")
     ),
@@ -7413,7 +7413,7 @@ function buildNav(){
   },
     el("span",{style:{fontSize:"1.35rem",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',Georgia,serif",lineHeight:"1.1",textShadow:"0 1px 2px rgba(0,0,0,.2)"}},"LaoH"),
     el("span",{style:{fontSize:".68rem",color:"rgba(255,255,255,.9)",letterSpacing:"2px",fontWeight:"800",fontFamily:"'Noto Sans Lao',sans-serif",lineHeight:"1.3"}},"ລາວເຮັດ"),
-    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.3.4")
+    el("span",{style:{fontSize:".48rem",color:"rgba(255,255,255,.38)",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.5px",lineHeight:"1.3"}},"v7.3.7")
   );
 
   // Icon style helper
@@ -17000,7 +17000,7 @@ function buildAdmin(){
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library"];
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library","🏆 "+(_lang==="lo"?"ອັນດັບ":"Ranking")];
   return el("div",{style:{padding:"14px 14px 60px"}},
     el("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}},
       el("div",{style:{fontSize:"1.3rem",fontWeight:"900"}},isNarrator?"🎙️ Narrator Dashboard":(_lang==="lo"?"⚙️ ແດຊບອດ":"⚙️ Dashboard")),
@@ -17212,7 +17212,7 @@ function buildAdmin(){
             ["🏪",posOfflineQty,"POS Offline",8]
           ];
         })():
-        [["🛍",prods.length,"ສິນຄ້າ",null],["👥",users.length,"ສະມາຊິກ",null],["🚚",orders.length,"ຄຳສັ່ງ",null],["🎁",promos.length,"ໂປຣ",null]];
+        [["🛍",prods.length,"ສິນຄ້າ",null],["👥",users.length,"ສະມາຊິກ",null],["🚚",orders.length,"ຄຳສັ່ງ",null],["🏪",shops.filter(function(sh){return sh&&sh.active&&!sh.deleted;}).length,"ຮ້ານຄ້າ",null]];
   })().map(([ic,v,lb,tabIdx])=>el("div",{
     style:{background:"#fff",borderRadius:"10px",padding:"10px 8px",textAlign:"center",boxShadow:"0 2px 6px rgba(59,32,96,.05)",cursor:tabIdx!==null?"pointer":"default",transition:"box-shadow .15s"},
     onclick:tabIdx!==null?function(){aTab=tabIdx;view="admin";render();}:null
@@ -17230,14 +17230,92 @@ function buildAdmin(){
     })()
   );
 }
+function buildRankingSection(){
+  const section=el("div",null);
+  const medals=["🥇","🥈","🥉"];
+  function card(title,rows,unit){
+    const c=el("div",{className:"acard",style:{marginBottom:"14px"}});
+    c.appendChild(el("div",{style:{fontWeight:"800",fontSize:".88rem",color:"#1A2B5F",marginBottom:"8px",paddingBottom:"6px",borderBottom:"1px solid #eee"}},title));
+    if(!rows.length){c.appendChild(el("div",{style:{textAlign:"center",color:"#888",fontSize:".78rem",padding:"10px 0"}},"ຍັງບໍ່ມີຂໍ້ມູນ"));return c;}
+    // (v737) ເລີ່ມ 10 ອັນດັບ ກົດ "ເບິ່ງເພີ່ມເຕີມ" ເພີ່ມເທື່ອລະ 20
+    let shown=10;
+    const list=el("div",null);
+    const moreWrap=el("div",null);
+    c.appendChild(list);c.appendChild(moreWrap);
+    function draw(){
+      list.innerHTML="";moreWrap.innerHTML="";
+      const vis=rows.slice(0,shown);
+      vis.forEach(function(r,i){
+        list.appendChild(el("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"7px 2px",borderBottom:i<vis.length-1?"1px solid #f3f3f3":"none"}},
+          el("div",{style:{width:"28px",textAlign:"center",fontSize:i<3?"1.1rem":".8rem",fontWeight:"800",color:"#6B8F75"}},i<3?medals[i]:String(i+1)),
+          el("div",{style:{flex:"1",minWidth:"0"}},
+            el("div",{style:{fontSize:".8rem",fontWeight:"700",color:"#1A2B5F",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},r.name||"-"),
+            r.sub?el("div",{style:{fontSize:".64rem",color:"#888"}},r.sub):null),
+          el("div",{style:{fontSize:".82rem",fontWeight:"900",color:"#1B6B3A",whiteSpace:"nowrap"}},fmt(r.value)+" "+unit)));
+      });
+      const btnStyle={width:"100%",marginTop:"8px",padding:"8px",borderRadius:"10px",border:"1.5px solid #1B6B3A",background:"none",color:"#1B6B3A",fontWeight:"700",fontSize:".76rem",cursor:"pointer",fontFamily:"inherit"};
+      if(shown<rows.length){
+        moreWrap.appendChild(el("button",{type:"button",style:btnStyle,onclick:function(){shown+=20;draw();}},"⬇️ ເບິ່ງເພີ່ມເຕີມ (+20) · "+Math.min(shown,rows.length)+"/"+rows.length));
+      } else if(rows.length>10){
+        moreWrap.appendChild(el("button",{type:"button",style:btnStyle,onclick:function(){shown=10;draw();}},"⬆️ ຍ່ອ"));
+      }
+    }
+    draw();
+    return c;
+  }
+  function top10(map,nameOf,subOf){
+    return Object.keys(map).map(function(k){return {key:k,value:map[k]};})
+      .filter(function(r){return r.value>0;})
+      .sort(function(a,b){return b.value-a.value;})
+      .map(function(r){return {name:nameOf(r.key),sub:subOf?subOf(r.key):"",value:r.value};});
+  }
+  section.appendChild(el("div",{style:{fontWeight:"800",fontSize:"1rem",marginBottom:"10px"}},"🏆 ອັນດັບ Top 10"));
+  // 1) ร้านที่มีสินค้ามากที่สุด
+  const liveShop=function(id){const sh=(shops||[]).find(function(x){return String(x.id)===String(id);});return sh&&!sh.deleted?sh:null;};
+  const prodCnt={};(prods||[]).forEach(function(p){if(p&&p.shopId!=null&&liveShop(p.shopId))prodCnt[p.shopId]=(prodCnt[p.shopId]||0)+1;});
+  section.appendChild(card("🛍 ຮ້ານຄ້າທີ່ມີສິນຄ້າຫຼາຍທີ່ສຸດ",top10(prodCnt,function(k){return liveShop(k).name;}),"ລາຍການ"));
+  // 2) ร้านที่มีออเดอร์มากที่สุด / 3) ลูกค้าที่สั่งมากที่สุด (ไม่นับที่ยกเลิก)
+  const okOrders=(orders||[]).filter(function(o){return o&&o.status!=="ຍົກເລີກ";});
+  const shopOrd={},custOrd={};
+  okOrders.forEach(function(o){
+    if(o.shopId!=null)shopOrd[o.shopId]=(shopOrd[o.shopId]||0)+1;
+    if(o.uid!=null)custOrd[o.uid]=(custOrd[o.uid]||0)+1;
+  });
+  section.appendChild(card("🚚 ຮ້ານຄ້າທີ່ມີຄຳສັ່ງຊື້ຫຼາຍທີ່ສຸດ",top10(shopOrd,function(k){const sh=(shops||[]).find(function(x){return String(x.id)===String(k);});return sh?sh.name:("ID "+k);}),"ຄຳສັ່ງ"));
+  section.appendChild(card("👤 ລູກຄ້າທີ່ສັ່ງຊື້ຫຼາຍທີ່ສຸດ",top10(custOrd,function(k){const u=(users||[]).find(function(x){return String(x.id)===String(k);});if(u)return u.name||u.username||("ID "+k);const o=okOrders.find(function(x){return String(x.uid)===String(k);});return (o&&o.name)||("ID "+k);},function(k){const u=(users||[]).find(function(x){return String(x.id)===String(k);});return u&&u.phone?"📞 "+u.phone:"";}),"ຄຳສັ່ງ"));
+  // 4) ลูกค้าที่เก็บเหรียญมากที่สุด (รวมจากประวัติ claim ใน coinLedger — โหลดตอนเปิดแท็บ)
+  const coinWrap=el("div",null,el("div",{className:"acard",style:{marginBottom:"14px",textAlign:"center",color:"#888",fontSize:".8rem",padding:"16px"}},"⏳ ກຳລັງໂຫຼດອັນດັບເຫຼຽນ..."));
+  section.appendChild(coinWrap);
+  function drawCoins(claims){
+    coinWrap.innerHTML="";
+    const sum={},days={};
+    claims.forEach(function(c){sum[c.uid]=(sum[c.uid]||0)+(Number(c.amount)||0);days[c.uid]=(days[c.uid]||0)+1;});
+    coinWrap.appendChild(card(coinLabel("ລູກຄ້າທີ່ເກັບຫຼຽນໄດ້ຫຼາຍທີ່ສຸດ (ລວມທັງໝົດ)"),top10(sum,function(k){const u=(users||[]).find(function(x){return String(x.id)===String(k);});return u?(u.name||u.username||("ID "+k)):("ID "+k);},function(k){return days[k]+" ວັນ";}),"₭"));
+  }
+  const cache=window._rankCoinCache;
+  if(cache&&Date.now()-cache.at<60000){drawCoins(cache.claims);}
+  else if(!db){coinWrap.innerHTML="";coinWrap.appendChild(el("div",{className:"acard",style:{color:"#c00",textAlign:"center",fontSize:".78rem"}},"ບໍ່ໄດ້ເຊື່ອມ Firebase"));}
+  else{
+    db.collection("coinLedger").where("type","==","claim").get().then(function(snap){
+      const claims=snap.docs.map(function(d){const x=d.data()||{};return {uid:x.uid,amount:x.amount};});
+      window._rankCoinCache={at:Date.now(),claims:claims};
+      if(coinWrap.isConnected)drawCoins(claims);
+    }).catch(function(e){
+      coinWrap.innerHTML="";
+      coinWrap.appendChild(el("div",{className:"acard",style:{color:"#c00",textAlign:"center",fontSize:".78rem",marginBottom:"14px"}},"❌ ໂຫຼດອັນດັບເຫຼຽນບໍ່ສຳເລັດ"));
+      console.warn("ranking coins failed:",e);
+    });
+  }
+  return section;
+}
 function buildAdminTab(){
   const isShop=user&&user.role==="shop";
   const isSuperAdmin=user&&user.role==="admin";
   const isNarrator=user&&user.role==="narrator";
   const TABS=isNarrator?["🎙️ ຄລິບ","➕ ອັປໂຫຼດ","📈 ລາຍຮັບ"]:
     isShop?[_lang==="lo"?"📦 ສິນຄ້າ":"📦 Products",_lang==="lo"?"➕ ເພີ່ມ":"➕ Add",_lang==="lo"?"📊 ສະຕ໋ອກ":"📊 Stock",_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"📈 ການເງິນ":"📈 Finance",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"🎁 ໂປຣ":"🎁 Promo","📸 ໂພສ",_lang==="lo"?"🏪 POS":"🏪 POS"]:
-    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library"];
-  const superAdminTabMap={0:5,1:40,2:7,3:8,4:9,5:15,6:4,7:10,8:11,9:12,10:13,11:14,12:30,13:41};
+    [_lang==="lo"?"🚚 ຄຳສັ່ງ":"🚚 Orders",_lang==="lo"?"💬 ຂໍ້ຄວາມ":"💬 Messages",_lang==="lo"?"🏷 ໂຄ້ດ":"🏷 Coupons",_lang==="lo"?"🏪 ຮ້ານຄ້າ":"🏪 Shops",_lang==="lo"?"💸 ຖອນ":"💸 Withdraw",_lang==="lo"?"📊 ບັນຊີ":"📊 Accounting",_lang==="lo"?"👥 ສະມາຊິກ":"👥 Members",_lang==="lo"?"⚙️ ຕັ້ງຄ່າ":"⚙️ Settings",_lang==="lo"?("📋 ຄຳຂໍ"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":"")):"📋 Apply"+(shopApplications.filter(function(a){return a.status==="pending";}).length>0?" ("+shopApplications.filter(function(a){return a.status==="pending";}).length+")":""),_lang==="lo"?"🚗 ໄລເດີ":"🚗 Rider","🏢 Staff","🎙️ ຜູ້ອ່ານ",_lang==="lo"?"➕ ສ້າງອໍເດີ":"➕ Create Order",_lang==="lo"?"🎵 ເພງປະກອບ":"🎵 Music Library","🏆 "+(_lang==="lo"?"ອັນດັບ":"Ranking")];
+  const superAdminTabMap={0:5,1:40,2:7,3:8,4:9,5:15,6:4,7:10,8:11,9:12,10:13,11:14,12:30,13:41,14:50};
   const shopTabMap={0:0,1:1,2:3,3:5,4:6,5:9,6:31,7:20,8:32};
   const effectiveTabMap=isSuperAdmin?superAdminTabMap:shopTabMap;
   const effectiveTab=(isShop||isSuperAdmin)?(effectiveTabMap[aTab]!==undefined?effectiveTabMap[aTab]:aTab):aTab;
@@ -22096,6 +22174,10 @@ function buildAdminTab(){
       }).catch(function(){listWrap.innerHTML="";listWrap.appendChild(el("div",{style:{textAlign:"center",color:"#c00",fontSize:".8rem",padding:"20px 0"}},"⚠ ໂຫຼດຂໍ້ມູນບໍ່ສຳເລັດ"));});
     }
     return section;
+  }
+  // (v736) แท็บ "อันดับ" (ซูเปอร์แอดมินเท่านั้น) — Top 10 อ่านอย่างเดียว ไม่เขียนข้อมูลใดๆ
+  if(effectiveTab===50&&isSuperAdmin){
+    return buildRankingSection();
   }
   if(effectiveTab===41){
     const section=el("div",null);

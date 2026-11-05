@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="lo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="ຂໍເຊີນຮ້ານຄ້າມາເປີດຮ້ານກັບ ລາວເຮັດ · ບໍ່ມີຄ່າສະໝັກ">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ບັດເຊີນເປີດຮ້ານກັບ ລາວເຮັດ · LaoH">
+<meta property="og:description" content="ຂໍເຊີນຮ້ານຄ້າທຸກຂະໜາດ ມາເປີດຮ້ານອອນລາຍກັບ LaoH · ບໍ່ມີຄ່າສະໝັກ">
+<meta property="og:url" content="https://laohmarket.com/invite/">
+<meta property="og:image" content="https://laohmarket.com/invite/laoh-steps-v2.jpg">
+<meta property="og:image:width" content="1080">
+<meta property="og:image:height" content="1350">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="laoh-h.png">
+<title>ບັດເຊີນເປີດຮ້ານ LaoH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Lao:wght@400;600;800&family=Noto+Sans+Lao+Looped:wght@400;500;700&display=swap">
+<style>
+/* Layout: one tall invitation card on the LaoH teal→green ground, framed by a woven band in brand colors; ends with the app poster linking to the App Store */
+:root{
+  --teal:#0e8f9c;
+  --teal-deep:#0b4f5e;
+  --green:#5cc95f;
+  --sky:#5fb8f4;
+  --sky-soft:#e6f5ff;
+  --paper:#ffffff;
+  --ink:#0f2a36;
+  --muted:#5b7380;
+  --red:#e2463f;
+  --band:#17558f;
+  --line:rgba(14,143,156,.28);
+  --display:"Noto Serif Lao","Phetsarath OT",Georgia,serif;
+  --body:"Noto Sans Lao Looped","Noto Sans Lao","Saysettha OT",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--teal);
+  background-image:linear-gradient(135deg,var(--teal) 0%,#2fb08a 55%,var(--green) 100%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;line-height:1.75;
+  min-height:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:28px 48px;
+}
+.card{
+  max-width:560px;margin:0 auto;
+  background:var(--paper);color:var(--ink);
+  border-radius:28px;position:relative;overflow:hidden;
+  box-shadow:0 30px 60px -24px rgba(11,79,94,.55);
+  animation:rise .9s ease-out both;
+}
+@keyframes rise{from{transform:translateY(14px)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}}
+
+/* woven band in brand colors, echoing the textile in the H logo */
+.weave{height:22px;background:var(--band)}
+
+.inner{padding:36px 28px 40px;display:flex;flex-direction:column;gap:36px}
+@media (max-width:420px){.inner{padding:30px 20px 34px}}
+
+.eyebrow{
+  font-size:13px;letter-spacing:.18em;color:var(--teal);font-weight:700;
+  display:flex;align-items:center;gap:12px;justify-content:center;
+}
+.eyebrow::before,.eyebrow::after{content:"";height:1px;width:40px;background:var(--line)}
+
+.hero{text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+.seal{
+  width:96px;height:96px;border-radius:24px;
+  background:#fbfdf0;
+  display:grid;place-items:center;padding:12px;
+  box-shadow:0 0 0 4px #fff,0 0 0 6px var(--teal),0 10px 20px rgba(11,79,94,.3);
+}
+.seal img{width:100%;height:100%;object-fit:contain;display:block}
+.steps-poster{display:block;border-radius:22px;overflow:hidden;max-width:100%;box-shadow:0 18px 36px -16px rgba(11,79,94,.5)}
+.steps-poster img{display:block;width:100%;height:auto;aspect-ratio:1080/1350}
+.row dd .free{display:inline-block;margin-top:4px;font-size:13px;font-weight:700;color:#fff;background:var(--green);border-radius:999px;padding:0 10px}
+.to{font-size:15px;color:var(--muted)}
+h1{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(30px,8vw,42px);line-height:1.35;margin:0;
+  text-wrap:balance;color:var(--teal-deep);
+}
+h1 em{font-style:normal;color:var(--teal)}
+h1 em span{color:var(--green)}
+.lede{margin:0;max-width:34em;color:#33505c;text-wrap:pretty}
+
+.ornament{display:flex;justify-content:center;gap:8px}
+.ornament i{width:7px;height:7px;transform:rotate(45deg);background:var(--teal);display:block}
+.ornament i:nth-child(2){background:var(--green)}
+
+h2{
+  font-family:var(--display);font-weight:600;font-size:22px;margin:0 0 14px;
+  color:var(--teal-deep);text-align:center;text-wrap:balance;
+}
+
+.details{
+  background:var(--sky-soft);border-radius:18px;padding:4px 18px;
+  display:grid;grid-template-columns:1fr;
+}
+.row{display:grid;grid-template-columns:7.5em 1fr;gap:12px;padding:14px 2px;border-bottom:1px dashed var(--line)}
+.row:last-child{border-bottom:0}
+.row dt{font-size:13px;color:var(--teal);font-weight:700;letter-spacing:.04em;padding-top:2px}
+.row dd{margin:0;min-width:0}
+.row dd b{font-family:var(--display);font-size:18px;font-weight:600;color:var(--teal-deep)}
+@media (max-width:380px){.row{grid-template-columns:1fr;gap:2px}}
+
+.gifts{display:grid;grid-template-columns:minmax(0,1fr);gap:20px 18px;margin:0;padding:0;list-style:none}
+@media (max-width:440px){.gifts{grid-template-columns:1fr}}
+.gifts li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.gifts svg{width:28px;height:28px;stroke:var(--teal);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.gifts strong{display:block;font-weight:700;color:var(--teal-deep);line-height:1.45}
+.gifts span{font-size:14px;color:var(--muted);line-height:1.6}
+
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:40px 1fr;gap:14px;padding-bottom:18px;position:relative}
+.steps li::before{
+  content:counter(s);width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--teal),var(--green));color:#fff;
+  display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:16px;
+  position:relative;z-index:1;
+}
+.steps li:not(:last-child)::after{content:"";position:absolute;left:17px;top:36px;bottom:0;width:2px;background:var(--line)}
+.steps strong{display:block;color:var(--teal-deep);line-height:1.5;padding-top:4px}
+.steps span{font-size:14px;color:var(--muted)}
+
+.reply{
+  border-radius:22px;padding:28px 22px;text-align:center;
+  display:flex;flex-direction:column;gap:14px;align-items:center;color:#fff;
+  background:linear-gradient(135deg,var(--teal) 0%,#2fb08a 60%,var(--green) 100%);
+}
+.reply h2{color:#fff;margin:0}
+.reply p{margin:0;font-size:15px;color:#eafaf3;max-width:28em}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  min-height:50px;padding:0 28px;border-radius:999px;
+  background:#fff;color:var(--teal-deep);font-weight:700;font-size:17px;
+  text-decoration:none;border:0;cursor:pointer;font-family:var(--body);
+  transition:transform .15s ease,box-shadow .15s ease;
+  box-shadow:0 6px 14px rgba(11,79,94,.2);
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(11,79,94,.28)}
+.btn:focus-visible{outline:3px solid var(--teal-deep);outline-offset:3px}
+.btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.7);min-height:42px;font-size:15px;padding:0 20px;box-shadow:none}
+.url{font-family:ui-monospace,Menlo,monospace;font-size:14px;color:#fff;user-select:all;letter-spacing:.02em}
+.toast{font-size:13px;color:#fff;min-height:1.2em}
+
+/* app poster */
+.app{display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center}
+.app p{margin:0;color:var(--muted);font-size:15px}
+.poster{display:block;border-radius:22px;overflow:hidden;max-width:100%;
+  box-shadow:0 18px 36px -16px rgba(11,79,94,.5);transition:transform .2s ease}
+.poster:hover{transform:translateY(-2px)}
+.poster:focus-visible{outline:3px solid var(--teal);outline-offset:4px}
+.poster img{display:block;width:100%;height:auto;aspect-ratio:1080/1350}
+.store{background:#0b0f14;color:#fff;box-shadow:0 8px 18px rgba(0,0,0,.25)}
+.store svg{width:22px;height:22px;fill:#fff}
+.store small{display:block;font-size:11px;font-weight:500;line-height:1.1;opacity:.85;text-align:left}
+.store b{display:block;font-size:17px;line-height:1.2;text-align:left}
+
+.sign{text-align:center;display:flex;flex-direction:column;gap:2px}
+.sign small{color:var(--muted);font-size:14px}
+.sign b{font-family:var(--display);font-size:20px;color:var(--teal-deep);font-weight:600}
+.contact{background:var(--sky-soft);border-radius:20px;padding:22px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.contact p{margin:0;color:var(--teal-deep);font-weight:500}
+.contact .num{font-family:ui-monospace,Menlo,monospace;font-size:18px;font-weight:700;color:var(--ink);user-select:all;letter-spacing:.03em}
+.wa{background:#1fa855;color:#fff}
+.wa svg{width:22px;height:22px;fill:#fff}
+.contact .row2{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn.copy{background:#fff;color:var(--teal-deep);border:1px solid var(--line);min-height:44px;font-size:15px;padding:0 18px;box-shadow:none}
+.contact .toast{color:var(--teal)}
+</style>
+<style>html,body{margin:0}img{max-width:100%}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+
+<main class="card">
+  <div class="weave" aria-hidden="true"></div>
+  <div class="inner">
+
+    <header class="hero">
+      <div class="eyebrow">ບັດເຊີນ</div>
+      <div class="seal"><img src="laoh-h.png" alt="ໂລໂກ້ LaoH" width="240" height="249"></div>
+      <div class="to">ຮຽນ ເຈົ້າຂອງຮ້ານ ແລະ ຜູ້ປະກອບການທີ່ນັບຖື</div>
+      <h1>ຂໍເຊີນມາເປີດຮ້ານ<br>ກັບ <em>ລາວ<span>ເຮັດ</span></em></h1>
+      <p class="lede">LaoH ຂໍເຊີນຮ້ານຄ້າທຸກຂະໜາດ ມາຮ່ວມເປັນສ່ວນໜຶ່ງຂອງຕະຫຼາດອອນລາຍ ທີ່ສ້າງໂດຍຄົນລາວ ເພື່ອຄົນລາວ. ນຳສິນຄ້າຂອງທ່ານໄປພົບລູກຄ້າໃໝ່ ທົ່ວປະເທດ.</p>
+    </header>
+
+    <div class="ornament" aria-hidden="true"><i></i><i></i><i></i></div>
+
+    <section>
+      <h2>ລາຍລະອຽດ</h2>
+      <dl class="details">
+        <div class="row"><dt>ສະຖານທີ່</dt><dd><b>laohmarket.com</b><br>ແລະ ແອັບ LaoH ໃນ iOS · Android</dd></div>
+        <div class="row"><dt>ເປີດຮັບ</dt><dd><b>ຕັ້ງແຕ່ມື້ນີ້ເປັນຕົ້ນໄປ</b><br><span class="free">ບໍ່ມີຄ່າສະໝັກ</span></dd></div>
+        <div class="row"><dt>ສຳລັບ</dt><dd>ຮ້ານຄ້າ, ຜູ້ຜະລິດ, ແມ່ຄ້າອອນລາຍ ແລະ ທຸລະກິດຄອບຄົວ</dd></div>
+        <div class="row"><dt>ສິ່ງທີ່ຄວນກຽມ</dt><dd>ຊື່ຮ້ານ, ຮູບສິນຄ້າ ແລະ ລາຄາ</dd></div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>ຮ້ານຂອງທ່ານຈະໄດ້ຮັບ</h2>
+      <ul class="gifts">
+        <li><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M10 20v-6h4v6"/></svg>
+          <div><strong>ໜ້າຮ້ານອອນລາຍຂອງຕົນເອງ</strong><span>ລົງສິນຄ້າ, ຈັດໝວດໝູ່ ແລະ ແບ່ງປັນລິ້ງຮ້ານໄປແພລັດຟອມອື່ນ ໃຫ້ລູກຄ້າກົດເບິ່ງຂໍ້ມູນສິນຄ້າ ແລະ ສັ່ງຊື້ໄດ້ທັນທີ</span></div></li>
+        <li><svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-3-7H8"/><path d="M15 17l2-7h3"/></svg>
+          <div><strong>ໄຣເດີຮັບ-ສົ່ງເຄື່ອງ</strong><span>ລະບົບໄຣເດີຂອງ LaoH ຮັບສິນຄ້າ ແລະ ສົ່ງເຖິງມືລູກຄ້າ (ພາຍໃນຕົວເມືອງ ນະຄອນຫຼວງວຽງຈັນ 10 ກິໂລແມັດ)</span></div></li>
+        <li><svg viewBox="0 0 24 24"><path d="M3 9V5h18v4a3 3 0 000 6v4H3v-4a3 3 0 000-6z"/><path d="M9 15l6-6"/></svg>
+          <div><strong>ໂປຣໂມຊັ່ນ ແລະ ຄູປອງ</strong><span>ສ້າງສ່ວນຫຼຸດ ດຶງດູດລູກຄ້າໃໝ່</span></div></li>
+        <li><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+          <div><strong>ບັນທຶກການຂາຍໜ້າຮ້ານ</strong><span>ຂາຍອອນລາຍ ແລະ ໜ້າຮ້ານ ໃຊ້ສະຕັອກດຽວກັນ</span></div></li>
+        <li><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.3 6.8 19.1l1-5.8L3.5 9.2l5.9-.8z"/></svg>
+          <div><strong>ລີວິວ ແລະ ຜູ້ຕິດຕາມ</strong><span>ສ້າງຄວາມເຊື່ອໝັ້ນ ໃຫ້ລູກຄ້າກັບມາຊື້ຊ້ຳ</span></div></li>
+      </ul>
+    </section>
+
+    <section class="steps-only">
+      <div class="steps-poster"><img src="laoh-steps-v2.jpg" alt="4 ຂັ້ນຕອນງ່າຍໆ ເລີ່ມຂາຍກັບ LaoH: ສະໝັກຮ້ານ, ລົງສິນຄ້າ, ໄດ້ຮັບຄຳສັ່ງຊື້, ເມື່ອອໍເດີ້ສຳເລັດ" width="1080" height="1350" loading="lazy"></div>
+    </section>
+
+    <section class="reply" aria-labelledby="rsvp">
+      <h2 id="rsvp">ຕອບຮັບຄຳເຊີນ</h2>
+      <p>ກົດປຸ່ມລຸ່ມນີ້ ເພື່ອສະໝັກເປີດຮ້ານກັບ ລາວເຮັດ</p>
+      <a class="btn" href="https://laohmarket.com" target="_blank" rel="noopener">ສະໝັກເປີດຮ້ານ</a>
+      <span class="url">laohmarket.com</span>
+      <button class="btn ghost" id="copyBtn" type="button">ສຳເນົາລິ້ງ ແບ່ງປັນໃຫ້ໝູ່</button>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="app" aria-labelledby="appTitle">
+      <h2 id="appTitle">ດາວໂຫຼດແອັບ LaoH</h2>
+      <p>ກົດທີ່ຮູບ ຫຼື ສະແກນ QR ເພື່ອດາວໂຫຼດໃນ App Store</p>
+      <a class="poster" href="https://apps.apple.com/la/app/laohmarket/id6799383922" target="_blank" rel="noopener" aria-label="ດາວໂຫຼດແອັບ LaoH ໃນ App Store">
+        <img src="laoh-app-ios.jpg" alt="ໂປສເຕີ ດາວໂຫຼດແອັບ LaoH ພ້ອມ QR code ສຳລັບ iOS" width="1080" height="1350" loading="lazy">
+      </a>
+      <a class="btn store" href="https://apps.apple.com/la/app/laohmarket/id6799383922" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.9-1.1-2.9-4.2zM13.9 5.2c.7-.8 1.2-2 1-3.2-1 .1-2.2.7-3 1.5-.6.7-1.2 1.9-1 3.1 1.1.1 2.3-.6 3-1.4z"/></svg>
+        <span><small>Download on the</small><b>App Store</b></span>
+      </a>
+    </section>
+
+    <section class="contact" aria-labelledby="contactTitle">
+      <h2 id="contactTitle" style="margin:0">ສອບຖາມຂໍ້ມູນເພີ່ມເຕີມ</h2>
+      <p>ຕິດຕໍ່ແອດມິນໄດ້ທີ່ WhatsApp</p>
+      <span class="num" id="waNum">+856 20 5982 6333</span>
+      <div class="row2">
+        <a class="btn wa" href="https://wa.me/8562059826333" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.8 12 12 0 004.6 4c1.7.7 2.4.8 3.2.6a2.8 2.8 0 001.8-1.3 2.3 2.3 0 00.2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>ແຊດທາງ WhatsApp</a>
+        <button class="btn copy" id="copyNum" type="button">ສຳເນົາເບີ</button>
+      </div>
+      <div class="toast" id="numToast" role="status" aria-live="polite"></div>
+    </section>
+
+    <footer class="sign">
+      <small>ດ້ວຍຄວາມນັບຖື</small>
+      <b>ທີມງານ ລາວເຮັດ · LaoH</b>
+    </footer>
+
+  </div>
+  <div class="weave bottom" aria-hidden="true"></div>
+</main>
+
+<script>
+(function(){
+  var btn=document.getElementById('copyBtn'),toast=document.getElementById('toast');
+  var link='https://laohmarket.com';
+  btn.addEventListener('click',function(){
+    function done(){toast.textContent='ສຳເນົາລິ້ງແລ້ວ';}
+    function fallback(){
+      var u=document.querySelector('.url');var r=document.createRange();r.selectNodeContents(u);
+      var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+      toast.textContent='ເລືອກລິ້ງໄວ້ແລ້ວ ກົດສຳເນົາໄດ້ເລີຍ';
+    }
+    try{navigator.clipboard.writeText(link).then(done,fallback);}catch(e){fallback();}
+  });
+})();
+(function(){
+  var b=document.getElementById('copyNum'),t=document.getElementById('numToast');
+  b.addEventListener('click',function(){
+    function fb(){var u=document.getElementById('waNum');var r=document.createRange();r.selectNodeContents(u);var s=window.getSelection();s.removeAllRanges();s.addRange(r);t.textContent='ເລືອກເບີໄວ້ແລ້ວ ກົດສຳເນົາໄດ້ເລີຍ';}
+    try{navigator.clipboard.writeText('+8562059826333').then(function(){t.textContent='ສຳເນົາເບີແລ້ວ';},fb);}catch(e){fb();}
+  });
+})();
+</script>
+
+</body>
+</html>
